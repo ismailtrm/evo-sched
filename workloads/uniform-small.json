@@ -1,0 +1,30 @@
+[
+  {
+    "name": "pod-001",
+    "arrivalSeconds": 0,
+    "cpuMilli": 100,
+    "memoryMiB": 64,
+    "durationSeconds": 10
+  },
+  {
+    "name": "pod-002",
+    "arrivalSeconds": 1,
+    "cpuMilli": 100,
+    "memoryMiB": 64,
+    "durationSeconds": 10
+  },
+  {
+    "name": "pod-003",
+    "arrivalSeconds": 2,
+    "cpuMilli": 100,
+    "memoryMiB": 64,
+    "durationSeconds": 10
+  },
+  {
+    "name": "pod-004",
+    "arrivalSeconds": 3,
+    "cpuMilli": 100,
+    "memoryMiB": 64,
+    "durationSeconds": 10
+  }
+]

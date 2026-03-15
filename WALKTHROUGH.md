@@ -332,6 +332,76 @@ Sonuç:
 
 Bu test, parametrik scoring refactor'unun canlı cluster'da regresyon yaratmadan çalıştığını doğruladı.
 
+### 3.18. İlk evaluation harness iskeletini ekledik
+
+Scoring refactor'undan sonra sıradaki ihtiyaç, farklı weight set'lerini aynı workload üzerinde tekrar tekrar koşturup ölçüm alabilecek bir evaluation katmanıydı.
+
+Bu amaçla repo içine şu yapılar eklendi:
+
+- [scheduler/cmd/evaluator/main.go](./scheduler/cmd/evaluator/main.go)
+- [scheduler/pkg/evaluator/types.go](./scheduler/pkg/evaluator/types.go)
+- [scheduler/pkg/evaluator/workload.go](./scheduler/pkg/evaluator/workload.go)
+- [scheduler/pkg/evaluator/weights.go](./scheduler/pkg/evaluator/weights.go)
+- [scheduler/pkg/evaluator/metrics.go](./scheduler/pkg/evaluator/metrics.go)
+- [workloads/uniform-small.json](./workloads/uniform-small.json)
+
+İlk evaluator sürümü şunları yapar:
+
+1. JSON workload dosyasını okur
+2. İstenirse scheduler deployment weight'lerini günceller
+3. Workload pod'larını sırayla cluster'a oluşturur
+4. Pod scheduling ve completion zamanlarını toplar
+5. Özet metrikleri JSON olarak üretir
+6. Test pod'larını sonunda temizler
+
+Bu ilk sürümde üretilen temel metrikler:
+
+- `averagePendingSeconds`
+- `p95PendingSeconds`
+- `unschedulableCount`
+- `maxActiveNodes`
+
+### 3.19. Workload formatını sabitledik
+
+İlk harness için workload formatı sade bir JSON liste olarak seçildi.
+
+Her workload item şu alanları içerir:
+
+- `name`
+- `arrivalSeconds`
+- `cpuMilli`
+- `memoryMiB`
+- `durationSeconds`
+
+Bu format evaluator tarafından okunur ve aynı senaryo farklı weight set'leriyle tekrar tekrar oynatılabilir.
+
+### 3.20. Evaluator smoke run yaptık
+
+İlk doğrulama için [workloads/uniform-small.json](./workloads/uniform-small.json) kullanıldı.
+
+Evaluator şu komutla çalıştırıldı:
+
+- `go run ./cmd/evaluator --workload ../workloads/uniform-small.json --timeout 90s --output /tmp/evo-sched-eval.json`
+
+Sonuç:
+
+- Workload başarıyla cluster'a basıldı
+- Tüm pod'lar schedule edildi
+- Tüm pod'lar tamamlandı
+- JSON metrik çıktısı üretildi
+- Evaluator namespace'i temiz bırakıldı
+
+Örnek özet sonuç:
+
+- `scheduledCount=4`
+- `completedCount=4`
+- `unschedulableCount=0`
+- `averagePendingSeconds=1.5`
+- `p95PendingSeconds=2`
+- `maxActiveNodes=2`
+
+Bu, scheduler'ın artık yalnızca çalışan bir sistem değil, aynı zamanda ölçülebilen ve karşılaştırılabilen bir deney nesnesine dönüştüğünü gösterir.
+
 ## 4. Şu Anki Durum
 
 Şu anda proje durumu şöyledir:
@@ -343,6 +413,7 @@ Bu test, parametrik scoring refactor'unun canlı cluster'da regresyon yaratmadan
 - Scheduler artık parametreli bir skor fonksiyonu ile node seçiyor
 - Skor ağırlıkları env üzerinden değiştirilebiliyor
 - Resource fit kontrolü scoring akışına dahil edilmiş durumda
+- Tek workload / tek weight set için metrik üreten evaluator iskeleti mevcut
 
 Başka bir ifadeyle:
 
@@ -352,21 +423,22 @@ Başka bir ifadeyle:
 - Adım 4 ilk başarılı smoke test seviyesiyle tamam
 - Adım 4 için temel feasibility filtreleri de eklenmiş durumda
 - Adım 5 için gereken parametrik policy zemini kurulmuş durumda
+- Adım 6 ve 7 için gerekli ilk evaluation altyapısı kurulmuş durumda
 
 ## 5. Sıradaki Muhtemel Adımlar
 
 Buradan sonra mantıklı ilerleme sırası şudur:
 
-1. Tekrar üretilebilir workload ve ölçüm altyapısı kurmak
-2. Fitness ölçümünü netleştirmek
-3. Weight set'lerini sistematik olarak denemek için evaluation akışı yazmak
+1. Batch evaluator yazmak ve birden fazla weight set'i tek komutla koşturmak
+2. Workload set'ini genişletmek
+3. Fitness ölçümünü netleştirmek
 4. Evolutionary optimization katmanına geçmek
 5. Baseline scheduler policy'leri ile karşılaştırma yapmak
 
 İlk teknik iyileştirme adayları:
 
-- Test workload'larından ölçüm verisi toplamak
-- Pending time / active node count / başarısız schedule sayısı gibi metrikleri kaydetmek
+- Batch sonuçları CSV/JSON olarak toplamak
+- `mixed` ve `bursty` workload dosyaları eklemek
 - Weight denemelerini otomatik çalıştıracak harness hazırlamak
 
 ## 6. Bu Dosya Nasıl Kullanılmalı
