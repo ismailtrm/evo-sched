@@ -551,6 +551,62 @@ Sonuç:
 
 Bu smoke run'ın amacı metric farkı üretmek değil, yeni workload formatının cluster kapasitesine göre doğru çözümlendiğini doğrulamaktı.
 
+### 3.28. 4-worker cluster üzerinde ilk resource-pressure matrix'i koşturduk
+
+Bir sonraki kritik deney için cluster topolojisi 4 worker olacak şekilde yeniden kuruldu.
+
+Uygulanan akış:
+
+- mevcut `evo-sched` kind cluster silindi
+- [kind-config-4workers.yaml](./kind-config-4workers.yaml) ile aynı isimde yeni cluster oluşturuldu
+- scheduler image'ı yeniden build edildi
+- image yeni cluster node'larına yüklendi
+- [rbac.yaml](./rbac.yaml) ve [deploy.yaml](./deploy.yaml) yeniden apply edildi
+- scheduler pod'unun rollout'u beklendi
+- [test-workload.yaml](./test-workload.yaml) ile kısa smoke validation yapıldı
+
+Smoke validation sonucu:
+
+- scheduler pod'u `Running`
+- smoke pod'ları başarıyla bind edildi
+- bind kararları scheduler log'larında görüldü
+
+Ardından ilk gerçek matrix şu kombinasyonla çalıştırıldı:
+
+- workload'lar: `cpu-tight`, `mem-tight`, `fragmenting-mix`
+- weight set'ler: `baseline-default`, `spread-heavy`, `packing-heavy`
+- tekrar sayısı: her kombinasyon için `3`
+
+Kontrol disiplini için her batch öncesi ve sonrası şu bilgiler loglandı:
+
+- ready worker sayısı
+- scheduler deployment env weight'leri
+- evaluator namespace pod sayısı
+
+Bu kontrol log'u şurada saklanır:
+
+- [results/2026-03-15-4worker-resource-pressure/controls.log](./results/2026-03-15-4worker-resource-pressure/controls.log)
+
+Özet sonuçlar şu dosyalara kaydedildi:
+
+- [results/2026-03-15-4worker-resource-pressure/summary.csv](./results/2026-03-15-4worker-resource-pressure/summary.csv)
+- [results/2026-03-15-4worker-resource-pressure/summary.json](./results/2026-03-15-4worker-resource-pressure/summary.json)
+- [results/2026-03-15-4worker-resource-pressure/detail.csv](./results/2026-03-15-4worker-resource-pressure/detail.csv)
+
+Bu deneyden çıkan ilk kritik bulgular:
+
+- `active-node` tradeoff nihayet açıldı
+- `packing-heavy`, `cpu-tight` ve `mem-tight` altında `maxActiveNodes=2` seviyesine inerken `spread-heavy` ve çoğu durumda `baseline-default` `maxActiveNodes=4` kullandı
+- `fragmenting-mix` altında `packing-heavy` orta bir davranış göstererek `maxActiveNodes=3` kullandı
+
+Pending tarafındaki okuma:
+
+- `cpu-tight` altında `packing-heavy` ve `spread-heavy` baseline'dan daha düşük pending üretti
+- `mem-tight` altında pending metrikleri neredeyse aynı kaldı; fakat `packing-heavy` daha az node ile aynı pending'i verdi
+- `fragmenting-mix` altında en düşük pending `spread-heavy`, ikinci `packing-heavy`, en zayıf ise `baseline-default` oldu
+
+Bu sonuç çok önemlidir; çünkü artık scheduler policy weight'leri hem pending hem de node kullanımında görünür tradeoff üretmektedir. Yani proje gerçekten çok hedefli scheduler optimization karakterine ulaşmıştır.
+
 ## 4. Şu Anki Durum
 
 Şu anda proje durumu şöyledir:
@@ -568,6 +624,8 @@ Bu smoke run'ın amacı metric farkı üretmek değil, yeni workload formatını
 - Workload'lar artık worker kapasitesine göre yüzdesel olarak tanımlanabiliyor
 - `resource-pressure` workload ailesi repo'ya eklenmiş durumda
 - Daha büyük deneyler için 4-worker cluster config hazır durumda
+- 4-worker cluster üzerinde ilk resource-pressure matrix'i başarıyla koşturulmuş durumda
+- Sonuçlar repo altında saklanmış durumda
 
 Başka bir ifadeyle:
 
@@ -579,20 +637,20 @@ Başka bir ifadeyle:
 - Adım 5 için gereken parametrik policy zemini kurulmuş durumda
 - Adım 6 ve 7 için gerekli evaluation altyapısının ilk kullanışlı sürümü kurulmuş durumda
 - Adım 6 için hafif workload'lara ek olarak baskılı workload ailesi de hazırlanmış durumda
+- Adım 6 ve 7 için node-count tradeoff'u görünür hale gelmiş durumda
 
 ## 5. Sıradaki Muhtemel Adımlar
 
 Buradan sonra mantıklı ilerleme sırası şudur:
 
-1. `resource-pressure` workload'larını mevcut cluster ve 4-worker cluster üzerinde koşturmak
-2. `maxActiveNodes` metriği gerçekten ayrışıyor mu doğrulamak
-3. Fitness ölçümünü pending ve node-count tradeoff'u etrafında netleştirmek
-4. Evolutionary optimization katmanına geçmek
-5. Sonuçları tablo/grafik üretimine bağlamak
+1. Fitness ölçümünü pending ve node-count tradeoff'u etrafında netleştirmek
+2. `spread-heavy`, `packing-heavy` ve `baseline-default` politikalarını baseline ailesi olarak sabitlemek
+3. Evolutionary optimization katmanına geçmek
+4. Sonuçları tablo/grafik üretimine bağlamak
+5. Daha ileri ayrım gerekirse `load variance` ve utilization metriklerini eklemek
 
 İlk teknik iyileştirme adayları:
 
-- `resource-pressure` ailesi için 3x3xN tekrar matrisini çalıştırmak
 - Scheduler cadence etkisini ayırmak için tiny-control workload eklemek
 - Batch sonuçları tablo/grafik üretimine bağlamak
 - Evolutionary loop için population ve mutation mantığını eklemek

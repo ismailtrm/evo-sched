@@ -1,0 +1,76 @@
+=== initial 2026-03-15T09:39:01Z ===
+ready_workers=4
+scheduler_env=SCHEDULER_NAME=evok8s-scheduler;WEIGHT_FREE_CPU=1;WEIGHT_FREE_MEM=1;WEIGHT_POD_PENALTY=0.5;WEIGHT_PACKING=0.2;
+eval_namespace_pods=0
+=== before-cpu-tight-rep1 2026-03-15T09:39:01Z ===
+ready_workers=4
+scheduler_env=SCHEDULER_NAME=evok8s-scheduler;WEIGHT_FREE_CPU=1;WEIGHT_FREE_MEM=1;WEIGHT_POD_PENALTY=0.5;WEIGHT_PACKING=0.2;
+eval_namespace_pods=0
+=== after-cpu-tight-rep1 2026-03-15T09:40:36Z ===
+ready_workers=4
+scheduler_env=SCHEDULER_NAME=evok8s-scheduler;WEIGHT_FREE_CPU=1;WEIGHT_FREE_MEM=1;WEIGHT_POD_PENALTY=0.5;WEIGHT_PACKING=0.2;
+eval_namespace_pods=0
+=== before-cpu-tight-rep2 2026-03-15T09:40:36Z ===
+ready_workers=4
+scheduler_env=SCHEDULER_NAME=evok8s-scheduler;WEIGHT_FREE_CPU=1;WEIGHT_FREE_MEM=1;WEIGHT_POD_PENALTY=0.5;WEIGHT_PACKING=0.2;
+eval_namespace_pods=0
+=== after-cpu-tight-rep2 2026-03-15T09:42:14Z ===
+ready_workers=4
+scheduler_env=SCHEDULER_NAME=evok8s-scheduler;WEIGHT_FREE_CPU=1;WEIGHT_FREE_MEM=1;WEIGHT_POD_PENALTY=0.5;WEIGHT_PACKING=0.2;
+eval_namespace_pods=0
+=== before-cpu-tight-rep3 2026-03-15T09:42:14Z ===
+ready_workers=4
+scheduler_env=SCHEDULER_NAME=evok8s-scheduler;WEIGHT_FREE_CPU=1;WEIGHT_FREE_MEM=1;WEIGHT_POD_PENALTY=0.5;WEIGHT_PACKING=0.2;
+eval_namespace_pods=0
+=== after-cpu-tight-rep3 2026-03-15T09:43:49Z ===
+ready_workers=4
+scheduler_env=SCHEDULER_NAME=evok8s-scheduler;WEIGHT_FREE_CPU=1;WEIGHT_FREE_MEM=1;WEIGHT_POD_PENALTY=0.5;WEIGHT_PACKING=0.2;
+eval_namespace_pods=0
+=== before-mem-tight-rep1 2026-03-15T09:43:49Z ===
+ready_workers=4
+scheduler_env=SCHEDULER_NAME=evok8s-scheduler;WEIGHT_FREE_CPU=1;WEIGHT_FREE_MEM=1;WEIGHT_POD_PENALTY=0.5;WEIGHT_PACKING=0.2;
+eval_namespace_pods=0
+=== after-mem-tight-rep1 2026-03-15T09:45:26Z ===
+ready_workers=4
+scheduler_env=SCHEDULER_NAME=evok8s-scheduler;WEIGHT_FREE_CPU=1;WEIGHT_FREE_MEM=1;WEIGHT_POD_PENALTY=0.5;WEIGHT_PACKING=0.2;
+eval_namespace_pods=0
+=== before-mem-tight-rep2 2026-03-15T09:45:27Z ===
+ready_workers=4
+scheduler_env=SCHEDULER_NAME=evok8s-scheduler;WEIGHT_FREE_CPU=1;WEIGHT_FREE_MEM=1;WEIGHT_POD_PENALTY=0.5;WEIGHT_PACKING=0.2;
+eval_namespace_pods=0
+=== after-mem-tight-rep2 2026-03-15T09:47:02Z ===
+ready_workers=4
+scheduler_env=SCHEDULER_NAME=evok8s-scheduler;WEIGHT_FREE_CPU=1;WEIGHT_FREE_MEM=1;WEIGHT_POD_PENALTY=0.5;WEIGHT_PACKING=0.2;
+eval_namespace_pods=0
+=== before-mem-tight-rep3 2026-03-15T09:47:02Z ===
+ready_workers=4
+scheduler_env=SCHEDULER_NAME=evok8s-scheduler;WEIGHT_FREE_CPU=1;WEIGHT_FREE_MEM=1;WEIGHT_POD_PENALTY=0.5;WEIGHT_PACKING=0.2;
+eval_namespace_pods=0
+=== after-mem-tight-rep3 2026-03-15T09:48:38Z ===
+ready_workers=4
+scheduler_env=SCHEDULER_NAME=evok8s-scheduler;WEIGHT_FREE_CPU=1;WEIGHT_FREE_MEM=1;WEIGHT_POD_PENALTY=0.5;WEIGHT_PACKING=0.2;
+eval_namespace_pods=0
+=== before-fragmenting-mix-rep1 2026-03-15T09:48:38Z ===
+ready_workers=4
+scheduler_env=SCHEDULER_NAME=evok8s-scheduler;WEIGHT_FREE_CPU=1;WEIGHT_FREE_MEM=1;WEIGHT_POD_PENALTY=0.5;WEIGHT_PACKING=0.2;
+eval_namespace_pods=0
+=== after-fragmenting-mix-rep1 2026-03-15T09:50:15Z ===
+ready_workers=4
+scheduler_env=SCHEDULER_NAME=evok8s-scheduler;WEIGHT_FREE_CPU=1;WEIGHT_FREE_MEM=1;WEIGHT_POD_PENALTY=0.5;WEIGHT_PACKING=0.2;
+eval_namespace_pods=0
+=== before-fragmenting-mix-rep2 2026-03-15T09:50:15Z ===
+ready_workers=4
+scheduler_env=SCHEDULER_NAME=evok8s-scheduler;WEIGHT_FREE_CPU=1;WEIGHT_FREE_MEM=1;WEIGHT_POD_PENALTY=0.5;WEIGHT_PACKING=0.2;
+eval_namespace_pods=0
+=== after-fragmenting-mix-rep2 2026-03-15T09:51:50Z ===
+ready_workers=4
+scheduler_env=SCHEDULER_NAME=evok8s-scheduler;WEIGHT_FREE_CPU=1;WEIGHT_FREE_MEM=1;WEIGHT_POD_PENALTY=0.5;WEIGHT_PACKING=0.2;
+eval_namespace_pods=0
+=== before-fragmenting-mix-rep3 2026-03-15T09:51:50Z ===
+ready_workers=4
+scheduler_env=SCHEDULER_NAME=evok8s-scheduler;WEIGHT_FREE_CPU=1;WEIGHT_FREE_MEM=1;WEIGHT_POD_PENALTY=0.5;WEIGHT_PACKING=0.2;
+eval_namespace_pods=0
+=== after-fragmenting-mix-rep3 2026-03-15T09:53:28Z ===
+ready_workers=4
+scheduler_env=SCHEDULER_NAME=evok8s-scheduler;WEIGHT_FREE_CPU=1;WEIGHT_FREE_MEM=1;WEIGHT_POD_PENALTY=0.5;WEIGHT_PACKING=0.2;
+eval_namespace_pods=0
