@@ -23,3 +23,11 @@ spec:
           env:
             - name: SCHEDULER_NAME
               value: evok8s-scheduler
+            - name: WEIGHT_FREE_CPU
+              value: "1.0"
+            - name: WEIGHT_FREE_MEM
+              value: "1.0"
+            - name: WEIGHT_POD_PENALTY
+              value: "0.5"
+            - name: WEIGHT_PACKING
+              value: "0.2"
