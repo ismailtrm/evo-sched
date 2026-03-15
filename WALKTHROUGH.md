@@ -690,6 +690,99 @@ Sonuç:
 
 Bu düzeltme, uzun optimizer deneylerinin deployment update çakışmaları yüzünden yarıda kalma riskini belirgin biçimde azalttı.
 
+### 3.32. Danışman geri bildirimi ile araştırma yönünü netleştirdik
+
+Bu aşamada danışmandan proje kapsamı, ana objective'ler ve dönem sonu için yeterli başarı ölçütü hakkında net geri bildirim alındı.
+
+Sorulan ana sorular ve alınan cevaplar özetle şöyledir:
+
+1. Ana araştırma çıktısı ne olmalı?
+
+- Ana çıktı `Pareto front` olmalı.
+- Tek bir birleşik skor ana çıktı olarak kullanılmamalı.
+- İstenirse raporda yardımcı analiz olarak tek bir "uzlaşma skoru" verilebilir.
+
+2. Hangi metrikler ana objective olarak tutulmalı?
+
+- Ana objective'ler:
+  - `p95 pending time`
+  - `max active nodes`
+- Yardımcı metrikler:
+  - `unschedulable count/rate`
+  - `load variance` veya `utilization`
+
+3. Baseline set'i yeterli mi?
+
+- Mevcut üç baseline bu dönem için yeterli kabul edildi:
+  - `baseline-default`
+  - `spread-heavy`
+  - `packing-heavy`
+- `default kube-scheduler` ile karşılaştırma değerli bir genişletme olur, ama şu an zorunlu değil.
+
+4. Sentetik workload yeterli mi?
+
+- Evet, bu dönem için yeterli.
+- Mevcut sentetik workload'lar tekrar üretilebilir ve tradeoff'u görünür kılıyor.
+- Gerçek trace tabanlı workload, gelecekteki genişletme olarak düşünülebilir.
+
+5. Kaç tekrar yeterli?
+
+- Matrix deneyleri için `3` tekrar yeterli kabul edildi.
+- Optimizer için en az `3` seed önerildi:
+  - `42`
+  - `123`
+  - `999`
+- Zaman kalırsa `5` seed daha güçlü raporlama sağlar.
+
+6. Optimizer tarafında hedef tek çözüm mü, çözüm kümesi mi?
+
+- Hedef tek en iyi çözüm değil, `Pareto kümesi` olmalı.
+- Rapor içinde bu kümeden üç temsilci çözüm seçilmeli:
+  - pending-odaklı en iyi çözüm
+  - node-odaklı en iyi çözüm
+  - dengeli uzlaşma çözümü
+
+7. Bu dönem için makul bitiş noktası nedir?
+
+- Çalışan gerçek custom scheduler
+- Tradeoff'un deneysel olarak gösterilmesi
+- Evolutionary search ile baseline'ların ötesinde yeni Pareto noktaları bulunması
+
+8. kind üzerinde deney yapmak metodolojik olarak yeterli mi?
+
+- Evet, kontrollü ve tekrar üretilebilir Kubernetes testbed olarak yeterli kabul edildi.
+- Raporda açıkça şu sınır yazılmalı:
+  - sonuçlar metodolojik karşılaştırma içindir
+  - üretim ortamına doğrudan genelleme iddia edilmemektedir
+
+9. Raporlama ağırlığı sistem mi, optimizasyon mu olmalı?
+
+- Yaklaşık denge:
+  - `%35` sistem altyapısı
+  - `%65` optimizasyon ve deney metodolojisi
+
+10. Projedeki ana akademik değer nedir?
+
+- Ana değer: workload'a göre optimize edilen scheduling policy
+- Çarpan etkisi: bu policy'nin gerçek Kubernetes scheduler olarak çalışıyor olması
+
+Bu görüşmeden sonra netleşen kararlar şunlardır:
+
+- Ana analiz ekseni `Pareto front` olacak.
+- Ana objective set'i sabitlendi:
+  - `p95 pending time`
+  - `max active nodes`
+- Yardımcı metrikler raporda tutulacak:
+  - `unschedulable count/rate`
+  - `load variance` veya `utilization`
+- Bu dönem için sentetik workload yeterli kabul edildi.
+- Bu dönem için mevcut üç baseline yeterli kabul edildi.
+- Bu dönem için hedef, evolutionary optimizer'ın baseline'ların ötesinde yeni Pareto noktaları bulduğunu göstermek.
+- Tam optimizer değerlendirmesi en az üç seed ile koşturulacak:
+  - `42`
+  - `123`
+  - `999`
+
 ## 4. Şu Anki Durum
 
 Şu anda proje durumu şöyledir:
@@ -711,6 +804,8 @@ Bu düzeltme, uzun optimizer deneylerinin deployment update çakışmaları yüz
 - Sonuçlar repo altında saklanmış durumda
 - Optimizer iskeleti eklenmiş durumda
 - Optimizer, gerçek evaluator'ı kullanarak cluster üstünde aday değerlendirebiliyor
+- Danışman geri bildirimi ile ana objective ve raporlama yönü netleşmiş durumda
+- Tam ölçekli ilk optimizer koşusu (`seed=42`) başlatılmış durumda
 
 Başka bir ifadeyle:
 
@@ -729,17 +824,25 @@ Başka bir ifadeyle:
 
 Buradan sonra mantıklı ilerleme sırası şudur:
 
-1. Optimizer'ı üç workload birlikte çalışacak şekilde gerçek experiment modunda koşturmak
-2. Üretilen Pareto front'u baseline policy'lerle doğrudan karşılaştırmak
-3. Sonuçları tablo/grafik üretimine bağlamak
-4. Daha ileri ayrım gerekirse `load variance` ve utilization metriklerini eklemek
-5. Fitness aggregation konusunda average vs worst-case seçimini netleştirmek
+1. Tam optimizer koşularını tamamlamak:
+   - `seed=42`
+   - `seed=123`
+   - `seed=999`
+2. Her seed için Pareto front'u baseline policy'lerle doğrudan karşılaştırmak
+3. Pareto kümesinden üç temsilci çözüm seçmek:
+   - pending-odaklı en iyi
+   - node-odaklı en iyi
+   - dengeli uzlaşma çözümü
+4. Yardımcı metrikleri sonuç tablolarına eklemek:
+   - `unschedulable`
+   - `load variance` veya `utilization`
+5. Sonuçları tablo/grafik üretimine bağlamak ve rapor anlatısını kurmak
 
 İlk teknik iyileştirme adayları:
 
 - Scheduler cadence etkisini ayırmak için tiny-control workload eklemek
-- Batch sonuçları tablo/grafik üretimine bağlamak
-- Optimizer sonuçlarını repo altında tarihli experience/result klasörlerine kaydetmek
+- Yardımcı metrik olarak `load variance` veya utilization hesaplamasını evaluator'a eklemek
+- Optimizer sonuçlarını repo altında tarihli result klasörlerine kaydetmek
 
 ## 6. Bu Dosya Nasıl Kullanılmalı
 
