@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: evok8s-scheduler
+  namespace: evo-sched
+  labels:
+    app: evok8s-scheduler
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: evok8s-scheduler
+  template:
+    metadata:
+      labels:
+        app: evok8s-scheduler
+    spec:
+      serviceAccountName: evok8s-scheduler
+      containers:
+        - name: scheduler
+          image: evok8s-scheduler:0.1.0
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: SCHEDULER_NAME
+              value: evok8s-scheduler

@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: scheduler-smoke
+  namespace: default
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: scheduler-smoke
+  template:
+    metadata:
+      labels:
+        app: scheduler-smoke
+    spec:
+      schedulerName: evok8s-scheduler
+      containers:
+        - name: pause
+          image: registry.k8s.io/pause:3.10
