@@ -15,6 +15,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	apiresource "k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -402,26 +403,36 @@ func cleanupPodsBySelector(ctx context.Context, cs kubernetes.Interface, namespa
 }
 
 func applyWeights(ctx context.Context, cs kubernetes.Interface, namespace, name string, weights WeightSet) error {
-	deploy, err := cs.AppsV1().Deployments(namespace).Get(ctx, name, metav1.GetOptions{})
-	if err != nil {
-		return fmt.Errorf("get scheduler deployment: %w", err)
-	}
-	if len(deploy.Spec.Template.Spec.Containers) == 0 {
-		return fmt.Errorf("scheduler deployment has no containers")
+	var lastErr error
+	for attempt := 0; attempt < 5; attempt++ {
+		deploy, err := cs.AppsV1().Deployments(namespace).Get(ctx, name, metav1.GetOptions{})
+		if err != nil {
+			return fmt.Errorf("get scheduler deployment: %w", err)
+		}
+		if len(deploy.Spec.Template.Spec.Containers) == 0 {
+			return fmt.Errorf("scheduler deployment has no containers")
+		}
+
+		env := deploy.Spec.Template.Spec.Containers[0].Env
+		env = upsertEnv(env, "WEIGHT_FREE_CPU", fmt.Sprintf("%g", weights.FreeCPU))
+		env = upsertEnv(env, "WEIGHT_FREE_MEM", fmt.Sprintf("%g", weights.FreeMem))
+		env = upsertEnv(env, "WEIGHT_POD_PENALTY", fmt.Sprintf("%g", weights.PodPenalty))
+		env = upsertEnv(env, "WEIGHT_PACKING", fmt.Sprintf("%g", weights.Packing))
+		deploy.Spec.Template.Spec.Containers[0].Env = env
+
+		if _, err := cs.AppsV1().Deployments(namespace).Update(ctx, deploy, metav1.UpdateOptions{}); err != nil {
+			if apierrors.IsConflict(err) {
+				lastErr = err
+				time.Sleep(time.Duration(attempt+1) * 200 * time.Millisecond)
+				continue
+			}
+			return fmt.Errorf("update scheduler deployment: %w", err)
+		}
+
+		return waitForRollout(ctx, cs, namespace, name)
 	}
 
-	env := deploy.Spec.Template.Spec.Containers[0].Env
-	env = upsertEnv(env, "WEIGHT_FREE_CPU", fmt.Sprintf("%g", weights.FreeCPU))
-	env = upsertEnv(env, "WEIGHT_FREE_MEM", fmt.Sprintf("%g", weights.FreeMem))
-	env = upsertEnv(env, "WEIGHT_POD_PENALTY", fmt.Sprintf("%g", weights.PodPenalty))
-	env = upsertEnv(env, "WEIGHT_PACKING", fmt.Sprintf("%g", weights.Packing))
-	deploy.Spec.Template.Spec.Containers[0].Env = env
-
-	if _, err := cs.AppsV1().Deployments(namespace).Update(ctx, deploy, metav1.UpdateOptions{}); err != nil {
-		return fmt.Errorf("update scheduler deployment: %w", err)
-	}
-
-	return waitForRollout(ctx, cs, namespace, name)
+	return fmt.Errorf("update scheduler deployment after retries: %w", lastErr)
 }
 
 func upsertEnv(env []corev1.EnvVar, name, value string) []corev1.EnvVar {

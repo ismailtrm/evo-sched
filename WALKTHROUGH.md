@@ -661,6 +661,35 @@ Bu smoke run sonunda:
 
 Bu aşamanın amacı tam ölçekli optimization sonucu almak değil, evolutionary loop'un evaluator entegrasyonu ile cluster üstünde gerçekten çalıştığını doğrulamaktı.
 
+### 3.31. Scheduler deployment weight update akışını conflict retry ile sağlamlaştırdık
+
+İlk uzun optimizer koşusunda scheduler deployment env'leri güncellenirken ara sıra Kubernetes `resourceVersion` conflict hatası görüldü.
+
+Hata biçimi kabaca şuydu:
+
+- `Operation cannot be fulfilled on deployments.apps "evok8s-scheduler": the object has been modified`
+
+Bu durum, evaluator'ın scheduler deployment'ını `Get` edip `Update` etmesi ile deployment controller'ın aynı nesneyi eşzamanlı güncellemesi arasında yarış oluşabildiğini gösterdi.
+
+Bunu düzeltmek için [scheduler/pkg/evaluator/runner.go](./scheduler/pkg/evaluator/runner.go) içindeki `applyWeights(...)` akışı güçlendirildi:
+
+- deployment her denemede yeniden `Get` edilir
+- `Update` sırasında conflict alınırsa kısa backoff ile tekrar denenir
+- en fazla 5 denemeden sonra hata döndürülür
+
+Ardından optimizer smoke run'ı tekrar çalıştırıldı:
+
+- `go run ./cmd/optimizer --workloads ../workloads/cpu-tight.json --baseline-file ../experiments/weights-smoke.json --population 2 --generations 1 --seed 42 --timeout 120s --output /tmp/evo-optimizer-smoke-retry.json`
+
+Sonuç:
+
+- smoke run başarıyla tamamlandı
+- JSON ve CSV çıktıları üretildi
+- evaluator namespace temiz kaldı
+- scheduler weight'leri tekrar default değerlere restore edildi
+
+Bu düzeltme, uzun optimizer deneylerinin deployment update çakışmaları yüzünden yarıda kalma riskini belirgin biçimde azalttı.
+
 ## 4. Şu Anki Durum
 
 Şu anda proje durumu şöyledir:
