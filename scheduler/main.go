@@ -77,7 +77,13 @@ func tick(ctx context.Context, cs *kubernetes.Clientset, schedulerName string) e
 			continue
 		}
 
-		nodeName := chooseNode(nodes.Items, podCount)
+		candidates := filterNodesForPod(&p, nodes.Items)
+		if len(candidates) == 0 {
+			log.Printf("no feasible nodes pod=%s/%s", p.Namespace, p.Name)
+			continue
+		}
+
+		nodeName := chooseNode(candidates, podCount)
 		if nodeName == "" {
 			continue
 		}
@@ -114,6 +120,64 @@ func chooseNode(nodes []corev1.Node, podCount map[string]int) string {
 		return cands[i].count < cands[j].count
 	})
 	return cands[0].name
+}
+
+func filterNodesForPod(pod *corev1.Pod, nodes []corev1.Node) []corev1.Node {
+	out := make([]corev1.Node, 0, len(nodes))
+	for _, n := range nodes {
+		if !isNodeReady(&n) {
+			continue
+		}
+		if n.Spec.Unschedulable {
+			continue
+		}
+		if !toleratesNodeTaints(pod, &n) {
+			continue
+		}
+		out = append(out, n)
+	}
+	return out
+}
+
+func isNodeReady(node *corev1.Node) bool {
+	for _, cond := range node.Status.Conditions {
+		if cond.Type == corev1.NodeReady {
+			return cond.Status == corev1.ConditionTrue
+		}
+	}
+	return false
+}
+
+func toleratesNodeTaints(pod *corev1.Pod, node *corev1.Node) bool {
+	for _, taint := range node.Spec.Taints {
+		if taint.Effect != corev1.TaintEffectNoSchedule && taint.Effect != corev1.TaintEffectNoExecute {
+			continue
+		}
+		if !podToleratesTaint(pod, &taint) {
+			return false
+		}
+	}
+	return true
+}
+
+func podToleratesTaint(pod *corev1.Pod, taint *corev1.Taint) bool {
+	for _, tol := range pod.Spec.Tolerations {
+		if tol.Effect != "" && tol.Effect != taint.Effect {
+			continue
+		}
+
+		switch tol.Operator {
+		case corev1.TolerationOpExists:
+			if tol.Key == "" || tol.Key == taint.Key {
+				return true
+			}
+		case corev1.TolerationOpEqual, "":
+			if tol.Key == taint.Key && tol.Value == taint.Value {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func bindPod(ctx context.Context, cs *kubernetes.Clientset, p corev1.Pod, nodeName string) error {
