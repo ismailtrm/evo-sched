@@ -709,7 +709,7 @@ Sorulan ana sorular ve alınan cevaplar özetle şöyledir:
   - `max active nodes`
 - Yardımcı metrikler:
   - `unschedulable count/rate`
-  - `load variance` veya `utilization`
+  - `load variance`
 
 3. Baseline set'i yeterli mi?
 
@@ -717,7 +717,7 @@ Sorulan ana sorular ve alınan cevaplar özetle şöyledir:
   - `baseline-default`
   - `spread-heavy`
   - `packing-heavy`
-- `default kube-scheduler` ile karşılaştırma değerli bir genişletme olur, ama şu an zorunlu değil.
+- `default kube-scheduler` ile karşılaştırma değerli bir güçlendirme olur, ama bu dönem için zorunlu değil.
 
 4. Sentetik workload yeterli mi?
 
@@ -741,6 +741,8 @@ Sorulan ana sorular ve alınan cevaplar özetle şöyledir:
   - pending-odaklı en iyi çözüm
   - node-odaklı en iyi çözüm
   - dengeli uzlaşma çözümü
+- Dengeli uzlaşma çözümü için ana seçim yöntemi `knee point` olacak.
+- Gerekirse normalize edilmiş birleşik skor yalnızca ikincil doğrulama için kullanılacak.
 
 7. Bu dönem için makul bitiş noktası nedir?
 
@@ -774,10 +776,12 @@ Bu görüşmeden sonra netleşen kararlar şunlardır:
   - `max active nodes`
 - Yardımcı metrikler raporda tutulacak:
   - `unschedulable count/rate`
-  - `load variance` veya `utilization`
+  - `load variance`
 - Bu dönem için sentetik workload yeterli kabul edildi.
 - Bu dönem için mevcut üç baseline yeterli kabul edildi.
+- `default kube-scheduler` karşılaştırması opsiyonel güçlendirme olarak bırakıldı.
 - Bu dönem için hedef, evolutionary optimizer'ın baseline'ların ötesinde yeni Pareto noktaları bulduğunu göstermek.
+- Pareto içinden seçilecek dengeli temsilci çözüm `knee point` yaklaşımı ile belirlenecek.
 - Tam optimizer değerlendirmesi en az üç seed ile koşturulacak:
   - `42`
   - `123`
@@ -805,6 +809,8 @@ Bu görüşmeden sonra netleşen kararlar şunlardır:
 - Optimizer iskeleti eklenmiş durumda
 - Optimizer, gerçek evaluator'ı kullanarak cluster üstünde aday değerlendirebiliyor
 - Danışman geri bildirimi ile ana objective ve raporlama yönü netleşmiş durumda
+- Yardımcı metrik olarak `load variance` seçilmiş durumda
+- Pareto içinden dengeli temsilci çözüm için `knee point` yaklaşımı seçilmiş durumda
 - Tam ölçekli ilk optimizer koşusu (`seed=42`) başlatılmış durumda
 
 Başka bir ifadeyle:
@@ -832,16 +838,16 @@ Buradan sonra mantıklı ilerleme sırası şudur:
 3. Pareto kümesinden üç temsilci çözüm seçmek:
    - pending-odaklı en iyi
    - node-odaklı en iyi
-   - dengeli uzlaşma çözümü
+   - `knee point` ile seçilen dengeli uzlaşma çözümü
 4. Yardımcı metrikleri sonuç tablolarına eklemek:
    - `unschedulable`
-   - `load variance` veya `utilization`
+   - `load variance`
 5. Sonuçları tablo/grafik üretimine bağlamak ve rapor anlatısını kurmak
 
 İlk teknik iyileştirme adayları:
 
 - Scheduler cadence etkisini ayırmak için tiny-control workload eklemek
-- Yardımcı metrik olarak `load variance` veya utilization hesaplamasını evaluator'a eklemek
+- Yardımcı metrik olarak `load variance` hesaplamasını evaluator'a eklemek
 - Optimizer sonuçlarını repo altında tarihli result klasörlerine kaydetmek
 
 ## 6. Bu Dosya Nasıl Kullanılmalı
