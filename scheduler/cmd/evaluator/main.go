@@ -78,14 +78,19 @@ func run(opts options) error {
 		return fmt.Errorf("--weights and --weights-file cannot be used together")
 	}
 
-	workload, err := evaluator.LoadWorkload(opts.workloadPath)
+	clientset, err := newClientset()
+	if err != nil {
+		return fmt.Errorf("client init failed: %w", err)
+	}
+
+	workloadBase, err := readWorkloadBase(context.Background(), clientset)
 	if err != nil {
 		return err
 	}
 
-	clientset, err := newClientset()
+	workload, err := evaluator.LoadWorkloadWithBase(opts.workloadPath, &workloadBase)
 	if err != nil {
-		return fmt.Errorf("client init failed: %w", err)
+		return err
 	}
 
 	originalWeights, err := readDeploymentWeights(context.Background(), clientset, opts.schedulerNamespace, opts.schedulerDeployment)
@@ -110,10 +115,12 @@ func run(opts options) error {
 	}
 
 	batch := evaluator.BatchResult{
-		Workload:     workloadName(opts.workloadPath),
-		WorkloadPath: opts.workloadPath,
-		Results:      make([]evaluator.ComparisonRow, 0, len(runSpecs)),
-		Runs:         make([]evaluator.RunResult, 0, len(runSpecs)),
+		Workload:         workloadName(opts.workloadPath),
+		WorkloadPath:     opts.workloadPath,
+		WorkloadBase:     &workloadBase,
+		ResolvedWorkload: append([]evaluator.WorkloadItem(nil), workload...),
+		Results:          make([]evaluator.ComparisonRow, 0, len(runSpecs)),
+		Runs:             make([]evaluator.RunResult, 0, len(runSpecs)),
 	}
 
 	for _, spec := range runSpecs {
@@ -183,6 +190,57 @@ func readDeploymentWeights(ctx context.Context, cs *kubernetes.Clientset, namesp
 		PodPenalty: envFloat64(deploy.Spec.Template.Spec.Containers[0].Env, "WEIGHT_POD_PENALTY", 0.5),
 		Packing:    envFloat64(deploy.Spec.Template.Spec.Containers[0].Env, "WEIGHT_PACKING", 0.2),
 	}, nil
+}
+
+func readWorkloadBase(ctx context.Context, cs *kubernetes.Clientset) (evaluator.WorkloadBase, error) {
+	nodes, err := cs.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return evaluator.WorkloadBase{}, fmt.Errorf("list nodes for workload base: %w", err)
+	}
+
+	base := evaluator.WorkloadBase{}
+	for _, node := range nodes.Items {
+		if !isWorkerCandidate(&node) {
+			continue
+		}
+
+		cpuMilli := node.Status.Allocatable.Cpu().MilliValue()
+		memMiB := node.Status.Allocatable.Memory().Value() / (1024 * 1024)
+		if cpuMilli <= 0 || memMiB <= 0 {
+			continue
+		}
+
+		base.WorkerCount++
+		if base.WorkerCPUMilli == 0 || cpuMilli < base.WorkerCPUMilli {
+			base.WorkerCPUMilli = cpuMilli
+		}
+		if base.WorkerMemoryMiB == 0 || memMiB < base.WorkerMemoryMiB {
+			base.WorkerMemoryMiB = memMiB
+		}
+	}
+
+	if base.WorkerCount == 0 {
+		return evaluator.WorkloadBase{}, fmt.Errorf("no ready schedulable worker nodes found for workload base")
+	}
+	return base, nil
+}
+
+func isWorkerCandidate(node *corev1.Node) bool {
+	if _, ok := node.Labels["node-role.kubernetes.io/control-plane"]; ok {
+		return false
+	}
+	if _, ok := node.Labels["node-role.kubernetes.io/master"]; ok {
+		return false
+	}
+	if node.Spec.Unschedulable {
+		return false
+	}
+	for _, cond := range node.Status.Conditions {
+		if cond.Type == corev1.NodeReady {
+			return cond.Status == corev1.ConditionTrue
+		}
+	}
+	return false
 }
 
 func executeRun(

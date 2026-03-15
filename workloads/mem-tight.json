@@ -1,0 +1,30 @@
+[
+  {
+    "name": "mem-001",
+    "arrivalSeconds": 0,
+    "cpuFraction": 0.08,
+    "memoryFraction": 0.45,
+    "durationSeconds": 25
+  },
+  {
+    "name": "mem-002",
+    "arrivalSeconds": 0,
+    "cpuFraction": 0.08,
+    "memoryFraction": 0.45,
+    "durationSeconds": 25
+  },
+  {
+    "name": "mem-003",
+    "arrivalSeconds": 1,
+    "cpuFraction": 0.08,
+    "memoryFraction": 0.45,
+    "durationSeconds": 25
+  },
+  {
+    "name": "mem-004",
+    "arrivalSeconds": 1,
+    "cpuFraction": 0.08,
+    "memoryFraction": 0.45,
+    "durationSeconds": 25
+  }
+]

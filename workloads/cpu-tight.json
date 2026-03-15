@@ -1,0 +1,30 @@
+[
+  {
+    "name": "cpu-001",
+    "arrivalSeconds": 0,
+    "cpuFraction": 0.45,
+    "memoryFraction": 0.08,
+    "durationSeconds": 25
+  },
+  {
+    "name": "cpu-002",
+    "arrivalSeconds": 0,
+    "cpuFraction": 0.45,
+    "memoryFraction": 0.08,
+    "durationSeconds": 25
+  },
+  {
+    "name": "cpu-003",
+    "arrivalSeconds": 1,
+    "cpuFraction": 0.45,
+    "memoryFraction": 0.08,
+    "durationSeconds": 25
+  },
+  {
+    "name": "cpu-004",
+    "arrivalSeconds": 1,
+    "cpuFraction": 0.45,
+    "memoryFraction": 0.08,
+    "durationSeconds": 25
+  }
+]

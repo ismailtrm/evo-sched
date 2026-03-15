@@ -1,0 +1,44 @@
+[
+  {
+    "name": "cpu-heavy-a",
+    "arrivalSeconds": 0,
+    "cpuFraction": 0.48,
+    "memoryFraction": 0.12,
+    "durationSeconds": 25
+  },
+  {
+    "name": "cpu-heavy-b",
+    "arrivalSeconds": 0,
+    "cpuFraction": 0.48,
+    "memoryFraction": 0.12,
+    "durationSeconds": 25
+  },
+  {
+    "name": "mem-heavy-a",
+    "arrivalSeconds": 1,
+    "cpuFraction": 0.12,
+    "memoryFraction": 0.48,
+    "durationSeconds": 25
+  },
+  {
+    "name": "mem-heavy-b",
+    "arrivalSeconds": 1,
+    "cpuFraction": 0.12,
+    "memoryFraction": 0.48,
+    "durationSeconds": 25
+  },
+  {
+    "name": "balanced-a",
+    "arrivalSeconds": 2,
+    "cpuFraction": 0.28,
+    "memoryFraction": 0.28,
+    "durationSeconds": 20
+  },
+  {
+    "name": "balanced-b",
+    "arrivalSeconds": 2,
+    "cpuFraction": 0.28,
+    "memoryFraction": 0.28,
+    "durationSeconds": 20
+  }
+]

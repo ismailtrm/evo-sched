@@ -3,11 +3,19 @@ package evaluator
 import "time"
 
 type WorkloadItem struct {
-	Name            string `json:"name"`
-	ArrivalSeconds  int    `json:"arrivalSeconds"`
-	CPUMilli        int64  `json:"cpuMilli"`
-	MemoryMiB       int64  `json:"memoryMiB"`
-	DurationSeconds int    `json:"durationSeconds"`
+	Name            string  `json:"name"`
+	ArrivalSeconds  int     `json:"arrivalSeconds"`
+	CPUMilli        int64   `json:"cpuMilli"`
+	MemoryMiB       int64   `json:"memoryMiB"`
+	CPUFraction     float64 `json:"cpuFraction,omitempty"`
+	MemoryFraction  float64 `json:"memoryFraction,omitempty"`
+	DurationSeconds int     `json:"durationSeconds"`
+}
+
+type WorkloadBase struct {
+	WorkerCount     int   `json:"workerCount"`
+	WorkerCPUMilli  int64 `json:"workerCPUMilli"`
+	WorkerMemoryMiB int64 `json:"workerMemoryMiB"`
 }
 
 type WeightSet struct {
@@ -76,8 +84,10 @@ type ComparisonRow struct {
 }
 
 type BatchResult struct {
-	Workload     string          `json:"workload"`
-	WorkloadPath string          `json:"workloadPath"`
-	Results      []ComparisonRow `json:"results"`
-	Runs         []RunResult     `json:"runs,omitempty"`
+	Workload         string          `json:"workload"`
+	WorkloadPath     string          `json:"workloadPath"`
+	WorkloadBase     *WorkloadBase   `json:"workloadBase,omitempty"`
+	ResolvedWorkload []WorkloadItem  `json:"resolvedWorkload,omitempty"`
+	Results          []ComparisonRow `json:"results"`
+	Runs             []RunResult     `json:"runs,omitempty"`
 }

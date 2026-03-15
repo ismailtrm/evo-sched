@@ -454,6 +454,103 @@ Bu koşu sonunda:
 
 Bu nokta çok önemli; çünkü artık "aynı workload, farklı weight set, sabit ölçüm çıktısı" döngüsü kurulmuş oldu. Yani evaluator artık gerçek bir experiment runner davranışı sergiliyor.
 
+### 3.24. Capacity-relative workload desteği ekledik
+
+İlk 3x3 deney matrisinden sonra önemli bir sınıra ulaştık:
+
+- weight'ler pending davranışını değiştiriyor
+- fakat `maxActiveNodes` metriği mevcut cluster ve hafif workload'larda sabit kalıyor
+
+Bu nedenle workload tanımını cluster kapasitesine daha taşınabilir hale getirdik.
+
+[scheduler/pkg/evaluator/types.go](./scheduler/pkg/evaluator/types.go) ve [scheduler/pkg/evaluator/workload.go](./scheduler/pkg/evaluator/workload.go) içinde şu destek eklendi:
+
+- workload item'larında `cpuFraction`
+- workload item'larında `memoryFraction`
+- evaluator tarafında worker allocatable kapasitesinden `WorkloadBase` çıkarma
+- fractional istekleri gerçek `cpuMilli` ve `memoryMiB` değerlerine çözümleme
+
+Bu tasarımın amacı şudur:
+
+- workload dosyaları sabit makine boyutuna bağımlı kalmaz
+- aynı senaryo farklı cluster'larda yeniden üretilebilir hale gelir
+- `resource-pressure` workload'ları worker kapasitesinin yüzdesiyle ifade edilebilir
+
+Evaluator batch çıktısına artık şu bilgi de eklenir:
+
+- kullanılan `WorkloadBase`
+- resolve edilmiş gerçek workload listesi
+
+Bu sayede deney sonucu yalnızca "hangi dosya çalıştı" değil, "gerçekte hangi pod resource request'leri üretildi" bilgisini de taşır.
+
+### 3.25. Resource-pressure workload ailesini ekledik
+
+Policy farkının `active-node` ekseninde de görünmesi için yeni workload setleri eklendi:
+
+- [workloads/cpu-tight.json](./workloads/cpu-tight.json)
+- [workloads/mem-tight.json](./workloads/mem-tight.json)
+- [workloads/fragmenting-mix.json](./workloads/fragmenting-mix.json)
+
+Bu workload'lar absolute request yerine worker kapasitesinin yüzdesini kullanır.
+
+Amaçları:
+
+- `cpu-tight`: CPU baskısında packing ve spread davranışını ayırmak
+- `mem-tight`: memory baskısında aynı ayrımı görmek
+- `fragmenting-mix`: CPU-heavy ve memory-heavy pod'lar birlikteyken oluşan fragmentation riskini gözlemek
+
+Bu workload ailesi, mevcut hafif workload set'lerini çöpe atmaz; aksine onları "light-load baseline" olarak bırakır ve üstüne daha baskılı bir deney katmanı ekler.
+
+### 3.26. 4-worker kind cluster config ekledik
+
+Mevcut cluster'ı bozmadan daha geniş deneyler için ayrı bir kind config dosyası eklendi:
+
+- [kind-config-4workers.yaml](./kind-config-4workers.yaml)
+
+Bu dosya:
+
+- 1 control-plane
+- 4 worker
+
+içerir.
+
+Bu tercih şu nedenle yapıldı:
+
+- mevcut çalışan cluster'ı korumak
+- ama `packing` ile `spread` arasındaki node-count farkını daha görünür hale getirecek daha büyük bir cluster seçeneğini repo içinde hazır tutmak
+
+İstenirse yeni cluster şu mantıkla oluşturulabilir:
+
+- `kind create cluster --name evo-sched-4w --config kind-config-4workers.yaml`
+
+### 3.27. İlk fractional workload smoke run'ını yaptık
+
+Yeni capacity-relative workload formatını doğrulamak için [workloads/cpu-tight.json](./workloads/cpu-tight.json) ile evaluator çalıştırıldı.
+
+Kullanılan komut:
+
+- `go run ./cmd/evaluator --workload ../workloads/cpu-tight.json --weights-file ../experiments/weights-smoke.json --timeout 150s --output /tmp/evo-cpu-tight.json`
+
+Bu koşuda evaluator mevcut 2-worker cluster'dan şu `WorkloadBase` değerlerini çıkardı:
+
+- `workerCount=2`
+- `workerCPUMilli=16000`
+- `workerMemoryMiB=31714`
+
+Buna göre `cpu-tight` pod'ları şu gerçek request'lere çözüldü:
+
+- `cpuMilli=7200`
+- `memoryMiB=2538`
+
+Sonuç:
+
+- tüm pod'lar schedule edildi
+- tüm pod'lar tamamlandı
+- evaluator namespace temiz bırakıldı
+- scheduler weight'leri tekrar default değerlere döndü
+
+Bu smoke run'ın amacı metric farkı üretmek değil, yeni workload formatının cluster kapasitesine göre doğru çözümlendiğini doğrulamaktı.
+
 ## 4. Şu Anki Durum
 
 Şu anda proje durumu şöyledir:
@@ -468,6 +565,9 @@ Bu nokta çok önemli; çünkü artık "aynı workload, farklı weight set, sabi
 - Birden fazla weight set'i art arda koşturabilen batch evaluator mevcut
 - JSON ve CSV sonuç üretilebiliyor
 - Çoklu workload set'i tanımlanmış durumda
+- Workload'lar artık worker kapasitesine göre yüzdesel olarak tanımlanabiliyor
+- `resource-pressure` workload ailesi repo'ya eklenmiş durumda
+- Daha büyük deneyler için 4-worker cluster config hazır durumda
 
 Başka bir ifadeyle:
 
@@ -478,20 +578,22 @@ Başka bir ifadeyle:
 - Adım 4 için temel feasibility filtreleri de eklenmiş durumda
 - Adım 5 için gereken parametrik policy zemini kurulmuş durumda
 - Adım 6 ve 7 için gerekli evaluation altyapısının ilk kullanışlı sürümü kurulmuş durumda
+- Adım 6 için hafif workload'lara ek olarak baskılı workload ailesi de hazırlanmış durumda
 
 ## 5. Sıradaki Muhtemel Adımlar
 
 Buradan sonra mantıklı ilerleme sırası şudur:
 
-1. Batch evaluator sonuçlarını daha büyük workload set'lerinde toplamak
-2. Fitness ölçümünü netleştirmek
-3. Evolutionary optimization katmanına geçmek
-4. Baseline scheduler policy'leri ile karşılaştırma yapmak
+1. `resource-pressure` workload'larını mevcut cluster ve 4-worker cluster üzerinde koşturmak
+2. `maxActiveNodes` metriği gerçekten ayrışıyor mu doğrulamak
+3. Fitness ölçümünü pending ve node-count tradeoff'u etrafında netleştirmek
+4. Evolutionary optimization katmanına geçmek
 5. Sonuçları tablo/grafik üretimine bağlamak
 
 İlk teknik iyileştirme adayları:
 
-- Fitness için hangi metriklerin birleştirileceğini netleştirmek
+- `resource-pressure` ailesi için 3x3xN tekrar matrisini çalıştırmak
+- Scheduler cadence etkisini ayırmak için tiny-control workload eklemek
 - Batch sonuçları tablo/grafik üretimine bağlamak
 - Evolutionary loop için population ve mutation mantığını eklemek
 

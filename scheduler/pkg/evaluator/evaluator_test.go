@@ -31,6 +31,52 @@ func TestLoadWorkloadArray(t *testing.T) {
 	}
 }
 
+func TestLoadWorkloadWithBase(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "workload-relative.json")
+	content := `[
+	  {"name":"cpu-heavy","arrivalSeconds":0,"cpuFraction":0.5,"memoryFraction":0.25,"durationSeconds":10},
+	  {"name":"mixed","arrivalSeconds":1,"cpuMilli":300,"memoryFraction":0.1,"durationSeconds":5}
+	]`
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatalf("write workload: %v", err)
+	}
+
+	items, err := LoadWorkloadWithBase(path, &WorkloadBase{
+		WorkerCount:     4,
+		WorkerCPUMilli:  4000,
+		WorkerMemoryMiB: 8192,
+	})
+	if err != nil {
+		t.Fatalf("LoadWorkloadWithBase() error = %v", err)
+	}
+	if got, want := items[0].CPUMilli, int64(2000); got != want {
+		t.Fatalf("cpu-heavy cpu = %d, want %d", got, want)
+	}
+	if got, want := items[0].MemoryMiB, int64(2048); got != want {
+		t.Fatalf("cpu-heavy memory = %d, want %d", got, want)
+	}
+	if got, want := items[1].CPUMilli, int64(300); got != want {
+		t.Fatalf("mixed cpu = %d, want %d", got, want)
+	}
+	if got, want := items[1].MemoryMiB, int64(820); got != want {
+		t.Fatalf("mixed memory = %d, want %d", got, want)
+	}
+}
+
+func TestLoadWorkloadWithFractionsRequiresBase(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "workload-relative.json")
+	content := `[{"name":"cpu-heavy","arrivalSeconds":0,"cpuFraction":0.5,"memoryFraction":0.25,"durationSeconds":10}]`
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatalf("write workload: %v", err)
+	}
+
+	if _, err := LoadWorkload(path); err == nil {
+		t.Fatalf("LoadWorkload() expected error for fractional workload without base")
+	}
+}
+
 func TestParseWeightSet(t *testing.T) {
 	got, err := ParseWeightSet("1.0, 0.8, 0.5, 1.2")
 	if err != nil {
