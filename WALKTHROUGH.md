@@ -607,6 +607,60 @@ Pending tarafındaki okuma:
 
 Bu sonuç çok önemlidir; çünkü artık scheduler policy weight'leri hem pending hem de node kullanımında görünür tradeoff üretmektedir. Yani proje gerçekten çok hedefli scheduler optimization karakterine ulaşmıştır.
 
+### 3.29. Optimizer iskeletini ekledik
+
+Tradeoff yüzeyi deneysel olarak doğrulandıktan sonra bir sonraki doğal adım evolutionary search katmanını eklemekti.
+
+Bu amaçla:
+
+- evaluator runtime'ı [scheduler/pkg/evaluator/runner.go](./scheduler/pkg/evaluator/runner.go) içine çıkarıldı
+- [scheduler/cmd/evaluator/main.go](./scheduler/cmd/evaluator/main.go) ince bir CLI wrapper haline getirildi
+- yeni [scheduler/pkg/optimizer](./scheduler/pkg/optimizer) paketi eklendi
+- yeni [scheduler/cmd/optimizer/main.go](./scheduler/cmd/optimizer/main.go) komutu eklendi
+
+Optimizer tarafında ilk sürüm şu yapıyı kullanır:
+
+- birey: `FreeCPU`, `FreeMem`, `PodPenalty`, `Packing`
+- objective 1: workload'lar üzerindeki ortalama `p95PendingSeconds`
+- objective 2: workload'lar üzerindeki ortalama `maxActiveNodes`
+- selection: nondominated sort + crowding distance
+- variation: uniform crossover + gaussian mutation
+- elitism: NSGA-II benzeri population update
+
+Bu tasarım sayesinde optimizer artık gerçek cluster evaluator'ını doğrudan çağırabilir.
+
+Yani kavramsal olarak:
+
+- `evaluate(weights) -> {avgP95Pending, avgMaxActiveNodes}`
+
+akışı kod içinde kurulmuş oldu.
+
+Optimizer komutu baseline policy'leri de aynı çıktı içine dahil eder:
+
+- `baseline-default`
+- `spread-heavy`
+- `packing-heavy`
+
+ve bunları optimizer adaylarıyla aynı Pareto analizine koyar.
+
+### 3.30. İlk optimizer smoke run'ını yaptık
+
+Kod entegrasyonunu doğrulamak için küçük bir smoke run çalıştırıldı.
+
+Kullanılan komut:
+
+- `go run ./cmd/optimizer --workloads ../workloads/cpu-tight.json --baseline-file ../experiments/weights-smoke.json --population 2 --generations 1 --seed 42 --timeout 120s --output /tmp/evo-optimizer-smoke.json`
+
+Bu smoke run sonunda:
+
+- JSON sonuç dosyası üretildi
+- combined Pareto CSV üretildi
+- all-candidates CSV üretildi
+- evaluator namespace temiz kaldı
+- scheduler weight'leri tekrar default değerlere döndü
+
+Bu aşamanın amacı tam ölçekli optimization sonucu almak değil, evolutionary loop'un evaluator entegrasyonu ile cluster üstünde gerçekten çalıştığını doğrulamaktı.
+
 ## 4. Şu Anki Durum
 
 Şu anda proje durumu şöyledir:
@@ -626,6 +680,8 @@ Bu sonuç çok önemlidir; çünkü artık scheduler policy weight'leri hem pend
 - Daha büyük deneyler için 4-worker cluster config hazır durumda
 - 4-worker cluster üzerinde ilk resource-pressure matrix'i başarıyla koşturulmuş durumda
 - Sonuçlar repo altında saklanmış durumda
+- Optimizer iskeleti eklenmiş durumda
+- Optimizer, gerçek evaluator'ı kullanarak cluster üstünde aday değerlendirebiliyor
 
 Başka bir ifadeyle:
 
@@ -638,22 +694,23 @@ Başka bir ifadeyle:
 - Adım 6 ve 7 için gerekli evaluation altyapısının ilk kullanışlı sürümü kurulmuş durumda
 - Adım 6 için hafif workload'lara ek olarak baskılı workload ailesi de hazırlanmış durumda
 - Adım 6 ve 7 için node-count tradeoff'u görünür hale gelmiş durumda
+- Adım 8 için gerekli evolutionary loop iskeleti kurulmuş durumda
 
 ## 5. Sıradaki Muhtemel Adımlar
 
 Buradan sonra mantıklı ilerleme sırası şudur:
 
-1. Fitness ölçümünü pending ve node-count tradeoff'u etrafında netleştirmek
-2. `spread-heavy`, `packing-heavy` ve `baseline-default` politikalarını baseline ailesi olarak sabitlemek
-3. Evolutionary optimization katmanına geçmek
-4. Sonuçları tablo/grafik üretimine bağlamak
-5. Daha ileri ayrım gerekirse `load variance` ve utilization metriklerini eklemek
+1. Optimizer'ı üç workload birlikte çalışacak şekilde gerçek experiment modunda koşturmak
+2. Üretilen Pareto front'u baseline policy'lerle doğrudan karşılaştırmak
+3. Sonuçları tablo/grafik üretimine bağlamak
+4. Daha ileri ayrım gerekirse `load variance` ve utilization metriklerini eklemek
+5. Fitness aggregation konusunda average vs worst-case seçimini netleştirmek
 
 İlk teknik iyileştirme adayları:
 
 - Scheduler cadence etkisini ayırmak için tiny-control workload eklemek
 - Batch sonuçları tablo/grafik üretimine bağlamak
-- Evolutionary loop için population ve mutation mantığını eklemek
+- Optimizer sonuçlarını repo altında tarihli experience/result klasörlerine kaydetmek
 
 ## 6. Bu Dosya Nasıl Kullanılmalı
 
