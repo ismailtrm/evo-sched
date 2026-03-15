@@ -1,0 +1,58 @@
+[
+  {
+    "name": "burst-001",
+    "arrivalSeconds": 0,
+    "cpuMilli": 150,
+    "memoryMiB": 128,
+    "durationSeconds": 15
+  },
+  {
+    "name": "burst-002",
+    "arrivalSeconds": 0,
+    "cpuMilli": 150,
+    "memoryMiB": 128,
+    "durationSeconds": 15
+  },
+  {
+    "name": "burst-003",
+    "arrivalSeconds": 0,
+    "cpuMilli": 150,
+    "memoryMiB": 128,
+    "durationSeconds": 15
+  },
+  {
+    "name": "burst-004",
+    "arrivalSeconds": 1,
+    "cpuMilli": 200,
+    "memoryMiB": 192,
+    "durationSeconds": 18
+  },
+  {
+    "name": "burst-005",
+    "arrivalSeconds": 1,
+    "cpuMilli": 200,
+    "memoryMiB": 192,
+    "durationSeconds": 18
+  },
+  {
+    "name": "burst-006",
+    "arrivalSeconds": 1,
+    "cpuMilli": 200,
+    "memoryMiB": 192,
+    "durationSeconds": 18
+  },
+  {
+    "name": "burst-007",
+    "arrivalSeconds": 2,
+    "cpuMilli": 250,
+    "memoryMiB": 256,
+    "durationSeconds": 20
+  },
+  {
+    "name": "burst-008",
+    "arrivalSeconds": 2,
+    "cpuMilli": 250,
+    "memoryMiB": 256,
+    "durationSeconds": 20
+  }
+]

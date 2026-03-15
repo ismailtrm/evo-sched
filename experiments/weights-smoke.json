@@ -1,0 +1,31 @@
+{
+  "runs": [
+    {
+      "name": "baseline-default",
+      "weights": {
+        "freeCPU": 1.0,
+        "freeMem": 1.0,
+        "podPenalty": 0.5,
+        "packing": 0.2
+      }
+    },
+    {
+      "name": "spread-heavy",
+      "weights": {
+        "freeCPU": 1.4,
+        "freeMem": 1.4,
+        "podPenalty": 1.0,
+        "packing": 0.0
+      }
+    },
+    {
+      "name": "packing-heavy",
+      "weights": {
+        "freeCPU": 0.5,
+        "freeMem": 0.5,
+        "podPenalty": 0.2,
+        "packing": 1.3
+      }
+    }
+  ]
+}

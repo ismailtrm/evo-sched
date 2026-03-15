@@ -17,6 +17,15 @@ type WeightSet struct {
 	Packing    float64 `json:"packing"`
 }
 
+type ExperimentRunSpec struct {
+	Name    string    `json:"name"`
+	Weights WeightSet `json:"weights"`
+}
+
+type ExperimentSpec struct {
+	Runs []ExperimentRunSpec `json:"runs"`
+}
+
 type PodTiming struct {
 	Name                string     `json:"name"`
 	CreatedAt           *time.Time `json:"createdAt,omitempty"`
@@ -40,6 +49,7 @@ type Summary struct {
 }
 
 type RunResult struct {
+	Name        string      `json:"name"`
 	RunID       string      `json:"runId"`
 	Namespace   string      `json:"namespace"`
 	Scheduler   string      `json:"schedulerName"`
@@ -51,4 +61,23 @@ type RunResult struct {
 	Pods        []PodTiming `json:"pods"`
 	ActiveNodes map[int]int `json:"activeNodesBySample"`
 	Notes       []string    `json:"notes,omitempty"`
+}
+
+type ComparisonRow struct {
+	Name               string    `json:"name"`
+	Weights            WeightSet `json:"weights"`
+	ScheduledCount     int       `json:"scheduledCount"`
+	CompletedCount     int       `json:"completedCount"`
+	UnschedulableCount int       `json:"unschedulableCount"`
+	AveragePending     float64   `json:"averagePendingSeconds"`
+	P95Pending         float64   `json:"p95PendingSeconds"`
+	MaxActiveNodes     int       `json:"maxActiveNodes"`
+	Notes              []string  `json:"notes,omitempty"`
+}
+
+type BatchResult struct {
+	Workload     string          `json:"workload"`
+	WorkloadPath string          `json:"workloadPath"`
+	Results      []ComparisonRow `json:"results"`
+	Runs         []RunResult     `json:"runs,omitempty"`
 }

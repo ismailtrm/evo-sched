@@ -402,6 +402,58 @@ Sonuç:
 
 Bu, scheduler'ın artık yalnızca çalışan bir sistem değil, aynı zamanda ölçülebilen ve karşılaştırılabilen bir deney nesnesine dönüştüğünü gösterir.
 
+### 3.21. Evaluator'ı batch experiment runner'a çevirdik
+
+Tek koşuluk evaluator, birden fazla weight set'i aynı workload üzerinde art arda koşturabilecek şekilde genişletildi.
+
+Bu amaçla şu eklemeler yapıldı:
+
+- `--weights-file` desteği
+- tek JSON içinde çoklu run sonucu üretme
+- CSV karşılaştırma çıktısı üretme
+- her run öncesi evaluator namespace temizleme
+- her run öncesi scheduler weight patch + rollout wait
+- batch sonunda scheduler'ı başlangıç weight'lerine geri döndürme
+
+Yeni giriş dosyası formatı için [experiments/weights-smoke.json](./experiments/weights-smoke.json) eklendi.
+
+Bu dosya üç baseline policy içerir:
+
+- `baseline-default`
+- `spread-heavy`
+- `packing-heavy`
+
+### 3.22. Workload set'ini genişlettik
+
+İlk `uniform-small` workload'una ek olarak iki yeni workload daha tanımlandı:
+
+- [workloads/mixed-batchy.json](./workloads/mixed-batchy.json)
+- [workloads/bursty.json](./workloads/bursty.json)
+
+Bu sayede evaluator artık sadece tek tip küçük pod'larla değil, farklı boyutlar ve daha ani yük desenleriyle de çalıştırılabilir.
+
+### 3.23. Batch smoke experiment yaptık
+
+İlk batch doğrulama için şu komut kullanıldı:
+
+- `go run ./cmd/evaluator --workload ../workloads/uniform-small.json --weights-file ../experiments/weights-smoke.json --timeout 90s --output /tmp/evo-batch.json`
+
+Bu koşu sonunda:
+
+- JSON sonuç dosyası üretildi
+- CSV karşılaştırma dosyası üretildi
+- Üç farklı weight set aynı workload üzerinde art arda koşturuldu
+- Evaluator namespace temiz bırakıldı
+- Scheduler deployment weight'leri tekrar default değerlerine döndürüldü
+
+Örnek özet çıktı:
+
+- `baseline-default`: `avgPending=1.0`, `p95Pending=1.85`, `maxActiveNodes=2`
+- `spread-heavy`: `avgPending=1.5`, `p95Pending=2.0`, `maxActiveNodes=2`
+- `packing-heavy`: `avgPending=1.5`, `p95Pending=2.0`, `maxActiveNodes=2`
+
+Bu nokta çok önemli; çünkü artık "aynı workload, farklı weight set, sabit ölçüm çıktısı" döngüsü kurulmuş oldu. Yani evaluator artık gerçek bir experiment runner davranışı sergiliyor.
+
 ## 4. Şu Anki Durum
 
 Şu anda proje durumu şöyledir:
@@ -413,7 +465,9 @@ Bu, scheduler'ın artık yalnızca çalışan bir sistem değil, aynı zamanda �
 - Scheduler artık parametreli bir skor fonksiyonu ile node seçiyor
 - Skor ağırlıkları env üzerinden değiştirilebiliyor
 - Resource fit kontrolü scoring akışına dahil edilmiş durumda
-- Tek workload / tek weight set için metrik üreten evaluator iskeleti mevcut
+- Birden fazla weight set'i art arda koşturabilen batch evaluator mevcut
+- JSON ve CSV sonuç üretilebiliyor
+- Çoklu workload set'i tanımlanmış durumda
 
 Başka bir ifadeyle:
 
@@ -423,23 +477,23 @@ Başka bir ifadeyle:
 - Adım 4 ilk başarılı smoke test seviyesiyle tamam
 - Adım 4 için temel feasibility filtreleri de eklenmiş durumda
 - Adım 5 için gereken parametrik policy zemini kurulmuş durumda
-- Adım 6 ve 7 için gerekli ilk evaluation altyapısı kurulmuş durumda
+- Adım 6 ve 7 için gerekli evaluation altyapısının ilk kullanışlı sürümü kurulmuş durumda
 
 ## 5. Sıradaki Muhtemel Adımlar
 
 Buradan sonra mantıklı ilerleme sırası şudur:
 
-1. Batch evaluator yazmak ve birden fazla weight set'i tek komutla koşturmak
-2. Workload set'ini genişletmek
-3. Fitness ölçümünü netleştirmek
-4. Evolutionary optimization katmanına geçmek
-5. Baseline scheduler policy'leri ile karşılaştırma yapmak
+1. Batch evaluator sonuçlarını daha büyük workload set'lerinde toplamak
+2. Fitness ölçümünü netleştirmek
+3. Evolutionary optimization katmanına geçmek
+4. Baseline scheduler policy'leri ile karşılaştırma yapmak
+5. Sonuçları tablo/grafik üretimine bağlamak
 
 İlk teknik iyileştirme adayları:
 
-- Batch sonuçları CSV/JSON olarak toplamak
-- `mixed` ve `bursty` workload dosyaları eklemek
-- Weight denemelerini otomatik çalıştıracak harness hazırlamak
+- Fitness için hangi metriklerin birleştirileceğini netleştirmek
+- Batch sonuçları tablo/grafik üretimine bağlamak
+- Evolutionary loop için population ve mutation mantığını eklemek
 
 ## 6. Bu Dosya Nasıl Kullanılmalı
 

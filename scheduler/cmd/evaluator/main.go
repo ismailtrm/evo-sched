@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -25,6 +26,8 @@ import (
 	"evok8s-scheduler/pkg/evaluator"
 )
 
+const managedPodsSelector = "app=evo-sched-eval,evo-sched/managed=true"
+
 type options struct {
 	workloadPath        string
 	namespace           string
@@ -33,7 +36,9 @@ type options struct {
 	schedulerName       string
 	image               string
 	outputPath          string
+	csvOutputPath       string
 	weights             string
+	weightsFile         string
 	pollInterval        time.Duration
 	timeout             time.Duration
 	cleanup             bool
@@ -55,10 +60,12 @@ func parseFlags() options {
 	flag.StringVar(&opts.schedulerName, "scheduler-name", "evok8s-scheduler", "schedulerName set on generated pods")
 	flag.StringVar(&opts.image, "image", "busybox:1.36.1", "Container image for evaluator-created pods")
 	flag.StringVar(&opts.outputPath, "output", "", "Optional output JSON path")
-	flag.StringVar(&opts.weights, "weights", "", "Optional weights in FreeCPU,FreeMem,PodPenalty,Packing order")
+	flag.StringVar(&opts.csvOutputPath, "csv-output", "", "Optional CSV output path; defaults next to --output")
+	flag.StringVar(&opts.weights, "weights", "", "Optional single run weights in FreeCPU,FreeMem,PodPenalty,Packing order")
+	flag.StringVar(&opts.weightsFile, "weights-file", "", "Optional JSON file describing named experiment runs")
 	flag.DurationVar(&opts.pollInterval, "poll-interval", 1*time.Second, "Polling interval for pod state collection")
-	flag.DurationVar(&opts.timeout, "timeout", 0, "Optional overall timeout; defaults from workload length")
-	flag.BoolVar(&opts.cleanup, "cleanup", true, "Delete evaluator pods after run")
+	flag.DurationVar(&opts.timeout, "timeout", 0, "Per-run timeout; defaults from workload length")
+	flag.BoolVar(&opts.cleanup, "cleanup", true, "Delete evaluator pods after each run")
 	flag.Parse()
 	return opts
 }
@@ -66,6 +73,9 @@ func parseFlags() options {
 func run(opts options) error {
 	if opts.workloadPath == "" {
 		return fmt.Errorf("--workload is required")
+	}
+	if opts.weights != "" && opts.weightsFile != "" {
+		return fmt.Errorf("--weights and --weights-file cannot be used together")
 	}
 
 	workload, err := evaluator.LoadWorkload(opts.workloadPath)
@@ -78,95 +88,88 @@ func run(opts options) error {
 		return fmt.Errorf("client init failed: %w", err)
 	}
 
-	weights, err := resolveWeights(context.Background(), clientset, opts)
+	originalWeights, err := readDeploymentWeights(context.Background(), clientset, opts.schedulerNamespace, opts.schedulerDeployment)
 	if err != nil {
 		return err
+	}
+	if opts.weights != "" || opts.weightsFile != "" {
+		defer func() {
+			if err := applyWeights(context.Background(), clientset, opts.schedulerNamespace, opts.schedulerDeployment, originalWeights); err != nil {
+				log.Printf("restore scheduler weights error: %v", err)
+			}
+		}()
 	}
 
 	if err := ensureNamespace(context.Background(), clientset, opts.namespace); err != nil {
 		return err
 	}
-	if opts.weights != "" {
-		if err := applyWeights(context.Background(), clientset, opts.schedulerNamespace, opts.schedulerDeployment, weights); err != nil {
-			return err
-		}
-	}
 
-	timeout := opts.timeout
-	if timeout <= 0 {
-		timeout = estimatedTimeout(workload)
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
-
-	runID := fmt.Sprintf("eval-%d", time.Now().Unix())
-	startedAt := time.Now().UTC()
-	selector := labelSelector(runID)
-	results := make(map[string]*evaluator.PodTiming, len(workload))
-	for _, item := range workload {
-		results[item.Name] = &evaluator.PodTiming{Name: item.Name}
-	}
-
-	var maxActiveNodes atomic.Int64
-	var creatorDone atomic.Bool
-	activeSamples := map[int]int{}
-	var mu sync.Mutex
-	doneCh := make(chan error, 1)
-
-	go func() {
-		doneCh <- monitorPods(ctx, clientset, opts.namespace, selector, results, &mu, &maxActiveNodes, activeSamples, &creatorDone, len(workload))
-	}()
-
-	for _, item := range workload {
-		if err := waitUntilArrival(ctx, startedAt, item.ArrivalSeconds); err != nil {
-			return err
-		}
-		if err := createWorkloadPod(ctx, clientset, opts, runID, item, results[item.Name]); err != nil {
-			return err
-		}
-	}
-	creatorDone.Store(true)
-
-	monitorErr := <-doneCh
-	finishedAt := time.Now().UTC()
-	if opts.cleanup {
-		if err := deleteRunPods(context.Background(), clientset, opts.namespace, selector); err != nil {
-			log.Printf("cleanup error: %v", err)
-		}
-	}
-
-	pods := flattenResults(results)
-	sort.Slice(pods, func(i, j int) bool { return pods[i].Name < pods[j].Name })
-	result := evaluator.RunResult{
-		RunID:       runID,
-		Namespace:   opts.namespace,
-		Scheduler:   opts.schedulerName,
-		Workload:    opts.workloadPath,
-		Weights:     weights,
-		StartedAt:   startedAt,
-		FinishedAt:  finishedAt,
-		Summary:     evaluator.SummarizePods(pods, int(maxActiveNodes.Load())),
-		Pods:        pods,
-		ActiveNodes: activeSamples,
-	}
-	if monitorErr != nil {
-		result.Notes = append(result.Notes, monitorErr.Error())
-	}
-
-	if err := emitResult(result, opts.outputPath); err != nil {
+	runSpecs, err := loadRunSpecs(opts, originalWeights)
+	if err != nil {
 		return err
 	}
 
-	return monitorErr
-}
-
-func resolveWeights(ctx context.Context, cs *kubernetes.Clientset, opts options) (evaluator.WeightSet, error) {
-	if opts.weights != "" {
-		return evaluator.ParseWeightSet(opts.weights)
+	batch := evaluator.BatchResult{
+		Workload:     workloadName(opts.workloadPath),
+		WorkloadPath: opts.workloadPath,
+		Results:      make([]evaluator.ComparisonRow, 0, len(runSpecs)),
+		Runs:         make([]evaluator.RunResult, 0, len(runSpecs)),
 	}
 
-	deploy, err := cs.AppsV1().Deployments(opts.schedulerNamespace).Get(ctx, opts.schedulerDeployment, metav1.GetOptions{})
+	for _, spec := range runSpecs {
+		log.Printf("starting experiment run name=%s weights=%+v", spec.Name, spec.Weights)
+
+		if err := cleanupManagedPods(context.Background(), clientset, opts.namespace); err != nil {
+			return err
+		}
+		if err := applyWeights(context.Background(), clientset, opts.schedulerNamespace, opts.schedulerDeployment, spec.Weights); err != nil {
+			return err
+		}
+
+		runResult, err := executeRun(clientset, opts, workload, spec)
+		if err != nil {
+			batch.Runs = append(batch.Runs, runResult)
+			batch.Results = append(batch.Results, evaluator.ComparisonRowFromRun(runResult))
+			if emitErr := emitOutputs(batch, opts); emitErr != nil {
+				return emitErr
+			}
+			return err
+		}
+
+		batch.Runs = append(batch.Runs, runResult)
+		batch.Results = append(batch.Results, evaluator.ComparisonRowFromRun(runResult))
+	}
+
+	return emitOutputs(batch, opts)
+}
+
+func loadRunSpecs(opts options, current evaluator.WeightSet) ([]evaluator.ExperimentRunSpec, error) {
+	if opts.weightsFile != "" {
+		spec, err := evaluator.LoadExperiment(opts.weightsFile)
+		if err != nil {
+			return nil, err
+		}
+		return spec.Runs, nil
+	}
+
+	name := "current-deployment"
+	weights := current
+	if opts.weights != "" {
+		name = "cli-weights"
+		var err error
+		weights, err = evaluator.ParseWeightSet(opts.weights)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return []evaluator.ExperimentRunSpec{
+		{Name: name, Weights: weights},
+	}, nil
+}
+
+func readDeploymentWeights(ctx context.Context, cs *kubernetes.Clientset, namespace, deployment string) (evaluator.WeightSet, error) {
+	deploy, err := cs.AppsV1().Deployments(namespace).Get(ctx, deployment, metav1.GetOptions{})
 	if err != nil {
 		return evaluator.WeightSet{}, fmt.Errorf("get scheduler deployment for weights: %w", err)
 	}
@@ -182,6 +185,102 @@ func resolveWeights(ctx context.Context, cs *kubernetes.Clientset, opts options)
 	}, nil
 }
 
+func executeRun(
+	cs *kubernetes.Clientset,
+	opts options,
+	workload []evaluator.WorkloadItem,
+	spec evaluator.ExperimentRunSpec,
+) (evaluator.RunResult, error) {
+	timeout := opts.timeout
+	if timeout <= 0 {
+		timeout = estimatedTimeout(workload)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	runID := makeRunID(spec.Name)
+	startedAt := time.Now().UTC()
+	selector := runSelector(runID)
+	results := make(map[string]*evaluator.PodTiming, len(workload))
+	for _, item := range workload {
+		results[item.Name] = &evaluator.PodTiming{Name: item.Name}
+	}
+
+	var maxActiveNodes atomic.Int64
+	var creatorDone atomic.Bool
+	activeSamples := map[int]int{}
+	var mu sync.Mutex
+	doneCh := make(chan error, 1)
+
+	go func() {
+		doneCh <- monitorPods(
+			ctx,
+			cs,
+			opts.namespace,
+			selector,
+			opts.pollInterval,
+			results,
+			&mu,
+			&maxActiveNodes,
+			activeSamples,
+			&creatorDone,
+			len(workload),
+		)
+	}()
+
+	for _, item := range workload {
+		if err := waitUntilArrival(ctx, startedAt, item.ArrivalSeconds); err != nil {
+			return emptyRunResult(opts, spec, startedAt), err
+		}
+		if err := createWorkloadPod(ctx, cs, opts, runID, item, results[item.Name]); err != nil {
+			return emptyRunResult(opts, spec, startedAt), err
+		}
+	}
+	creatorDone.Store(true)
+
+	monitorErr := <-doneCh
+	finishedAt := time.Now().UTC()
+	if opts.cleanup {
+		if err := cleanupPodsBySelector(context.Background(), cs, opts.namespace, selector); err != nil {
+			log.Printf("cleanup error for run=%s: %v", spec.Name, err)
+		}
+	}
+
+	pods := flattenResults(results)
+	sort.Slice(pods, func(i, j int) bool { return pods[i].Name < pods[j].Name })
+	runResult := evaluator.RunResult{
+		Name:        spec.Name,
+		RunID:       runID,
+		Namespace:   opts.namespace,
+		Scheduler:   opts.schedulerName,
+		Workload:    opts.workloadPath,
+		Weights:     spec.Weights,
+		StartedAt:   startedAt,
+		FinishedAt:  finishedAt,
+		Summary:     evaluator.SummarizePods(pods, int(maxActiveNodes.Load())),
+		Pods:        pods,
+		ActiveNodes: activeSamples,
+	}
+	if monitorErr != nil {
+		runResult.Notes = append(runResult.Notes, monitorErr.Error())
+	}
+
+	return runResult, monitorErr
+}
+
+func emptyRunResult(opts options, spec evaluator.ExperimentRunSpec, startedAt time.Time) evaluator.RunResult {
+	return evaluator.RunResult{
+		Name:       spec.Name,
+		Namespace:  opts.namespace,
+		Scheduler:  opts.schedulerName,
+		Workload:   opts.workloadPath,
+		Weights:    spec.Weights,
+		StartedAt:  startedAt,
+		FinishedAt: time.Now().UTC(),
+	}
+}
+
 func ensureNamespace(ctx context.Context, cs *kubernetes.Clientset, name string) error {
 	if _, err := cs.CoreV1().Namespaces().Get(ctx, name, metav1.GetOptions{}); err == nil {
 		return nil
@@ -193,6 +292,37 @@ func ensureNamespace(ctx context.Context, cs *kubernetes.Clientset, name string)
 		return fmt.Errorf("ensure namespace %s: %w", name, err)
 	}
 	return nil
+}
+
+func cleanupManagedPods(ctx context.Context, cs *kubernetes.Clientset, namespace string) error {
+	return cleanupPodsBySelector(ctx, cs, namespace, managedPodsSelector)
+}
+
+func cleanupPodsBySelector(ctx context.Context, cs *kubernetes.Clientset, namespace, selector string) error {
+	deletePolicy := metav1.DeletePropagationBackground
+	if err := cs.CoreV1().Pods(namespace).DeleteCollection(ctx, metav1.DeleteOptions{
+		PropagationPolicy: &deletePolicy,
+	}, metav1.ListOptions{LabelSelector: selector}); err != nil {
+		return fmt.Errorf("delete pods selector=%s: %w", selector, err)
+	}
+
+	ticker := time.NewTicker(500 * time.Millisecond)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("wait cleanup selector=%s: %w", selector, ctx.Err())
+		case <-ticker.C:
+			pods, err := cs.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{LabelSelector: selector})
+			if err != nil {
+				return fmt.Errorf("list pods during cleanup: %w", err)
+			}
+			if len(pods.Items) == 0 {
+				return nil
+			}
+		}
+	}
 }
 
 func applyWeights(ctx context.Context, cs *kubernetes.Clientset, namespace, name string, weights evaluator.WeightSet) error {
@@ -357,6 +487,7 @@ func monitorPods(
 	ctx context.Context,
 	cs *kubernetes.Clientset,
 	namespace, selector string,
+	pollInterval time.Duration,
 	results map[string]*evaluator.PodTiming,
 	mu *sync.Mutex,
 	maxActiveNodes *atomic.Int64,
@@ -364,7 +495,7 @@ func monitorPods(
 	creatorDone *atomic.Bool,
 	expected int,
 ) error {
-	ticker := time.NewTicker(1 * time.Second)
+	ticker := time.NewTicker(pollInterval)
 	defer ticker.Stop()
 
 	sample := 0
@@ -458,8 +589,24 @@ func updateTiming(result *evaluator.PodTiming, pod *corev1.Pod) {
 	}
 }
 
-func emitResult(result evaluator.RunResult, outputPath string) error {
-	data, err := json.MarshalIndent(result, "", "  ")
+func emitOutputs(batch evaluator.BatchResult, opts options) error {
+	if err := emitJSON(batch, opts.outputPath); err != nil {
+		return err
+	}
+
+	csvPath := deriveCSVOutputPath(opts)
+	if csvPath == "" {
+		return nil
+	}
+	if err := evaluator.WriteComparisonCSV(csvPath, batch.Results); err != nil {
+		return err
+	}
+	log.Printf("wrote evaluator csv to %s", csvPath)
+	return nil
+}
+
+func emitJSON(batch evaluator.BatchResult, outputPath string) error {
+	data, err := json.MarshalIndent(batch, "", "  ")
 	if err != nil {
 		return fmt.Errorf("marshal result: %w", err)
 	}
@@ -474,15 +621,22 @@ func emitResult(result evaluator.RunResult, outputPath string) error {
 	return nil
 }
 
-func deleteRunPods(ctx context.Context, cs *kubernetes.Clientset, namespace, selector string) error {
-	deletePolicy := metav1.DeletePropagationBackground
-	return cs.CoreV1().Pods(namespace).DeleteCollection(ctx, metav1.DeleteOptions{
-		PropagationPolicy: &deletePolicy,
-	}, metav1.ListOptions{LabelSelector: selector})
+func deriveCSVOutputPath(opts options) string {
+	if opts.csvOutputPath != "" {
+		return opts.csvOutputPath
+	}
+	if opts.outputPath == "" {
+		return ""
+	}
+	ext := filepath.Ext(opts.outputPath)
+	if ext == "" {
+		return opts.outputPath + ".csv"
+	}
+	return strings.TrimSuffix(opts.outputPath, ext) + ".csv"
 }
 
-func labelSelector(runID string) string {
-	return fmt.Sprintf("app=evo-sched-eval,evo-sched/run-id=%s", runID)
+func runSelector(runID string) string {
+	return fmt.Sprintf("%s,evo-sched/run-id=%s", managedPodsSelector, runID)
 }
 
 func flattenResults(results map[string]*evaluator.PodTiming) []evaluator.PodTiming {
@@ -493,6 +647,32 @@ func flattenResults(results map[string]*evaluator.PodTiming) []evaluator.PodTimi
 		}
 	}
 	return out
+}
+
+func workloadName(path string) string {
+	base := filepath.Base(path)
+	ext := filepath.Ext(base)
+	return strings.TrimSuffix(base, ext)
+}
+
+func makeRunID(name string) string {
+	var b strings.Builder
+	b.WriteString("eval-")
+	for _, r := range strings.ToLower(name) {
+		switch {
+		case r >= 'a' && r <= 'z':
+			b.WriteRune(r)
+		case r >= '0' && r <= '9':
+			b.WriteRune(r)
+		default:
+			b.WriteRune('-')
+		}
+	}
+	runID := strings.Trim(b.String(), "-")
+	if len(runID) > 40 {
+		runID = runID[:40]
+	}
+	return fmt.Sprintf("%s-%d", runID, time.Now().Unix())
 }
 
 func isTerminalPhase(phase corev1.PodPhase) bool {

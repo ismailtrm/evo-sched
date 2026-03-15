@@ -3,6 +3,7 @@ package evaluator
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -38,6 +39,63 @@ func TestParseWeightSet(t *testing.T) {
 	want := WeightSet{FreeCPU: 1.0, FreeMem: 0.8, PodPenalty: 0.5, Packing: 1.2}
 	if got != want {
 		t.Fatalf("ParseWeightSet() = %+v, want %+v", got, want)
+	}
+}
+
+func TestLoadExperiment(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "weights.json")
+	content := `{
+	  "runs": [
+	    {"name":"baseline","weights":{"freeCPU":1.0,"freeMem":1.0,"podPenalty":0.5,"packing":0.2}},
+	    {"name":"packing-heavy","weights":{"freeCPU":0.5,"freeMem":0.5,"podPenalty":0.2,"packing":1.2}}
+	  ]
+	}`
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatalf("write experiment: %v", err)
+	}
+
+	spec, err := LoadExperiment(path)
+	if err != nil {
+		t.Fatalf("LoadExperiment() error = %v", err)
+	}
+	if len(spec.Runs) != 2 {
+		t.Fatalf("expected 2 runs, got %d", len(spec.Runs))
+	}
+	if spec.Runs[1].Name != "packing-heavy" {
+		t.Fatalf("unexpected second run: %+v", spec.Runs[1])
+	}
+}
+
+func TestWriteComparisonCSV(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "result.csv")
+	rows := []ComparisonRow{
+		{
+			Name:               "baseline",
+			Weights:            WeightSet{FreeCPU: 1, FreeMem: 1, PodPenalty: 0.5, Packing: 0.2},
+			ScheduledCount:     4,
+			CompletedCount:     4,
+			UnschedulableCount: 0,
+			AveragePending:     1.5,
+			P95Pending:         2.0,
+			MaxActiveNodes:     2,
+		},
+	}
+
+	if err := WriteComparisonCSV(path, rows); err != nil {
+		t.Fatalf("WriteComparisonCSV() error = %v", err)
+	}
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read csv: %v", err)
+	}
+	content := string(data)
+	if !strings.Contains(content, "run_name,free_cpu,free_mem,pod_penalty,packing") {
+		t.Fatalf("missing csv header: %s", content)
+	}
+	if !strings.Contains(content, "baseline,1,1,0.5,0.2,4,4,0,1.500000,2.000000,2,") {
+		t.Fatalf("missing csv row: %s", content)
 	}
 }
 

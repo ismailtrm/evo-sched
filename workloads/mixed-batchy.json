@@ -1,0 +1,44 @@
+[
+  {
+    "name": "small-a",
+    "arrivalSeconds": 0,
+    "cpuMilli": 100,
+    "memoryMiB": 64,
+    "durationSeconds": 12
+  },
+  {
+    "name": "medium-a",
+    "arrivalSeconds": 0,
+    "cpuMilli": 300,
+    "memoryMiB": 256,
+    "durationSeconds": 18
+  },
+  {
+    "name": "large-a",
+    "arrivalSeconds": 1,
+    "cpuMilli": 600,
+    "memoryMiB": 512,
+    "durationSeconds": 20
+  },
+  {
+    "name": "small-b",
+    "arrivalSeconds": 2,
+    "cpuMilli": 100,
+    "memoryMiB": 64,
+    "durationSeconds": 12
+  },
+  {
+    "name": "medium-b",
+    "arrivalSeconds": 2,
+    "cpuMilli": 300,
+    "memoryMiB": 256,
+    "durationSeconds": 18
+  },
+  {
+    "name": "large-b",
+    "arrivalSeconds": 3,
+    "cpuMilli": 600,
+    "memoryMiB": 512,
+    "durationSeconds": 20
+  }
+]
