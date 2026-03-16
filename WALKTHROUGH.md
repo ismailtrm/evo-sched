@@ -874,6 +874,50 @@ Bu nedenle bu seed için çıkarılan ana araştırma cümlesi şudur:
   - düşük pending / yüksek node kullanımı
   - daha düşük node kullanımı / biraz daha yüksek pending
 
+### 3.34. Optimizer hiperparametrelerini makul başlangıç varsayımları olarak tuttuk
+
+Bu çalışmada evolutionary optimizer hiperparametreleri ayrı bir tuning problemi olarak ele alınmamıştır.
+
+Başka bir ifadeyle, bu projede optimize edilen şey scheduler policy weight'leridir:
+
+- `FreeCPU`
+- `FreeMem`
+- `PodPenalty`
+- `Packing`
+
+Buna karşılık optimizer tarafındaki bazı seçimler sabit başlangıç varsayımları olarak tutulmuştur:
+
+- offspring üretiminde `uniform crossover`
+- her offspring için crossover uygulanması
+- her gen için mutasyon olasılığı `0.8`
+- Gauss gürültüsü ölçeği `0.25`
+- weight aralığı için clamp sınırları `0.0` ile `2.0`
+
+Bu seçimler rastgele yapılmamıştır; problem yapısına göre makul ilk varsayımlar olarak seçilmiştir.
+
+Seçim mantığı şöyledir:
+
+- arama uzayı küçüktür; yalnızca `4` weight optimize edilmektedir
+- buna karşılık her evaluation gerçek cluster üzerinde pahalıdır
+- bu nedenle sınırlı sayıda aday ile yeterli keşif yapılması gerekir
+- erken daralmayı önlemek için mutasyon görece yüksek tutulmuştur
+- `sigma = 0.25`, `[0, 2]` aralığında ne çok küçük ne de aşırı yıkıcı bir adım büyüklüğü vermektedir
+
+Bu nedenle mevcut optimizer ayarları şu şekilde yorumlanmalıdır:
+
+- bunlar nihai olarak tune edilmiş en iyi hyperparameter set'i değildir
+- ilk deneyler için kararlı ve savunulabilir başlangıç ayarlarıdır
+
+Bu not rapor açısından önemlidir; çünkü burada ana araştırma değişkeninin optimizer hiperparametreleri değil, scheduling policy weight'leri olduğu açıkça ortaya konmuş olur.
+
+Gelecekteki doğal genişletme:
+
+- `mutation rate`
+- `mutation sigma`
+- farklı crossover / offspring üretim stratejileri
+
+için ayrı bir sensitivity analysis yapılmasıdır.
+
 ## 4. Şu Anki Durum
 
 Şu anda proje durumu şöyledir:
@@ -938,6 +982,7 @@ Buradan sonra mantıklı ilerleme sırası şudur:
 - Scheduler cadence etkisini ayırmak için tiny-control workload eklemek
 - Yardımcı metrik olarak `load variance` hesaplamasını evaluator'a eklemek
 - Farklı bireylerin aynı objective noktasına çökmesini dikkate alarak raporlamayı benzersiz Pareto noktaları üzerinden yapmak
+- Optimizer hiperparametreleri için ayrı sensitivity analysis yapmak
 
 ## 6. Bu Dosya Nasıl Kullanılmalı
 
