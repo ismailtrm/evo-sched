@@ -1,0 +1,4446 @@
+{
+  "startedAt": "2026-03-15T12:36:22.932518049Z",
+  "finishedAt": "2026-03-15T14:32:36.844619383Z",
+  "config": {
+    "populationSize": 12,
+    "generations": 5,
+    "mutationRate": 0.8,
+    "mutationSigma": 0.25,
+    "minWeight": 0,
+    "maxWeight": 2,
+    "seed": 42,
+    "workloads": [
+      "../workloads/cpu-tight.json",
+      "../workloads/mem-tight.json",
+      "../workloads/fragmenting-mix.json"
+    ]
+  },
+  "baselines": [
+    {
+      "id": "baseline-baseline-default",
+      "name": "baseline-default",
+      "source": "baseline",
+      "generation": 0,
+      "weights": {
+        "freeCPU": 1,
+        "freeMem": 1,
+        "podPenalty": 0.5,
+        "packing": 0.2
+      },
+      "objectives": {
+        "averageP95Pending": 1.6666666666666667,
+        "averageMaxActiveNodes": 4
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 1.5,
+          "p95PendingSeconds": 2,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 1.5,
+          "p95PendingSeconds": 2,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 0.6666666666666666,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 0,
+      "crowdingDistance": 0
+    },
+    {
+      "id": "baseline-spread-heavy",
+      "name": "spread-heavy",
+      "source": "baseline",
+      "generation": 0,
+      "weights": {
+        "freeCPU": 1.4,
+        "freeMem": 1.4,
+        "podPenalty": 1,
+        "packing": 0
+      },
+      "objectives": {
+        "averageP95Pending": 1,
+        "averageMaxActiveNodes": 4
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 0.6666666666666666,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 0,
+      "crowdingDistance": 0
+    },
+    {
+      "id": "baseline-packing-heavy",
+      "name": "packing-heavy",
+      "source": "baseline",
+      "generation": 0,
+      "weights": {
+        "freeCPU": 0.5,
+        "freeMem": 0.5,
+        "podPenalty": 0.2,
+        "packing": 1.3
+      },
+      "objectives": {
+        "averageP95Pending": 1,
+        "averageMaxActiveNodes": 2.3333333333333335
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 2,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 2,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 0.6666666666666666,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 3,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 0,
+      "crowdingDistance": 0
+    }
+  ],
+  "evaluated": [
+    {
+      "id": "initial-init-001",
+      "name": "init-001",
+      "source": "initial",
+      "generation": 0,
+      "weights": {
+        "freeCPU": 0.7460567220932652,
+        "freeMem": 0.13200099358703582,
+        "podPenalty": 1.208187703117284,
+        "packing": 0.41763740610931827
+      },
+      "objectives": {
+        "averageP95Pending": 1.6666666666666667,
+        "averageMaxActiveNodes": 4
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 1.5,
+          "p95PendingSeconds": 2,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 1.5,
+          "p95PendingSeconds": 2,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 0.6666666666666666,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 0,
+      "crowdingDistance": 0
+    },
+    {
+      "id": "initial-init-002",
+      "name": "init-002",
+      "source": "initial",
+      "generation": 0,
+      "weights": {
+        "freeCPU": 0.08763691719874861,
+        "freeMem": 0.7663865998447713,
+        "podPenalty": 1.6257542718487574,
+        "packing": 0.7688916998889231
+      },
+      "objectives": {
+        "averageP95Pending": 1,
+        "averageMaxActiveNodes": 4
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 0.6666666666666666,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 0,
+      "crowdingDistance": 0
+    },
+    {
+      "id": "initial-init-003",
+      "name": "init-003",
+      "source": "initial",
+      "generation": 0,
+      "weights": {
+        "freeCPU": 0.7660893060994326,
+        "freeMem": 1.2927527012115978,
+        "podPenalty": 1.4712586346581376,
+        "packing": 0.4358831491512456
+      },
+      "objectives": {
+        "averageP95Pending": 1,
+        "averageMaxActiveNodes": 4
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 0.6666666666666666,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 0,
+      "crowdingDistance": 0
+    },
+    {
+      "id": "initial-init-004",
+      "name": "init-004",
+      "source": "initial",
+      "generation": 0,
+      "weights": {
+        "freeCPU": 0.7233655224610864,
+        "freeMem": 0.24247619165139775,
+        "podPenalty": 1.3280218953690182,
+        "packing": 0.9324072425549008
+      },
+      "objectives": {
+        "averageP95Pending": 1,
+        "averageMaxActiveNodes": 3.3333333333333335
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 3,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 3,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 0.3333333333333333,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 0,
+      "crowdingDistance": 0
+    },
+    {
+      "id": "initial-init-005",
+      "name": "init-005",
+      "source": "initial",
+      "generation": 0,
+      "weights": {
+        "freeCPU": 1.4247317357661993,
+        "freeMem": 1.4318121609594034,
+        "podPenalty": 1.8833424291046237,
+        "packing": 1.941561237274634
+      },
+      "objectives": {
+        "averageP95Pending": 1,
+        "averageMaxActiveNodes": 4
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 0.6666666666666666,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 0,
+      "crowdingDistance": 0
+    },
+    {
+      "id": "initial-init-006",
+      "name": "init-006",
+      "source": "initial",
+      "generation": 0,
+      "weights": {
+        "freeCPU": 0.23866359352746597,
+        "freeMem": 0.6803338732802682,
+        "podPenalty": 0.5731782361649926,
+        "packing": 0.45424446024800263
+      },
+      "objectives": {
+        "averageP95Pending": 1.6666666666666667,
+        "averageMaxActiveNodes": 3.6666666666666665
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 3,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 1.5,
+          "p95PendingSeconds": 2,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 1.6666666666666667,
+          "p95PendingSeconds": 2,
+          "maxActiveNodes": 4,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 0,
+      "crowdingDistance": 0
+    },
+    {
+      "id": "initial-init-007",
+      "name": "init-007",
+      "source": "initial",
+      "generation": 0,
+      "weights": {
+        "freeCPU": 1.305124297784445,
+        "freeMem": 0.08395580742890735,
+        "podPenalty": 1.853576863212626,
+        "packing": 0.25992367364756475
+      },
+      "objectives": {
+        "averageP95Pending": 1,
+        "averageMaxActiveNodes": 4
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 0.6666666666666666,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 0,
+      "crowdingDistance": 0
+    },
+    {
+      "id": "initial-init-008",
+      "name": "init-008",
+      "source": "initial",
+      "generation": 0,
+      "weights": {
+        "freeCPU": 0.9015169994482076,
+        "freeMem": 0.42219523281687776,
+        "podPenalty": 0.7346905605014362,
+        "packing": 1.443424357469087
+      },
+      "objectives": {
+        "averageP95Pending": 1,
+        "averageMaxActiveNodes": 3
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 3,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 3,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 0.6666666666666666,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 3,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 0,
+      "crowdingDistance": 0
+    },
+    {
+      "id": "initial-init-009",
+      "name": "init-009",
+      "source": "initial",
+      "generation": 0,
+      "weights": {
+        "freeCPU": 1.7852337248524397,
+        "freeMem": 1.9946439285659185,
+        "podPenalty": 0.14057348429712624,
+        "packing": 1.9469599227913144
+      },
+      "objectives": {
+        "averageP95Pending": 1,
+        "averageMaxActiveNodes": 4
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 0.6666666666666666,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 0,
+      "crowdingDistance": 0
+    },
+    {
+      "id": "initial-init-010",
+      "name": "init-010",
+      "source": "initial",
+      "generation": 0,
+      "weights": {
+        "freeCPU": 1.8734801324956485,
+        "freeMem": 1.7117688134214517,
+        "podPenalty": 0.3031609322877566,
+        "packing": 1.254488255009794
+      },
+      "objectives": {
+        "averageP95Pending": 1.2833333333333332,
+        "averageMaxActiveNodes": 4
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 1,
+          "p95PendingSeconds": 1.8499999999999996,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 0.6666666666666666,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 0,
+      "crowdingDistance": 0
+    },
+    {
+      "id": "initial-init-011",
+      "name": "init-011",
+      "source": "initial",
+      "generation": 0,
+      "weights": {
+        "freeCPU": 1.4864171253798832,
+        "freeMem": 1.5119178101151585,
+        "podPenalty": 0.5104335253315946,
+        "packing": 0.11369321555978339
+      },
+      "objectives": {
+        "averageP95Pending": 1,
+        "averageMaxActiveNodes": 4
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 0.6666666666666666,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 0,
+      "crowdingDistance": 0
+    },
+    {
+      "id": "initial-init-012",
+      "name": "init-012",
+      "source": "initial",
+      "generation": 0,
+      "weights": {
+        "freeCPU": 1.4089509251286312,
+        "freeMem": 1.1436990574530157,
+        "podPenalty": 1.6692208075833,
+        "packing": 1.087165934009002
+      },
+      "objectives": {
+        "averageP95Pending": 2.283333333333333,
+        "averageMaxActiveNodes": 3.6666666666666665
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 2.25,
+          "p95PendingSeconds": 2.8499999999999996,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 1.5,
+          "p95PendingSeconds": 2,
+          "maxActiveNodes": 3,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 1.6666666666666667,
+          "p95PendingSeconds": 2,
+          "maxActiveNodes": 4,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 0,
+      "crowdingDistance": 0
+    },
+    {
+      "id": "offspring-gen-01-001",
+      "name": "gen-01-001",
+      "source": "offspring",
+      "generation": 1,
+      "weights": {
+        "freeCPU": 1.7436985065812018,
+        "freeMem": 1.7086474637835865,
+        "podPenalty": 1.3280218953690182,
+        "packing": 1.1138882744627152
+      },
+      "objectives": {
+        "averageP95Pending": 1.9166666666666667,
+        "averageMaxActiveNodes": 4
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 1.5,
+          "p95PendingSeconds": 2,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 1.5,
+          "p95PendingSeconds": 2,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 1,
+          "p95PendingSeconds": 1.75,
+          "maxActiveNodes": 4,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 0,
+      "crowdingDistance": 0
+    },
+    {
+      "id": "offspring-gen-01-002",
+      "name": "gen-01-002",
+      "source": "offspring",
+      "generation": 1,
+      "weights": {
+        "freeCPU": 1.2415709399633241,
+        "freeMem": 0.24247619165139775,
+        "podPenalty": 0.265564767980752,
+        "packing": 0.9972958318243712
+      },
+      "objectives": {
+        "averageP95Pending": 1,
+        "averageMaxActiveNodes": 3.6666666666666665
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 3,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 0.6666666666666666,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 0,
+      "crowdingDistance": 0
+    },
+    {
+      "id": "offspring-gen-01-003",
+      "name": "gen-01-003",
+      "source": "offspring",
+      "generation": 1,
+      "weights": {
+        "freeCPU": 0.7233655224610864,
+        "freeMem": 0.4407588969415645,
+        "podPenalty": 1.4710683133239635,
+        "packing": 0.9324072425549008
+      },
+      "objectives": {
+        "averageP95Pending": 1,
+        "averageMaxActiveNodes": 4
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 0.6666666666666666,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 0,
+      "crowdingDistance": 0
+    },
+    {
+      "id": "offspring-gen-01-004",
+      "name": "gen-01-004",
+      "source": "offspring",
+      "generation": 1,
+      "weights": {
+        "freeCPU": 0.8833322104288345,
+        "freeMem": 0.31634858484879763,
+        "podPenalty": 0.7346905605014362,
+        "packing": 1.443424357469087
+      },
+      "objectives": {
+        "averageP95Pending": 1.6166666666666665,
+        "averageMaxActiveNodes": 3.3333333333333335
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 1,
+          "p95PendingSeconds": 1.8499999999999996,
+          "maxActiveNodes": 3,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 3,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 1.6666666666666667,
+          "p95PendingSeconds": 2,
+          "maxActiveNodes": 4,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 0,
+      "crowdingDistance": 0
+    },
+    {
+      "id": "offspring-gen-01-005",
+      "name": "gen-01-005",
+      "source": "offspring",
+      "generation": 1,
+      "weights": {
+        "freeCPU": 1.305124297784445,
+        "freeMem": 0.6782637046428184,
+        "podPenalty": 0.834379064143985,
+        "packing": 1.443424357469087
+      },
+      "objectives": {
+        "averageP95Pending": 1.3333333333333333,
+        "averageMaxActiveNodes": 4
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 1.5,
+          "p95PendingSeconds": 2,
+          "maxActiveNodes": 4,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 0,
+      "crowdingDistance": 0
+    },
+    {
+      "id": "offspring-gen-01-006",
+      "name": "gen-01-006",
+      "source": "offspring",
+      "generation": 1,
+      "weights": {
+        "freeCPU": 1.197009238458343,
+        "freeMem": 0.3540986596139696,
+        "podPenalty": 2,
+        "packing": 0.4358831491512456
+      },
+      "objectives": {
+        "averageP95Pending": 1.5333333333333332,
+        "averageMaxActiveNodes": 3.3333333333333335
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 1.25,
+          "p95PendingSeconds": 1.8499999999999996,
+          "maxActiveNodes": 3,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 3,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 1,
+          "p95PendingSeconds": 1.75,
+          "maxActiveNodes": 4,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 0,
+      "crowdingDistance": 0
+    },
+    {
+      "id": "offspring-gen-01-007",
+      "name": "gen-01-007",
+      "source": "offspring",
+      "generation": 1,
+      "weights": {
+        "freeCPU": 1.3121951245757597,
+        "freeMem": 0.08395580742890735,
+        "podPenalty": 1.8008251581237722,
+        "packing": 0.31313804823165076
+      },
+      "objectives": {
+        "averageP95Pending": 1.3333333333333333,
+        "averageMaxActiveNodes": 3.6666666666666665
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 3,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 1.3333333333333333,
+          "p95PendingSeconds": 2,
+          "maxActiveNodes": 4,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 0,
+      "crowdingDistance": 0
+    },
+    {
+      "id": "offspring-gen-01-008",
+      "name": "gen-01-008",
+      "source": "offspring",
+      "generation": 1,
+      "weights": {
+        "freeCPU": 0.9015169994482076,
+        "freeMem": 0.3292129889588775,
+        "podPenalty": 1.4899811685258193,
+        "packing": 1.3641640779345907
+      },
+      "objectives": {
+        "averageP95Pending": 1.3333333333333333,
+        "averageMaxActiveNodes": 4
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 1.5,
+          "p95PendingSeconds": 2,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 0.6666666666666666,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 0,
+      "crowdingDistance": 0
+    },
+    {
+      "id": "offspring-gen-01-009",
+      "name": "gen-01-009",
+      "source": "offspring",
+      "generation": 1,
+      "weights": {
+        "freeCPU": 0.9015169994482076,
+        "freeMem": 1.4494424708676237,
+        "podPenalty": 1.2043860354018838,
+        "packing": 1.3474693336020778
+      },
+      "objectives": {
+        "averageP95Pending": 1.3333333333333333,
+        "averageMaxActiveNodes": 4
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 1.3333333333333333,
+          "p95PendingSeconds": 2,
+          "maxActiveNodes": 4,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 0,
+      "crowdingDistance": 0
+    },
+    {
+      "id": "offspring-gen-01-010",
+      "name": "gen-01-010",
+      "source": "offspring",
+      "generation": 1,
+      "weights": {
+        "freeCPU": 1.8723348161666173,
+        "freeMem": 2,
+        "podPenalty": 0.556455857901035,
+        "packing": 1.445093223571409
+      },
+      "objectives": {
+        "averageP95Pending": 1,
+        "averageMaxActiveNodes": 4
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 0.6666666666666666,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 0,
+      "crowdingDistance": 0
+    },
+    {
+      "id": "offspring-gen-01-011",
+      "name": "gen-01-011",
+      "source": "offspring",
+      "generation": 1,
+      "weights": {
+        "freeCPU": 0.7384332199828075,
+        "freeMem": 1.9133138704546209,
+        "podPenalty": 0.5104335253315946,
+        "packing": 0.5016566128586208
+      },
+      "objectives": {
+        "averageP95Pending": 1,
+        "averageMaxActiveNodes": 4
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 0.6666666666666666,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 0,
+      "crowdingDistance": 0
+    },
+    {
+      "id": "offspring-gen-01-012",
+      "name": "gen-01-012",
+      "source": "offspring",
+      "generation": 1,
+      "weights": {
+        "freeCPU": 0.08763691719874861,
+        "freeMem": 1.3525399632818154,
+        "podPenalty": 1.8013537231728112,
+        "packing": 1.0154719876247296
+      },
+      "objectives": {
+        "averageP95Pending": 1.3333333333333333,
+        "averageMaxActiveNodes": 4
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 1.3333333333333333,
+          "p95PendingSeconds": 2,
+          "maxActiveNodes": 4,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 0,
+      "crowdingDistance": 0
+    },
+    {
+      "id": "offspring-gen-02-001",
+      "name": "gen-02-001",
+      "source": "offspring",
+      "generation": 2,
+      "weights": {
+        "freeCPU": 0.46175038835579685,
+        "freeMem": 0.7023067809809882,
+        "podPenalty": 1.4710683133239635,
+        "packing": 1.443424357469087
+      },
+      "objectives": {
+        "averageP95Pending": 1,
+        "averageMaxActiveNodes": 3
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 3,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 3,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 0.6666666666666666,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 3,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 0,
+      "crowdingDistance": 0
+    },
+    {
+      "id": "offspring-gen-02-002",
+      "name": "gen-02-002",
+      "source": "offspring",
+      "generation": 2,
+      "weights": {
+        "freeCPU": 0.7604948021564787,
+        "freeMem": 0.4504202648914018,
+        "podPenalty": 1.1522435149167105,
+        "packing": 1.413855639808303
+      },
+      "objectives": {
+        "averageP95Pending": 1,
+        "averageMaxActiveNodes": 4
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 0.6666666666666666,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 0,
+      "crowdingDistance": 0
+    },
+    {
+      "id": "offspring-gen-02-003",
+      "name": "gen-02-003",
+      "source": "offspring",
+      "generation": 2,
+      "weights": {
+        "freeCPU": 0.5557007284982216,
+        "freeMem": 1.8091266580452334,
+        "podPenalty": 1.0925307849805272,
+        "packing": 1.440219048666576
+      },
+      "objectives": {
+        "averageP95Pending": 1,
+        "averageMaxActiveNodes": 4
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 0.6666666666666666,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 0,
+      "crowdingDistance": 0
+    },
+    {
+      "id": "offspring-gen-02-004",
+      "name": "gen-02-004",
+      "source": "offspring",
+      "generation": 2,
+      "weights": {
+        "freeCPU": 1.6167661800533202,
+        "freeMem": 1.7512438542813058,
+        "podPenalty": 1.3712450419015225,
+        "packing": 1.941561237274634
+      },
+      "objectives": {
+        "averageP95Pending": 1,
+        "averageMaxActiveNodes": 4
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 0.6666666666666666,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 0,
+      "crowdingDistance": 0
+    },
+    {
+      "id": "offspring-gen-02-005",
+      "name": "gen-02-005",
+      "source": "offspring",
+      "generation": 2,
+      "weights": {
+        "freeCPU": 0.5684575628726276,
+        "freeMem": 0.055095305935418976,
+        "podPenalty": 1.0147231376748127,
+        "packing": 0.3347185007889687
+      },
+      "objectives": {
+        "averageP95Pending": 1,
+        "averageMaxActiveNodes": 4
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 0.6666666666666666,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 0,
+      "crowdingDistance": 0
+    },
+    {
+      "id": "offspring-gen-02-006",
+      "name": "gen-02-006",
+      "source": "offspring",
+      "generation": 2,
+      "weights": {
+        "freeCPU": 0,
+        "freeMem": 0.05937178154558423,
+        "podPenalty": 2,
+        "packing": 0.6732057003401295
+      },
+      "objectives": {
+        "averageP95Pending": 1,
+        "averageMaxActiveNodes": 3
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 3,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 3,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 0.6666666666666666,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 3,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 0,
+      "crowdingDistance": 0
+    },
+    {
+      "id": "offspring-gen-02-007",
+      "name": "gen-02-007",
+      "source": "offspring",
+      "generation": 2,
+      "weights": {
+        "freeCPU": 1.4247317357661993,
+        "freeMem": 0.4583249440240864,
+        "podPenalty": 1.5250916425471153,
+        "packing": 0.7688916998889231
+      },
+      "objectives": {
+        "averageP95Pending": 1,
+        "averageMaxActiveNodes": 4
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 0.6666666666666666,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 0,
+      "crowdingDistance": 0
+    },
+    {
+      "id": "offspring-gen-02-008",
+      "name": "gen-02-008",
+      "source": "offspring",
+      "generation": 2,
+      "weights": {
+        "freeCPU": 0.9871714697134685,
+        "freeMem": 0.4767325293560613,
+        "podPenalty": 2,
+        "packing": 1.4263362737134342
+      },
+      "objectives": {
+        "averageP95Pending": 1,
+        "averageMaxActiveNodes": 3.3333333333333335
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 3,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 3,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 0.6666666666666666,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 0,
+      "crowdingDistance": 0
+    },
+    {
+      "id": "offspring-gen-02-009",
+      "name": "gen-02-009",
+      "source": "offspring",
+      "generation": 2,
+      "weights": {
+        "freeCPU": 0.7888511612515974,
+        "freeMem": 1.12246721124697,
+        "podPenalty": 2,
+        "packing": 0.9051298519075195
+      },
+      "objectives": {
+        "averageP95Pending": 1.3333333333333333,
+        "averageMaxActiveNodes": 4
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 1.3333333333333333,
+          "p95PendingSeconds": 2,
+          "maxActiveNodes": 4,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 0,
+      "crowdingDistance": 0
+    },
+    {
+      "id": "offspring-gen-02-010",
+      "name": "gen-02-010",
+      "source": "offspring",
+      "generation": 2,
+      "weights": {
+        "freeCPU": 0.7233655224610864,
+        "freeMem": 0.8269266124193895,
+        "podPenalty": 1.4710683133239635,
+        "packing": 0.7199921506767075
+      },
+      "objectives": {
+        "averageP95Pending": 1.2833333333333332,
+        "averageMaxActiveNodes": 4
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 1,
+          "p95PendingSeconds": 1.8499999999999996,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 0.6666666666666666,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 0,
+      "crowdingDistance": 0
+    },
+    {
+      "id": "offspring-gen-02-011",
+      "name": "gen-02-011",
+      "source": "offspring",
+      "generation": 2,
+      "weights": {
+        "freeCPU": 0.25588954310692325,
+        "freeMem": 0.44223182918238724,
+        "podPenalty": 1.9475709072054963,
+        "packing": 1.1952309466571966
+      },
+      "objectives": {
+        "averageP95Pending": 1.3333333333333333,
+        "averageMaxActiveNodes": 4
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 1.8333333333333333,
+          "p95PendingSeconds": 2,
+          "maxActiveNodes": 4,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 0,
+      "crowdingDistance": 0
+    },
+    {
+      "id": "offspring-gen-02-012",
+      "name": "gen-02-012",
+      "source": "offspring",
+      "generation": 2,
+      "weights": {
+        "freeCPU": 1.1211481256505595,
+        "freeMem": 0.11961121968504174,
+        "podPenalty": 0.7346905605014362,
+        "packing": 0.9677656664173628
+      },
+      "objectives": {
+        "averageP95Pending": 1.3333333333333333,
+        "averageMaxActiveNodes": 4
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 1.6666666666666667,
+          "p95PendingSeconds": 2,
+          "maxActiveNodes": 4,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 0,
+      "crowdingDistance": 0
+    },
+    {
+      "id": "offspring-gen-03-001",
+      "name": "gen-03-001",
+      "source": "offspring",
+      "generation": 3,
+      "weights": {
+        "freeCPU": 0.6973418237333355,
+        "freeMem": 0.7359255561477708,
+        "podPenalty": 0.7346905605014362,
+        "packing": 1.5695051130729225
+      },
+      "objectives": {
+        "averageP95Pending": 1.3333333333333333,
+        "averageMaxActiveNodes": 4
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 1.5,
+          "p95PendingSeconds": 2,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 0.6666666666666666,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 0,
+      "crowdingDistance": 0
+    },
+    {
+      "id": "offspring-gen-03-002",
+      "name": "gen-03-002",
+      "source": "offspring",
+      "generation": 3,
+      "weights": {
+        "freeCPU": 1.3535813761317526,
+        "freeMem": 0.24247619165139775,
+        "podPenalty": 0.265564767980752,
+        "packing": 0.86582031374635
+      },
+      "objectives": {
+        "averageP95Pending": 1,
+        "averageMaxActiveNodes": 4
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 0.6666666666666666,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 0,
+      "crowdingDistance": 0
+    },
+    {
+      "id": "offspring-gen-03-003",
+      "name": "gen-03-003",
+      "source": "offspring",
+      "generation": 3,
+      "weights": {
+        "freeCPU": 1.123009007235515,
+        "freeMem": 0.661438123710308,
+        "podPenalty": 1.5046744417917588,
+        "packing": 1.3268433964156685
+      },
+      "objectives": {
+        "averageP95Pending": 1,
+        "averageMaxActiveNodes": 4
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 0.6666666666666666,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 0,
+      "crowdingDistance": 0
+    },
+    {
+      "id": "offspring-gen-03-004",
+      "name": "gen-03-004",
+      "source": "offspring",
+      "generation": 3,
+      "weights": {
+        "freeCPU": 1.4834777488193271,
+        "freeMem": 0.4767325293560613,
+        "podPenalty": 2,
+        "packing": 1.1150026381998022
+      },
+      "objectives": {
+        "averageP95Pending": 1,
+        "averageMaxActiveNodes": 4
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 0.6666666666666666,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 0,
+      "crowdingDistance": 0
+    },
+    {
+      "id": "offspring-gen-03-005",
+      "name": "gen-03-005",
+      "source": "offspring",
+      "generation": 3,
+      "weights": {
+        "freeCPU": 0.9170382931618941,
+        "freeMem": 0.6241106161702533,
+        "podPenalty": 2,
+        "packing": 1.6520505345579517
+      },
+      "objectives": {
+        "averageP95Pending": 1,
+        "averageMaxActiveNodes": 4
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 0.6666666666666666,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 0,
+      "crowdingDistance": 0
+    },
+    {
+      "id": "offspring-gen-03-006",
+      "name": "gen-03-006",
+      "source": "offspring",
+      "generation": 3,
+      "weights": {
+        "freeCPU": 0.7233655224610864,
+        "freeMem": 0.17268810320796119,
+        "podPenalty": 0.7970255941587647,
+        "packing": 1.3189229615827327
+      },
+      "objectives": {
+        "averageP95Pending": 1.3333333333333333,
+        "averageMaxActiveNodes": 3.3333333333333335
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 1.5,
+          "p95PendingSeconds": 2,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 2,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 0.6666666666666666,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 0,
+      "crowdingDistance": 0
+    },
+    {
+      "id": "offspring-gen-03-007",
+      "name": "gen-03-007",
+      "source": "offspring",
+      "generation": 3,
+      "weights": {
+        "freeCPU": 0,
+        "freeMem": 0.7023067809809882,
+        "podPenalty": 0.6530475118467414,
+        "packing": 1.5244028828161
+      },
+      "objectives": {
+        "averageP95Pending": 1.3333333333333333,
+        "averageMaxActiveNodes": 3.3333333333333335
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 2,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 1.5,
+          "p95PendingSeconds": 2,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 0.6666666666666666,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 0,
+      "crowdingDistance": 0
+    },
+    {
+      "id": "offspring-gen-03-008",
+      "name": "gen-03-008",
+      "source": "offspring",
+      "generation": 3,
+      "weights": {
+        "freeCPU": 1.2149862240823908,
+        "freeMem": 0.24247619165139775,
+        "podPenalty": 1.943023853927738,
+        "packing": 1.3716134094185284
+      },
+      "objectives": {
+        "averageP95Pending": 0.6666666666666666,
+        "averageMaxActiveNodes": 4
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 0,
+          "p95PendingSeconds": 0,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 0.6666666666666666,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 0,
+      "crowdingDistance": 0
+    },
+    {
+      "id": "offspring-gen-03-009",
+      "name": "gen-03-009",
+      "source": "offspring",
+      "generation": 3,
+      "weights": {
+        "freeCPU": 1.0310684573498912,
+        "freeMem": 0.5135249966889104,
+        "podPenalty": 0.873049088846322,
+        "packing": 1.443424357469087
+      },
+      "objectives": {
+        "averageP95Pending": 0.6666666666666666,
+        "averageMaxActiveNodes": 4
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 0,
+          "p95PendingSeconds": 0,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 0.6666666666666666,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 0,
+      "crowdingDistance": 0
+    },
+    {
+      "id": "offspring-gen-03-010",
+      "name": "gen-03-010",
+      "source": "offspring",
+      "generation": 3,
+      "weights": {
+        "freeCPU": 0.9871714697134685,
+        "freeMem": 0.570923018633082,
+        "podPenalty": 2,
+        "packing": 1.162568019829779
+      },
+      "objectives": {
+        "averageP95Pending": 1.6666666666666667,
+        "averageMaxActiveNodes": 3.3333333333333335
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 3,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 1.5,
+          "p95PendingSeconds": 2,
+          "maxActiveNodes": 3,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 1.3333333333333333,
+          "p95PendingSeconds": 2,
+          "maxActiveNodes": 4,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 0,
+      "crowdingDistance": 0
+    },
+    {
+      "id": "offspring-gen-03-011",
+      "name": "gen-03-011",
+      "source": "offspring",
+      "generation": 3,
+      "weights": {
+        "freeCPU": 0.9015169994482076,
+        "freeMem": 0.022163002317443253,
+        "podPenalty": 1.2800229331318742,
+        "packing": 0.9324072425549008
+      },
+      "objectives": {
+        "averageP95Pending": 1.3333333333333333,
+        "averageMaxActiveNodes": 4
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 1.6666666666666667,
+          "p95PendingSeconds": 2,
+          "maxActiveNodes": 4,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 0,
+      "crowdingDistance": 0
+    },
+    {
+      "id": "offspring-gen-03-012",
+      "name": "gen-03-012",
+      "source": "offspring",
+      "generation": 3,
+      "weights": {
+        "freeCPU": 0.998734140432318,
+        "freeMem": 0.7479058776544069,
+        "podPenalty": 1.469210093837491,
+        "packing": 1.092984551431972
+      },
+      "objectives": {
+        "averageP95Pending": 1,
+        "averageMaxActiveNodes": 3.3333333333333335
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 3,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 3,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 0.6666666666666666,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 0,
+      "crowdingDistance": 0
+    },
+    {
+      "id": "offspring-gen-04-001",
+      "name": "gen-04-001",
+      "source": "offspring",
+      "generation": 4,
+      "weights": {
+        "freeCPU": 0.34474061085501884,
+        "freeMem": 1.173970453009959,
+        "podPenalty": 0.8713494196017875,
+        "packing": 1.5244028828161
+      },
+      "objectives": {
+        "averageP95Pending": 1,
+        "averageMaxActiveNodes": 4
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 0.6666666666666666,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 0,
+      "crowdingDistance": 0
+    },
+    {
+      "id": "offspring-gen-04-002",
+      "name": "gen-04-002",
+      "source": "offspring",
+      "generation": 4,
+      "weights": {
+        "freeCPU": 1.5472732595390597,
+        "freeMem": 0.3476799857707722,
+        "podPenalty": 0.873049088846322,
+        "packing": 1.6175935557842867
+      },
+      "objectives": {
+        "averageP95Pending": 1,
+        "averageMaxActiveNodes": 4
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 0.6666666666666666,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 0,
+      "crowdingDistance": 0
+    },
+    {
+      "id": "offspring-gen-04-003",
+      "name": "gen-04-003",
+      "source": "offspring",
+      "generation": 4,
+      "weights": {
+        "freeCPU": 0.01515718867047865,
+        "freeMem": 0.4560469942757185,
+        "podPenalty": 0.9284245219121119,
+        "packing": 1.1987396908514198
+      },
+      "objectives": {
+        "averageP95Pending": 1,
+        "averageMaxActiveNodes": 2.6666666666666665
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 2,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 3,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 0.6666666666666666,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 3,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 0,
+      "crowdingDistance": 0
+    },
+    {
+      "id": "offspring-gen-04-004",
+      "name": "gen-04-004",
+      "source": "offspring",
+      "generation": 4,
+      "weights": {
+        "freeCPU": 0.5831939377707579,
+        "freeMem": 0.38112212141062757,
+        "podPenalty": 0.873049088846322,
+        "packing": 1.1120989836065738
+      },
+      "objectives": {
+        "averageP95Pending": 1.3333333333333333,
+        "averageMaxActiveNodes": 4
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 1.5,
+          "p95PendingSeconds": 2,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 0.6666666666666666,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 0,
+      "crowdingDistance": 0
+    },
+    {
+      "id": "offspring-gen-04-005",
+      "name": "gen-04-005",
+      "source": "offspring",
+      "generation": 4,
+      "weights": {
+        "freeCPU": 0.2665739612158329,
+        "freeMem": 0.07137634523222888,
+        "podPenalty": 2,
+        "packing": 0.907067826985283
+      },
+      "objectives": {
+        "averageP95Pending": 1,
+        "averageMaxActiveNodes": 3
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 3,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 3,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 0.6666666666666666,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 3,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 0,
+      "crowdingDistance": 0
+    },
+    {
+      "id": "offspring-gen-04-006",
+      "name": "gen-04-006",
+      "source": "offspring",
+      "generation": 4,
+      "weights": {
+        "freeCPU": 0.7712342690179298,
+        "freeMem": 0.8411796799010833,
+        "podPenalty": 0.873049088846322,
+        "packing": 1.0654976158267928
+      },
+      "objectives": {
+        "averageP95Pending": 1.6666666666666667,
+        "averageMaxActiveNodes": 4
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 1.5,
+          "p95PendingSeconds": 2,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 1.5,
+          "p95PendingSeconds": 2,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 0.6666666666666666,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 0,
+      "crowdingDistance": 0
+    },
+    {
+      "id": "offspring-gen-04-007",
+      "name": "gen-04-007",
+      "source": "offspring",
+      "generation": 4,
+      "weights": {
+        "freeCPU": 0.9435751637806894,
+        "freeMem": 0.7479058776544069,
+        "podPenalty": 2,
+        "packing": 0.7393650407864429
+      },
+      "objectives": {
+        "averageP95Pending": 2,
+        "averageMaxActiveNodes": 3.3333333333333335
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 1.5,
+          "p95PendingSeconds": 2,
+          "maxActiveNodes": 3,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 1.5,
+          "p95PendingSeconds": 2,
+          "maxActiveNodes": 3,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 1.3333333333333333,
+          "p95PendingSeconds": 2,
+          "maxActiveNodes": 4,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 0,
+      "crowdingDistance": 0
+    },
+    {
+      "id": "offspring-gen-04-008",
+      "name": "gen-04-008",
+      "source": "offspring",
+      "generation": 4,
+      "weights": {
+        "freeCPU": 0.889826956418646,
+        "freeMem": 0.7270359117986649,
+        "podPenalty": 1.943023853927738,
+        "packing": 1.4263362737134342
+      },
+      "objectives": {
+        "averageP95Pending": 1,
+        "averageMaxActiveNodes": 3.3333333333333335
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 3,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 3,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 0.6666666666666666,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 0,
+      "crowdingDistance": 0
+    },
+    {
+      "id": "offspring-gen-04-009",
+      "name": "gen-04-009",
+      "source": "offspring",
+      "generation": 4,
+      "weights": {
+        "freeCPU": 1.3187866030823514,
+        "freeMem": 0.5748849032548592,
+        "podPenalty": 2,
+        "packing": 1.443424357469087
+      },
+      "objectives": {
+        "averageP95Pending": 1.6166666666666665,
+        "averageMaxActiveNodes": 4
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 1,
+          "p95PendingSeconds": 1.8499999999999996,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 1.3333333333333333,
+          "p95PendingSeconds": 2,
+          "maxActiveNodes": 4,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 0,
+      "crowdingDistance": 0
+    },
+    {
+      "id": "offspring-gen-04-010",
+      "name": "gen-04-010",
+      "source": "offspring",
+      "generation": 4,
+      "weights": {
+        "freeCPU": 0,
+        "freeMem": 0.08475838761299695,
+        "podPenalty": 2,
+        "packing": 0.884878903474424
+      },
+      "objectives": {
+        "averageP95Pending": 1,
+        "averageMaxActiveNodes": 4
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 0.6666666666666666,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 0,
+      "crowdingDistance": 0
+    },
+    {
+      "id": "offspring-gen-04-011",
+      "name": "gen-04-011",
+      "source": "offspring",
+      "generation": 4,
+      "weights": {
+        "freeCPU": 0,
+        "freeMem": 0,
+        "podPenalty": 1.836053836902999,
+        "packing": 0.9815760232794316
+      },
+      "objectives": {
+        "averageP95Pending": 1.2833333333333332,
+        "averageMaxActiveNodes": 4
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 1,
+          "p95PendingSeconds": 1.8499999999999996,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 0.6666666666666666,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 0,
+      "crowdingDistance": 0
+    },
+    {
+      "id": "offspring-gen-04-012",
+      "name": "gen-04-012",
+      "source": "offspring",
+      "generation": 4,
+      "weights": {
+        "freeCPU": 1.0662837115998158,
+        "freeMem": 0.17759364364280292,
+        "podPenalty": 1.943023853927738,
+        "packing": 1.6003701382582858
+      },
+      "objectives": {
+        "averageP95Pending": 1,
+        "averageMaxActiveNodes": 3
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 3,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 3,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 0.6666666666666666,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 3,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 0,
+      "crowdingDistance": 0
+    },
+    {
+      "id": "offspring-gen-05-001",
+      "name": "gen-05-001",
+      "source": "offspring",
+      "generation": 5,
+      "weights": {
+        "freeCPU": 0.3434973232355452,
+        "freeMem": 0,
+        "podPenalty": 1.943023853927738,
+        "packing": 0.907067826985283
+      },
+      "objectives": {
+        "averageP95Pending": 1,
+        "averageMaxActiveNodes": 4
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 0.6666666666666666,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 0,
+      "crowdingDistance": 0
+    },
+    {
+      "id": "offspring-gen-05-002",
+      "name": "gen-05-002",
+      "source": "offspring",
+      "generation": 5,
+      "weights": {
+        "freeCPU": 0.7865214218948623,
+        "freeMem": 0.6049585220688226,
+        "podPenalty": 1.1486010637263537,
+        "packing": 1.1311921028090934
+      },
+      "objectives": {
+        "averageP95Pending": 1,
+        "averageMaxActiveNodes": 3.3333333333333335
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 3,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 3,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 0.6666666666666666,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 0,
+      "crowdingDistance": 0
+    },
+    {
+      "id": "offspring-gen-05-003",
+      "name": "gen-05-003",
+      "source": "offspring",
+      "generation": 5,
+      "weights": {
+        "freeCPU": 1.763407869448736,
+        "freeMem": 0.6289305824596229,
+        "podPenalty": 2,
+        "packing": 0.6200164532463439
+      },
+      "objectives": {
+        "averageP95Pending": 1.3333333333333333,
+        "averageMaxActiveNodes": 4
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 1.1666666666666667,
+          "p95PendingSeconds": 2,
+          "maxActiveNodes": 4,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 0,
+      "crowdingDistance": 0
+    },
+    {
+      "id": "offspring-gen-05-004",
+      "name": "gen-05-004",
+      "source": "offspring",
+      "generation": 5,
+      "weights": {
+        "freeCPU": 0.3664607319095535,
+        "freeMem": 0.5145874409606522,
+        "podPenalty": 2,
+        "packing": 0.907067826985283
+      },
+      "objectives": {
+        "averageP95Pending": 1.3333333333333333,
+        "averageMaxActiveNodes": 3.3333333333333335
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 1.5,
+          "p95PendingSeconds": 2,
+          "maxActiveNodes": 3,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 3,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 0.6666666666666666,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 0,
+      "crowdingDistance": 0
+    },
+    {
+      "id": "offspring-gen-05-005",
+      "name": "gen-05-005",
+      "source": "offspring",
+      "generation": 5,
+      "weights": {
+        "freeCPU": 1.0662837115998158,
+        "freeMem": 0.1180762424702077,
+        "podPenalty": 1.7993921580762273,
+        "packing": 0.6732057003401295
+      },
+      "objectives": {
+        "averageP95Pending": 1,
+        "averageMaxActiveNodes": 4
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 0.6666666666666666,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 0,
+      "crowdingDistance": 0
+    },
+    {
+      "id": "offspring-gen-05-006",
+      "name": "gen-05-006",
+      "source": "offspring",
+      "generation": 5,
+      "weights": {
+        "freeCPU": 1.002492364547977,
+        "freeMem": 0.10028337228118653,
+        "podPenalty": 1.0351124369265154,
+        "packing": 1.1987396908514198
+      },
+      "objectives": {
+        "averageP95Pending": 1,
+        "averageMaxActiveNodes": 3.3333333333333335
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 3,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 3,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 0.6666666666666666,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 0,
+      "crowdingDistance": 0
+    },
+    {
+      "id": "offspring-gen-05-007",
+      "name": "gen-05-007",
+      "source": "offspring",
+      "generation": 5,
+      "weights": {
+        "freeCPU": 0,
+        "freeMem": 0.09792814300147556,
+        "podPenalty": 2,
+        "packing": 0.557241359199661
+      },
+      "objectives": {
+        "averageP95Pending": 1.25,
+        "averageMaxActiveNodes": 4
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 0.8333333333333334,
+          "p95PendingSeconds": 1.75,
+          "maxActiveNodes": 4,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 0,
+      "crowdingDistance": 0
+    },
+    {
+      "id": "offspring-gen-05-008",
+      "name": "gen-05-008",
+      "source": "offspring",
+      "generation": 5,
+      "weights": {
+        "freeCPU": 0.889826956418646,
+        "freeMem": 0.1243949346004527,
+        "podPenalty": 1.5493832603226003,
+        "packing": 1.343281812918617
+      },
+      "objectives": {
+        "averageP95Pending": 1,
+        "averageMaxActiveNodes": 3
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 3,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 3,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 0.6666666666666666,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 3,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 0,
+      "crowdingDistance": 0
+    },
+    {
+      "id": "offspring-gen-05-009",
+      "name": "gen-05-009",
+      "source": "offspring",
+      "generation": 5,
+      "weights": {
+        "freeCPU": 0.8489482379808425,
+        "freeMem": 0.643514461737625,
+        "podPenalty": 1.4537732616540349,
+        "packing": 1.0364602343425842
+      },
+      "objectives": {
+        "averageP95Pending": 1,
+        "averageMaxActiveNodes": 4
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 0.6666666666666666,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 0,
+      "crowdingDistance": 0
+    },
+    {
+      "id": "offspring-gen-05-010",
+      "name": "gen-05-010",
+      "source": "offspring",
+      "generation": 5,
+      "weights": {
+        "freeCPU": 0,
+        "freeMem": 1.150303136546159,
+        "podPenalty": 1.739219707916647,
+        "packing": 0.6583138445386385
+      },
+      "objectives": {
+        "averageP95Pending": 1.6666666666666667,
+        "averageMaxActiveNodes": 3.3333333333333335
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 0.75,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 3,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 1.5,
+          "p95PendingSeconds": 2,
+          "maxActiveNodes": 3,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 1.6666666666666667,
+          "p95PendingSeconds": 2,
+          "maxActiveNodes": 4,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 0,
+      "crowdingDistance": 0
+    },
+    {
+      "id": "offspring-gen-05-011",
+      "name": "gen-05-011",
+      "source": "offspring",
+      "generation": 5,
+      "weights": {
+        "freeCPU": 1.5137847412125631,
+        "freeMem": 0.4200418794986522,
+        "podPenalty": 1.5474141254466651,
+        "packing": 1.5040021775451151
+      },
+      "objectives": {
+        "averageP95Pending": 1,
+        "averageMaxActiveNodes": 4
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 0.6666666666666666,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 0,
+      "crowdingDistance": 0
+    },
+    {
+      "id": "offspring-gen-05-012",
+      "name": "gen-05-012",
+      "source": "offspring",
+      "generation": 5,
+      "weights": {
+        "freeCPU": 0.7559516399815616,
+        "freeMem": 0.17759364364280292,
+        "podPenalty": 0.4632614993221262,
+        "packing": 1.789447360395284
+      },
+      "objectives": {
+        "averageP95Pending": 1,
+        "averageMaxActiveNodes": 2.3333333333333335
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 2,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 2,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 0.6666666666666666,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 3,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 0,
+      "crowdingDistance": 0
+    }
+  ],
+  "finalPopulation": [
+    {
+      "id": "offspring-gen-03-008",
+      "name": "gen-03-008",
+      "source": "offspring",
+      "generation": 3,
+      "weights": {
+        "freeCPU": 1.2149862240823908,
+        "freeMem": 0.24247619165139775,
+        "podPenalty": 1.943023853927738,
+        "packing": 1.3716134094185284
+      },
+      "objectives": {
+        "averageP95Pending": 0.6666666666666666,
+        "averageMaxActiveNodes": 4
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 0,
+          "p95PendingSeconds": 0,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 0.6666666666666666,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 1,
+      "crowdingDistance": 1000000001
+    },
+    {
+      "id": "offspring-gen-03-009",
+      "name": "gen-03-009",
+      "source": "offspring",
+      "generation": 3,
+      "weights": {
+        "freeCPU": 1.0310684573498912,
+        "freeMem": 0.5135249966889104,
+        "podPenalty": 0.873049088846322,
+        "packing": 1.443424357469087
+      },
+      "objectives": {
+        "averageP95Pending": 0.6666666666666666,
+        "averageMaxActiveNodes": 4
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 0,
+          "p95PendingSeconds": 0,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 0.6666666666666666,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 1,
+      "crowdingDistance": 1000000000
+    },
+    {
+      "id": "offspring-gen-05-012",
+      "name": "gen-05-012",
+      "source": "offspring",
+      "generation": 5,
+      "weights": {
+        "freeCPU": 0.7559516399815616,
+        "freeMem": 0.17759364364280292,
+        "podPenalty": 0.4632614993221262,
+        "packing": 1.789447360395284
+      },
+      "objectives": {
+        "averageP95Pending": 1,
+        "averageMaxActiveNodes": 2.3333333333333335
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 2,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 2,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 0.6666666666666666,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 3,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 1,
+      "crowdingDistance": 1000000000
+    },
+    {
+      "id": "offspring-gen-04-003",
+      "name": "gen-04-003",
+      "source": "offspring",
+      "generation": 4,
+      "weights": {
+        "freeCPU": 0.01515718867047865,
+        "freeMem": 0.4560469942757185,
+        "podPenalty": 0.9284245219121119,
+        "packing": 1.1987396908514198
+      },
+      "objectives": {
+        "averageP95Pending": 1,
+        "averageMaxActiveNodes": 2.6666666666666665
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 2,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 3,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 0.6666666666666666,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 3,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 2,
+      "crowdingDistance": 1000000000
+    },
+    {
+      "id": "initial-init-008",
+      "name": "init-008",
+      "source": "initial",
+      "generation": 0,
+      "weights": {
+        "freeCPU": 0.9015169994482076,
+        "freeMem": 0.42219523281687776,
+        "podPenalty": 0.7346905605014362,
+        "packing": 1.443424357469087
+      },
+      "objectives": {
+        "averageP95Pending": 1,
+        "averageMaxActiveNodes": 3
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 3,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 3,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 0.6666666666666666,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 3,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 3,
+      "crowdingDistance": 1000000000
+    },
+    {
+      "id": "offspring-gen-02-001",
+      "name": "gen-02-001",
+      "source": "offspring",
+      "generation": 2,
+      "weights": {
+        "freeCPU": 0.46175038835579685,
+        "freeMem": 0.7023067809809882,
+        "podPenalty": 1.4710683133239635,
+        "packing": 1.443424357469087
+      },
+      "objectives": {
+        "averageP95Pending": 1,
+        "averageMaxActiveNodes": 3
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 3,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 3,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 0.6666666666666666,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 3,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 3,
+      "crowdingDistance": 0
+    },
+    {
+      "id": "offspring-gen-02-006",
+      "name": "gen-02-006",
+      "source": "offspring",
+      "generation": 2,
+      "weights": {
+        "freeCPU": 0,
+        "freeMem": 0.05937178154558423,
+        "podPenalty": 2,
+        "packing": 0.6732057003401295
+      },
+      "objectives": {
+        "averageP95Pending": 1,
+        "averageMaxActiveNodes": 3
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 3,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 3,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 0.6666666666666666,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 3,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 3,
+      "crowdingDistance": 0
+    },
+    {
+      "id": "offspring-gen-04-005",
+      "name": "gen-04-005",
+      "source": "offspring",
+      "generation": 4,
+      "weights": {
+        "freeCPU": 0.2665739612158329,
+        "freeMem": 0.07137634523222888,
+        "podPenalty": 2,
+        "packing": 0.907067826985283
+      },
+      "objectives": {
+        "averageP95Pending": 1,
+        "averageMaxActiveNodes": 3
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 3,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 3,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 0.6666666666666666,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 3,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 3,
+      "crowdingDistance": 0
+    },
+    {
+      "id": "offspring-gen-04-012",
+      "name": "gen-04-012",
+      "source": "offspring",
+      "generation": 4,
+      "weights": {
+        "freeCPU": 1.0662837115998158,
+        "freeMem": 0.17759364364280292,
+        "podPenalty": 1.943023853927738,
+        "packing": 1.6003701382582858
+      },
+      "objectives": {
+        "averageP95Pending": 1,
+        "averageMaxActiveNodes": 3
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 3,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 3,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 0.6666666666666666,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 3,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 3,
+      "crowdingDistance": 0
+    },
+    {
+      "id": "offspring-gen-05-008",
+      "name": "gen-05-008",
+      "source": "offspring",
+      "generation": 5,
+      "weights": {
+        "freeCPU": 0.889826956418646,
+        "freeMem": 0.1243949346004527,
+        "podPenalty": 1.5493832603226003,
+        "packing": 1.343281812918617
+      },
+      "objectives": {
+        "averageP95Pending": 1,
+        "averageMaxActiveNodes": 3
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 3,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 3,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 0.6666666666666666,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 3,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 3,
+      "crowdingDistance": 1000000000
+    },
+    {
+      "id": "offspring-gen-05-006",
+      "name": "gen-05-006",
+      "source": "offspring",
+      "generation": 5,
+      "weights": {
+        "freeCPU": 1.002492364547977,
+        "freeMem": 0.10028337228118653,
+        "podPenalty": 1.0351124369265154,
+        "packing": 1.1987396908514198
+      },
+      "objectives": {
+        "averageP95Pending": 1,
+        "averageMaxActiveNodes": 3.3333333333333335
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 3,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 3,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 0.6666666666666666,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 4,
+      "crowdingDistance": 1000000000
+    },
+    {
+      "id": "initial-init-004",
+      "name": "init-004",
+      "source": "initial",
+      "generation": 0,
+      "weights": {
+        "freeCPU": 0.7233655224610864,
+        "freeMem": 0.24247619165139775,
+        "podPenalty": 1.3280218953690182,
+        "packing": 0.9324072425549008
+      },
+      "objectives": {
+        "averageP95Pending": 1,
+        "averageMaxActiveNodes": 3.3333333333333335
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 3,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 3,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 0.3333333333333333,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 4,
+      "crowdingDistance": 1000000000
+    }
+  ],
+  "paretoFront": [
+    {
+      "id": "offspring-gen-03-008",
+      "name": "gen-03-008",
+      "source": "offspring",
+      "generation": 3,
+      "weights": {
+        "freeCPU": 1.2149862240823908,
+        "freeMem": 0.24247619165139775,
+        "podPenalty": 1.943023853927738,
+        "packing": 1.3716134094185284
+      },
+      "objectives": {
+        "averageP95Pending": 0.6666666666666666,
+        "averageMaxActiveNodes": 4
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 0,
+          "p95PendingSeconds": 0,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 0.6666666666666666,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 1,
+      "crowdingDistance": 1000000001
+    },
+    {
+      "id": "offspring-gen-03-009",
+      "name": "gen-03-009",
+      "source": "offspring",
+      "generation": 3,
+      "weights": {
+        "freeCPU": 1.0310684573498912,
+        "freeMem": 0.5135249966889104,
+        "podPenalty": 0.873049088846322,
+        "packing": 1.443424357469087
+      },
+      "objectives": {
+        "averageP95Pending": 0.6666666666666666,
+        "averageMaxActiveNodes": 4
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 0,
+          "p95PendingSeconds": 0,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 0.6666666666666666,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 1,
+      "crowdingDistance": 1000000000
+    },
+    {
+      "id": "offspring-gen-05-012",
+      "name": "gen-05-012",
+      "source": "offspring",
+      "generation": 5,
+      "weights": {
+        "freeCPU": 0.7559516399815616,
+        "freeMem": 0.17759364364280292,
+        "podPenalty": 0.4632614993221262,
+        "packing": 1.789447360395284
+      },
+      "objectives": {
+        "averageP95Pending": 1,
+        "averageMaxActiveNodes": 2.3333333333333335
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 2,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 2,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 0.6666666666666666,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 3,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 1,
+      "crowdingDistance": 1000000000
+    }
+  ],
+  "combinedParetoFront": [
+    {
+      "id": "offspring-gen-03-008",
+      "name": "gen-03-008",
+      "source": "offspring",
+      "generation": 3,
+      "weights": {
+        "freeCPU": 1.2149862240823908,
+        "freeMem": 0.24247619165139775,
+        "podPenalty": 1.943023853927738,
+        "packing": 1.3716134094185284
+      },
+      "objectives": {
+        "averageP95Pending": 0.6666666666666666,
+        "averageMaxActiveNodes": 4
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 0,
+          "p95PendingSeconds": 0,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 0.6666666666666666,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 1,
+      "crowdingDistance": 1000000001
+    },
+    {
+      "id": "offspring-gen-03-009",
+      "name": "gen-03-009",
+      "source": "offspring",
+      "generation": 3,
+      "weights": {
+        "freeCPU": 1.0310684573498912,
+        "freeMem": 0.5135249966889104,
+        "podPenalty": 0.873049088846322,
+        "packing": 1.443424357469087
+      },
+      "objectives": {
+        "averageP95Pending": 0.6666666666666666,
+        "averageMaxActiveNodes": 4
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 0,
+          "p95PendingSeconds": 0,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 0.6666666666666666,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 4,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 1,
+      "crowdingDistance": 1000000000
+    },
+    {
+      "id": "offspring-gen-05-012",
+      "name": "gen-05-012",
+      "source": "offspring",
+      "generation": 5,
+      "weights": {
+        "freeCPU": 0.7559516399815616,
+        "freeMem": 0.17759364364280292,
+        "podPenalty": 0.4632614993221262,
+        "packing": 1.789447360395284
+      },
+      "objectives": {
+        "averageP95Pending": 1,
+        "averageMaxActiveNodes": 2.3333333333333335
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 2,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 2,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 0.6666666666666666,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 3,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 1,
+      "crowdingDistance": 1000000000
+    },
+    {
+      "id": "baseline-packing-heavy",
+      "name": "packing-heavy",
+      "source": "baseline",
+      "generation": 0,
+      "weights": {
+        "freeCPU": 0.5,
+        "freeMem": 0.5,
+        "podPenalty": 0.2,
+        "packing": 1.3
+      },
+      "objectives": {
+        "averageP95Pending": 1,
+        "averageMaxActiveNodes": 2.3333333333333335
+      },
+      "workloads": [
+        {
+          "workload": "cpu-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 2,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "mem-tight",
+          "averagePendingSeconds": 0.5,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 2,
+          "scheduledCount": 4,
+          "completedCount": 4,
+          "unschedulableCount": 0
+        },
+        {
+          "workload": "fragmenting-mix",
+          "averagePendingSeconds": 0.6666666666666666,
+          "p95PendingSeconds": 1,
+          "maxActiveNodes": 3,
+          "scheduledCount": 6,
+          "completedCount": 6,
+          "unschedulableCount": 0
+        }
+      ],
+      "rank": 1,
+      "crowdingDistance": 1000000001
+    }
+  ]
+}

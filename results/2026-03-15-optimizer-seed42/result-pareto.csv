@@ -1,0 +1,5 @@
+candidate_id,name,source,generation,free_cpu,free_mem,pod_penalty,packing,avg_p95_pending,avg_max_active_nodes,rank,crowding_distance,workloads,notes
+offspring-gen-03-008,gen-03-008,offspring,3,1.2149862240823908,0.24247619165139775,1.943023853927738,1.3716134094185284,0.666667,4.000000,1,1000000001.000000,"cpu-tight:p95=0.000,maxActive=4 | mem-tight:p95=1.000,maxActive=4 | fragmenting-mix:p95=1.000,maxActive=4",
+offspring-gen-03-009,gen-03-009,offspring,3,1.0310684573498912,0.5135249966889104,0.873049088846322,1.443424357469087,0.666667,4.000000,1,1000000000.000000,"cpu-tight:p95=0.000,maxActive=4 | mem-tight:p95=1.000,maxActive=4 | fragmenting-mix:p95=1.000,maxActive=4",
+offspring-gen-05-012,gen-05-012,offspring,5,0.7559516399815616,0.17759364364280292,0.4632614993221262,1.789447360395284,1.000000,2.333333,1,1000000000.000000,"cpu-tight:p95=1.000,maxActive=2 | mem-tight:p95=1.000,maxActive=2 | fragmenting-mix:p95=1.000,maxActive=3",
+baseline-packing-heavy,packing-heavy,baseline,0,0.5,0.5,0.2,1.3,1.000000,2.333333,1,1000000001.000000,"cpu-tight:p95=1.000,maxActive=2 | mem-tight:p95=1.000,maxActive=2 | fragmenting-mix:p95=1.000,maxActive=3",
