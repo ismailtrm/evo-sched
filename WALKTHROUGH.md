@@ -787,6 +787,93 @@ Bu görüşmeden sonra netleşen kararlar şunlardır:
   - `123`
   - `999`
 
+### 3.33. İlk tam optimizer koşusunu (`seed=42`) tamamlayıp özetledik
+
+Danışman geri bildirimi sonrasında ilk tam optimizer koşusu şu ayarlarla tamamlandı:
+
+- population size: `12`
+- generations: `5`
+- workloads:
+  - `cpu-tight`
+  - `mem-tight`
+  - `fragmenting-mix`
+- seed: `42`
+
+Bu koşunun çıktıları şu klasöre kaydedildi:
+
+- [results/2026-03-15-optimizer-seed42/result.json](./results/2026-03-15-optimizer-seed42/result.json)
+- [results/2026-03-15-optimizer-seed42/result-pareto.csv](./results/2026-03-15-optimizer-seed42/result-pareto.csv)
+- [results/2026-03-15-optimizer-seed42/result-all.csv](./results/2026-03-15-optimizer-seed42/result-all.csv)
+
+Toplam değerlendirme sayıları:
+
+- baseline sayısı: `3`
+- optimizer tarafından değerlendirilen aday sayısı: `72`
+- baseline dahil toplam çözüm sayısı: `75`
+- final population boyutu: `12`
+- optimizer-only nondominated çözüm sayısı: `3`
+- baseline dahil birleşik nondominated çözüm sayısı: `4`
+
+Birleşik Pareto front'ta kalan çözümler:
+
+- `gen-03-008`
+- `gen-03-009`
+- `gen-05-012`
+- `packing-heavy`
+
+Ancak raporlama açısından daha önemli olan şey, birey sayısı değil benzersiz objective noktalarıdır.
+
+`seed=42` için birleşik Pareto front iki benzersiz tradeoff noktasına çöktü:
+
+1. `avgP95Pending = 0.6667`, `avgMaxActiveNodes = 4`
+2. `avgP95Pending = 1.0000`, `avgMaxActiveNodes = 2.3333`
+
+Bu sonuç, Pareto yüzeyinin bu seed için iki baskın rejime ayrıldığını gösterdi:
+
+- düşük pending / yüksek node kullanımı
+- daha düşük node kullanımı / biraz daha yüksek pending
+
+Baseline durumu:
+
+- Pareto'da kalan baseline:
+  - `packing-heavy`
+- Pareto'dan düşen baseline'lar:
+  - `baseline-default`
+  - `spread-heavy`
+
+Özellikle `spread-heavy` objective noktasının optimizer tarafından domine edildiği görüldü.
+
+Yeni optimizer bulgusu:
+
+- Optimizer, `packing-heavy` ile aynı düşük-node rejimini yeniden keşfetti:
+  - `gen-05-012`
+- Ayrıca baseline set'te olmayan yeni bir düşük-pending rejimi buldu:
+  - `gen-03-008`
+  - `gen-03-009`
+
+Bu yeni rejim şu objective noktasını verdi:
+
+- `avgP95Pending = 0.6667`
+- `avgMaxActiveNodes = 4`
+
+Temsilci çözümler:
+
+- pending-odaklı en iyi çözüm:
+  - `gen-03-008` veya `gen-03-009`
+- node-odaklı en iyi çözüm:
+  - `packing-heavy` veya aynı objective noktayı bulan `gen-05-012`
+
+`seed=42` için strict anlamda tekil bir `knee point` çıkmadı.
+Sebep, birleşik Pareto front'un yalnızca iki benzersiz objective noktasından oluşmasıdır.
+
+Bu nedenle bu seed için çıkarılan ana araştırma cümlesi şudur:
+
+- optimizer, baseline set'in ötesinde yeni bir baskın düşük-pending rejimi buldu
+- düşük-node rejiminde ise `packing-heavy` davranışını yeniden keşfetti
+- Pareto yapısı bu seed altında iki baskın tradeoff rejimine ayrıldı
+  - düşük pending / yüksek node kullanımı
+  - daha düşük node kullanımı / biraz daha yüksek pending
+
 ## 4. Şu Anki Durum
 
 Şu anda proje durumu şöyledir:
@@ -811,7 +898,8 @@ Bu görüşmeden sonra netleşen kararlar şunlardır:
 - Danışman geri bildirimi ile ana objective ve raporlama yönü netleşmiş durumda
 - Yardımcı metrik olarak `load variance` seçilmiş durumda
 - Pareto içinden dengeli temsilci çözüm için `knee point` yaklaşımı seçilmiş durumda
-- Tam ölçekli ilk optimizer koşusu (`seed=42`) başlatılmış durumda
+- Tam ölçekli ilk optimizer koşusu (`seed=42`) tamamlanmış ve özetlenmiş durumda
+- `seed=42` altında iki baskın Pareto rejimi gözlenmiş durumda
 
 Başka bir ifadeyle:
 
@@ -825,30 +913,31 @@ Başka bir ifadeyle:
 - Adım 6 için hafif workload'lara ek olarak baskılı workload ailesi de hazırlanmış durumda
 - Adım 6 ve 7 için node-count tradeoff'u görünür hale gelmiş durumda
 - Adım 8 için gerekli evolutionary loop iskeleti kurulmuş durumda
+- Adım 8 için ilk tam seed sonucu alınmış ve Pareto özeti çıkarılmış durumda
 
 ## 5. Sıradaki Muhtemel Adımlar
 
 Buradan sonra mantıklı ilerleme sırası şudur:
 
 1. Tam optimizer koşularını tamamlamak:
-   - `seed=42`
    - `seed=123`
    - `seed=999`
-2. Her seed için Pareto front'u baseline policy'lerle doğrudan karşılaştırmak
-3. Pareto kümesinden üç temsilci çözüm seçmek:
+2. `seed=123` ve `seed=999` altında da benzersiz Pareto noktalarını çıkarmak
+3. Her seed için Pareto front'u baseline policy'lerle doğrudan karşılaştırmak
+4. Pareto kümesinden üç temsilci çözüm seçmek:
    - pending-odaklı en iyi
    - node-odaklı en iyi
    - `knee point` ile seçilen dengeli uzlaşma çözümü
-4. Yardımcı metrikleri sonuç tablolarına eklemek:
+5. Yardımcı metrikleri sonuç tablolarına eklemek:
    - `unschedulable`
    - `load variance`
-5. Sonuçları tablo/grafik üretimine bağlamak ve rapor anlatısını kurmak
+6. Sonuçları tablo/grafik üretimine bağlamak ve rapor anlatısını kurmak
 
 İlk teknik iyileştirme adayları:
 
 - Scheduler cadence etkisini ayırmak için tiny-control workload eklemek
 - Yardımcı metrik olarak `load variance` hesaplamasını evaluator'a eklemek
-- Optimizer sonuçlarını repo altında tarihli result klasörlerine kaydetmek
+- Farklı bireylerin aynı objective noktasına çökmesini dikkate alarak raporlamayı benzersiz Pareto noktaları üzerinden yapmak
 
 ## 6. Bu Dosya Nasıl Kullanılmalı
 
