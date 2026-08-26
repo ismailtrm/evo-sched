@@ -1,0 +1,109 @@
+{
+  "schemaVersion": 1,
+  "protocolVersion": "v1-pilot",
+  "runName": "optimizer-seed42",
+  "runClass": "pilot",
+  "status": "completed",
+  "reconstructed": true,
+  "reconstructedAt": "2026-08-27T00:12:14+03:00",
+  "startedAt": "2026-03-15T12:36:22.932518049Z",
+  "finishedAt": "2026-03-15T14:32:36.844619383Z",
+  "provenance": {
+    "executionCommit": "d0cf0876f8bbdfa36ebbad9b9ead7c4e56a3f3d3",
+    "executionCommitConfidence": "high",
+    "executionCommitBasis": "result.json records a start 12 seconds after commit d0cf087, which contains the deployment-conflict retry used by the completed long run; no later code commit precedes the run.",
+    "artifactCommit": "5963556efc8acb5e4d61e9c3f737289b7c5daf25",
+    "branchAtExecution": null,
+    "workingTreeCleanAtExecution": null,
+    "exactCommand": null,
+    "confirmedArgumentsSource": "result.json config",
+    "unknownFieldsReason": "Branch, dirty state, baseline-file flag, timeout flag, and exact CLI text were not persisted in the result artifact."
+  },
+  "experiment": {
+    "optimizer": {
+      "populationSize": 12,
+      "generations": 5,
+      "mutationRate": 0.8,
+      "mutationSigma": 0.25,
+      "minWeight": 0.0,
+      "maxWeight": 2.0,
+      "seed": 42,
+      "evaluatedCandidates": 72
+    },
+    "workloads": [
+      {
+        "path": "workloads/cpu-tight.json",
+        "podCount": 4,
+        "gitBlobOid": "c103952faf448593472039e32d1e031976f17753"
+      },
+      {
+        "path": "workloads/mem-tight.json",
+        "podCount": 4,
+        "gitBlobOid": "2bcd8c971ce55983646df762edb770cabc5e3a79"
+      },
+      {
+        "path": "workloads/fragmenting-mix.json",
+        "podCount": 6,
+        "gitBlobOid": "6137145dd0864916aa6c0c91f37294d11dc096c9"
+      }
+    ],
+    "baselineFile": {
+      "path": "experiments/weights-smoke.json",
+      "gitBlobOid": "cf97db2dc74cb25c32d31833a9d02460984aac4a"
+    },
+    "baselineCount": 3,
+    "candidateEvaluationRepetitions": 1,
+    "objectiveAggregation": {
+      "averageP95Pending": "arithmetic mean of workload-level p95 pending values",
+      "averageMaxActiveNodes": "arithmetic mean of workload-level maximum occupied-worker counts"
+    }
+  },
+  "cluster": {
+    "kindClusterName": "evo-sched",
+    "kubectlContext": "kind-evo-sched",
+    "controlPlaneNodes": 1,
+    "workerNodes": 4,
+    "workerCountEvidence": "The contemporaneous walkthrough states that the optimizer reused the 4-worker experiment cluster; worker count is not embedded in result.json.",
+    "kubernetesVersion": null,
+    "kindVersion": null,
+    "nodeImage": null
+  },
+  "scheduler": {
+    "name": "evok8s-scheduler",
+    "namespace": "evo-sched",
+    "imageFromDeploymentSource": "evok8s-scheduler:0.1.0",
+    "deploymentGitBlobOid": "b58accabfe2805284f96a56adfd094defc469db3",
+    "schedulerSourceGitBlobOid": "46f468df7693438018b73e8bd659668a37d62d1d",
+    "evaluatorSourceGitBlobOid": "55a7229f1aa5214c65bd8834e2b34494e7efc57b",
+    "optimizerCliGitBlobOid": "1cae26e342a85aaeb1b5c4dc22b6f846191ae06d",
+    "optimizerCoreGitBlobOid": "a15be524b50d71c5556cc09b4516f757dae6751a"
+  },
+  "toolchain": {
+    "goDirective": "1.25.0",
+    "goModGitBlobOid": "b84a6dceb96f7c29402aea0e2344814b3e5ffcaf",
+    "goSumGitBlobOid": "b5f9dbe2f0641885a0d7d049f1395c0d9f3d5f0b",
+    "clientGoVersion": "v0.35.0",
+    "goRuntimeVersion": null
+  },
+  "rawArtifacts": [
+    {
+      "path": "result.json",
+      "sha256": "5ee4dddaa92bbf3c398a23e5096dea5f6b980644a9f17731028722d944c993de"
+    },
+    {
+      "path": "result-all.csv",
+      "sha256": "681f30123660cd0477a06f3f923e9273ec651373fc30feb2bfa7f8187012f374"
+    },
+    {
+      "path": "result-pareto.csv",
+      "sha256": "518d71b8ac338914bd3487220d27fae853e7509b5e825e3f3fb41aa50405d5f4"
+    }
+  ],
+  "limitations": [
+    "This is a retrospectively reconstructed pilot manifest, not an original run manifest.",
+    "Each candidate was evaluated once, so optimizer selection may retain scheduler-cadence and timestamp noise.",
+    "The nominal four-weight policy representation contains scale invariance and a Packing dependency under homogeneous workers.",
+    "The exact command, working-tree state, Kubernetes version, kind version, node image, and Go runtime version were not persisted.",
+    "The metric named maxActiveNodes counts worker nodes hosting non-terminal evaluator Pods; it does not measure powered or autoscaled nodes."
+  ]
+}

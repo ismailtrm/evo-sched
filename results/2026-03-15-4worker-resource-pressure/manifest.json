@@ -1,0 +1,124 @@
+{
+  "schemaVersion": 1,
+  "protocolVersion": "v1-pilot",
+  "runName": "4worker-resource-pressure",
+  "runClass": "pilot",
+  "status": "completed",
+  "reconstructed": true,
+  "reconstructedAt": "2026-08-27T00:12:14+03:00",
+  "startedAt": "2026-03-15T09:39:01Z",
+  "finishedAt": "2026-03-15T09:53:28Z",
+  "provenance": {
+    "executionCommit": "69ed894d110edca59be1335251dff3e5e247f515",
+    "executionCommitConfidence": "high",
+    "executionCommitBasis": "The first control sample was recorded at 2026-03-15T09:39:01Z, after commit 69ed894 at 2026-03-15T12:32:17+03:00 and before artifact commit 4c20bee at 2026-03-15T12:55:04+03:00.",
+    "artifactCommit": "4c20bee8515440b531276fcac4da4457ad669ac3",
+    "branchAtExecution": null,
+    "workingTreeCleanAtExecution": null,
+    "exactCommand": null,
+    "unknownFieldsReason": "Branch, dirty state, and the exact orchestration command were not persisted in the original artifacts. They are intentionally not inferred."
+  },
+  "experiment": {
+    "workloads": [
+      {
+        "path": "workloads/cpu-tight.json",
+        "podCount": 4,
+        "gitBlobOid": "c103952faf448593472039e32d1e031976f17753"
+      },
+      {
+        "path": "workloads/mem-tight.json",
+        "podCount": 4,
+        "gitBlobOid": "2bcd8c971ce55983646df762edb770cabc5e3a79"
+      },
+      {
+        "path": "workloads/fragmenting-mix.json",
+        "podCount": 6,
+        "gitBlobOid": "6137145dd0864916aa6c0c91f37294d11dc096c9"
+      }
+    ],
+    "baselineFile": {
+      "path": "experiments/weights-smoke.json",
+      "gitBlobOid": "cf97db2dc74cb25c32d31833a9d02460984aac4a"
+    },
+    "baselines": [
+      {
+        "name": "baseline-default",
+        "weights": {
+          "freeCPU": 1.0,
+          "freeMem": 1.0,
+          "podPenalty": 0.5,
+          "packing": 0.2
+        }
+      },
+      {
+        "name": "spread-heavy",
+        "weights": {
+          "freeCPU": 1.4,
+          "freeMem": 1.4,
+          "podPenalty": 1.0,
+          "packing": 0.0
+        }
+      },
+      {
+        "name": "packing-heavy",
+        "weights": {
+          "freeCPU": 0.5,
+          "freeMem": 0.5,
+          "podPenalty": 0.2,
+          "packing": 1.3
+        }
+      }
+    ],
+    "repetitionsPerWorkloadPolicy": 3,
+    "recordedCombinations": 9
+  },
+  "cluster": {
+    "kindClusterName": "evo-sched",
+    "kubectlContext": "kind-evo-sched",
+    "controlPlaneNodes": 1,
+    "workerNodes": 4,
+    "workerCountEvidence": "controls.log records ready_workers=4 before and after every repetition.",
+    "kubernetesVersion": null,
+    "kindVersion": null,
+    "nodeImage": null
+  },
+  "scheduler": {
+    "name": "evok8s-scheduler",
+    "namespace": "evo-sched",
+    "imageFromDeploymentSource": "evok8s-scheduler:0.1.0",
+    "deploymentGitBlobOid": "b58accabfe2805284f96a56adfd094defc469db3",
+    "schedulerSourceGitBlobOid": "46f468df7693438018b73e8bd659668a37d62d1d",
+    "evaluatorSourceGitBlobOid": "64ee417cf9de89cbf822d26a43a40886905a4633"
+  },
+  "toolchain": {
+    "goDirective": "1.25.0",
+    "goModGitBlobOid": "b84a6dceb96f7c29402aea0e2344814b3e5ffcaf",
+    "goSumGitBlobOid": "b5f9dbe2f0641885a0d7d049f1395c0d9f3d5f0b",
+    "clientGoVersion": "v0.35.0",
+    "goRuntimeVersion": null
+  },
+  "rawArtifacts": [
+    {
+      "path": "controls.log",
+      "sha256": "20db7f2c03e1ab4ae052309052660836634fb333a9dd2ff84e6379c0e13c0c7e"
+    },
+    {
+      "path": "detail.csv",
+      "sha256": "918beddd2c49c904044170929f1ccf850544272433c4052638888d0928956404"
+    },
+    {
+      "path": "summary.csv",
+      "sha256": "64c041fa38ca41c4fe8b7f058a2ea9481edcfae8cc37d77da7c555adbcf4b0ae"
+    },
+    {
+      "path": "summary.json",
+      "sha256": "d2513b6336bcda12779d8abc9b0e1a8b41b78898f06e8d256f8d991cf4e4d7bc"
+    }
+  ],
+  "limitations": [
+    "This is a retrospectively reconstructed pilot manifest, not an original run manifest.",
+    "The exact command, working-tree state, Kubernetes version, kind version, node image, and Go runtime version were not persisted.",
+    "Pending-time observations are affected by the v1 scheduler cadence and the small 4/4/6-Pod workloads.",
+    "The metric named maxActiveNodes counts worker nodes hosting non-terminal evaluator Pods; it does not measure powered or autoscaled nodes."
+  ]
+}
