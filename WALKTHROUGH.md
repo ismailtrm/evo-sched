@@ -1151,6 +1151,57 @@ Gate 0 kararı:
 - bir sonraki çalışma `research/policy-space-v2` branch'inde Gate 1 invariance testleri ile başlayacak
 - final paper claim'leri ancak official `v2` kanıtı geldikten sonra güncellenecek
 
+### 3.39. Gate 1 policy-space invariance testlerini ekledik
+
+Gate 0 audit'inde cebirsel olarak görülen policy-space tekrarlarını çalıştırılabilir testlerle sabitlemek için
+[scheduler/policy_space_test.go](./scheduler/policy_space_test.go) eklendi.
+Bu adım üretim scoring davranışını değiştirmedi; önce mevcut `v1` modelinin efektif boyutunu kanıtlamayı amaçladı.
+
+Eklenen tanı testleri:
+
+- `TestV1PolicyPositiveScalingPreservesNodeRanking`
+  - bütün weight'lerin aynı pozitif katsayıyla çarpılmasının node seçimini değiştirmediğini doğruluyor
+  - pairwise score farklarının yalnızca aynı katsayıyla ölçeklendiğini kontrol ediyor
+- `TestV1PackingWeightIsAbsorbedByFreeWeightsOnHomogeneousNodes`
+  - aynı allocatable CPU ve memory kapasitesine sahip worker'larda `Packing` etkisinin `FreeCPU` ve `FreeMem` katsayılarına emilebildiğini doğruluyor
+  - eşdeğer temsil `FreeCPU' = FreeCPU - Packing/2`, `FreeMem' = FreeMem - Packing/2`, `Packing' = 0` biçiminde kuruluyor
+- `TestV1PackingDependencyIsConditionalOnHomogeneousAllocations`
+  - aynı dönüşümün farklı allocatable kapasitelere sahip node'larda genel olarak geçerli olmadığını gösteriyor
+  - böylece bulgunun tüm cluster topolojilerine taşınmadığı, mevcut homojen kind worker düzenine koşullu olduğu kaydediliyor
+
+Homojen worker'lar ve aynı Pod request'i altında aday sıralamasını belirleyen skor şu efektif biçime indirgenebilir:
+
+```text
+score_i = C
+        + (wFreeCPU - wPacking/2) * normFreeCPU_i
+        + (wFreeMem - wPacking/2) * normFreeMem_i
+        - wPodPenalty * normPodCount_i
+```
+
+Buradaki `C`, aday node'dan bağımsızdır ve node sıralamasını değiştirmez.
+Ayrıca bütün efektif katsayıların aynı pozitif değerle çarpılması sıralamayı korur.
+Dolayısıyla `v1` optimizer'ı nominal olarak dört weight arasa da homojen testbed'de dört bağımsız davranış boyutu aramıyordu.
+
+Doğrulama:
+
+```bash
+cd scheduler
+go test -short -cover ./...
+```
+
+Sonuç:
+
+- bütün paketler geçti
+- ana scheduler paketi statement coverage: `%48.0`
+- optimizer paketi statement coverage: `%82.0`
+- tanı testleri `04164c6` (`test: document v1 policy-space invariances`) commit'inde kaydedildi
+
+Gate 1 ara kararı:
+
+- scale invariance ve homojen-worker Packing bağımlılığı artık yalnızca yorum değil, regression test ile korunan bir bulgudur
+- bir sonraki adım weight temsilinin ölçeğini sabitlemek ve operasyonel olarak bağımsız yeni sinyali literatür ile sistem semantiğine göre seçmektir
+- yeni sinyal seçilmeden ve feature-independence testleri geçmeden resmi optimizer koşusu başlatılmayacaktır
+
 ## 4. Şu Anki Durum
 
 Şu anda proje durumu şöyledir:
@@ -1187,7 +1238,9 @@ Gate 0 kararı:
 - SciSpace plugin'i related-work keşfi ve paper inceleme desteği için kurulmuş durumda
 - Gate 0 için iki retrospective pilot manifesti eklenmiş durumda
 - `v1` paper evidence audit'i tamamlanmış ve blocking bulgular makine-okunabilir biçimde kaydedilmiş durumda
-- Gate 0 tamam; sıradaki aktif kapı Gate 1 policy-space `v2`
+- Gate 0 tamam
+- Gate 1'in scale-invariance ve Packing-dependency tanı testleri tamamlanmış durumda
+- Gate 1'in sıradaki kararı weight normalization ve bağımsız `v2` sinyal seçimidir
 
 Başka bir ifadeyle:
 
@@ -1220,6 +1273,13 @@ Yol haritası bağımlılık sırasına göre gate'lere ayrılmıştır.
 - `v1` sonuçlarının neyi desteklediği ve neyi desteklemediği açık olmalı
 
 ### Gate 1 - Policy space `v2`
+
+Durum:
+
+- scale invariance testi tamamlandı
+- homojen worker'larda Packing ranking-equivalence testi tamamlandı
+- bağımlılığın heterojen kapasitelere genellenmediğini gösteren sınır testi tamamlandı
+- weight normalization ve bağımsız operasyonel sinyal seçimi bekliyor
 
 - Önce mevcut score için scale invariance ve ranking-equivalence testleri ekle
 - `Packing` bağımlılığını cebirsel ve ampirik olarak doğrula
