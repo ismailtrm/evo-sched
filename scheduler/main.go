@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"time"
 
+	"evok8s-scheduler/pkg/policy"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -32,12 +34,7 @@ type NodeState struct {
 	ManagedPodCount int
 }
 
-type ScoreWeights struct {
-	FreeCPU       float64
-	FreeMem       float64
-	Balance       float64
-	Consolidation float64
-}
+type ScoreWeights = policy.WeightSet
 
 func main() {
 	schedulerName := getenv("SCHEDULER_NAME", "evok8s-scheduler")
@@ -353,36 +350,7 @@ func loadScoreWeights() (ScoreWeights, error) {
 }
 
 func normalizeScoreWeights(weights ScoreWeights) (ScoreWeights, error) {
-	values := []struct {
-		name  string
-		value float64
-	}{
-		{name: "FreeCPU", value: weights.FreeCPU},
-		{name: "FreeMem", value: weights.FreeMem},
-		{name: "Balance", value: weights.Balance},
-		{name: "Consolidation", value: weights.Consolidation},
-	}
-
-	total := 0.0
-	for _, item := range values {
-		if math.IsNaN(item.value) || math.IsInf(item.value, 0) {
-			return ScoreWeights{}, fmt.Errorf("score weight %s must be finite", item.name)
-		}
-		if item.value < 0 {
-			return ScoreWeights{}, fmt.Errorf("score weight %s must be non-negative", item.name)
-		}
-		total += item.value
-	}
-	if total <= 0 {
-		return ScoreWeights{}, fmt.Errorf("score weights must have a positive sum")
-	}
-
-	return ScoreWeights{
-		FreeCPU:       weights.FreeCPU / total,
-		FreeMem:       weights.FreeMem / total,
-		Balance:       weights.Balance / total,
-		Consolidation: weights.Consolidation / total,
-	}, nil
+	return policy.Normalize(weights)
 }
 
 func bindPod(ctx context.Context, cs *kubernetes.Clientset, p corev1.Pod, nodeName string) error {
