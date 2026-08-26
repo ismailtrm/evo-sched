@@ -1063,6 +1063,26 @@ Paper kaynakları da Git'e alınmıştır:
 - sürekli değişen `main.pdf` repo yerine submission/release artifact olarak üretilecektir
 - bu ayrım `3173ae9` commit'i ile kaydedilmiştir
 
+### 3.37. Related-work araştırması için SciSpace plugin'ini ekledik
+
+Paper'ın related-work ve kaynak doğrulama aşamasında akademik literatür keşfini kolaylaştırmak için SciSpace plugin'i kullanıcı onayıyla kuruldu.
+
+Plugin'in görev sınırı şöyledir:
+
+- Kubernetes scheduling, multi-objective optimization ve evolutionary scheduling çalışmalarını keşfetmek
+- aday paper'ları konu, yöntem ve deney protokolü açısından ön elemek
+- related-work için karşılaştırılabilecek katkı ve sınırlılıkları çıkarmaya yardımcı olmak
+
+SciSpace deney kanıtı veya doğrulanmış kaynak yerine kullanılmayacaktır:
+
+- Paper'daki teknik iddialar mümkün olduğunca özgün araştırma makalesi veya resmî Kubernetes dokümantasyonu ile desteklenecek
+- Plugin özetleri doğrudan kaynak kabul edilmeyecek
+- Kullanılacak her referansın başlığı, yazarları, yayın bilgisi ve ilgili iddiası birincil kaynaktan doğrulanacak
+- Related-work notları paper'a girmeden önce `paper-evidence-audit` sürecinden geçirilecek
+
+Bu aşamada ek task-management veya dosya-yedekleme plugin'i kurulmadı.
+Roadmap için Git ve `WALKTHROUGH.md`, artifact saklama için repo ve release düzeni tek doğruluk kaynağı olarak korunmaktadır.
+
 ## 4. Şu Anki Durum
 
 Şu anda proje durumu şöyledir:
@@ -1096,6 +1116,7 @@ Paper kaynakları da Git'e alınmıştır:
 - Hibrit branch ve atomik kanıt commit düzeni kabul edilmiş durumda
 - Paper kaynakları Git ile izleniyor; build ürünleri ignore ediliyor
 - Araştırma ledger, policy audit ve paper evidence audit skill'leri yerel Codex ortamına kurulmuş durumda
+- SciSpace plugin'i related-work keşfi ve paper inceleme desteği için kurulmuş durumda
 
 Başka bir ifadeyle:
 
