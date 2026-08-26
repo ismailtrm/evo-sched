@@ -918,6 +918,151 @@ Gelecekteki doğal genişletme:
 
 için ayrı bir sensitivity analysis yapılmasıdır.
 
+### 3.35. Metodoloji denetimi sonrasında `v1` sonuçlarını pilot olarak yeniden sınıflandırdık
+
+Paper ve olası KubeCon başvurusu için iddiaları güçlendirmeden önce mevcut deney protokolü yeniden denetlendi.
+
+Bu denetim, `seed=42` sonucunu silmeyi veya değersiz saymayı değil, kanıt seviyesini doğru adlandırmayı amaçladı.
+
+Tespit edilen ilk metodolojik risk policy uzayındaki bağımlılıktır.
+
+Mevcut packing özelliği şöyledir:
+
+```text
+packing = 1 - average(remainingCPUAfterPlacement / allocCPU,
+                      remainingMemAfterPlacement / allocMem)
+```
+
+Homojen worker node'larda ve aynı Pod request'i aday node'lar arasında karşılaştırılırken bu terim yaklaşık olarak şu biçime açılır:
+
+```text
+packing = candidate-independent constant
+          - 0.5 * normalizedFreeCPU
+          - 0.5 * normalizedFreeMem
+```
+
+Bu durumda aday sıralamasını belirleyen skor şu efektif biçime yaklaşır:
+
+```text
+score = constant
+        + (wFreeCPU - 0.5 * wPacking) * normalizedFreeCPU
+        + (wFreeMem - 0.5 * wPacking) * normalizedFreeMem
+        - wPodPenalty * normalizedPodCount
+```
+
+Bunun iki sonucu vardır:
+
+- `Packing`, mevcut homojen kind topolojisinde `FreeCPU` ve `FreeMem` sinyallerinden tamamen bağımsız davranmayabilir
+- tüm weight'leri aynı pozitif katsayıyla çarpmak node sıralamasını değiştirmediği için farklı kromozomlar aynı policy'yi temsil edebilir
+
+Dolayısıyla nominal olarak dört boyutlu olan arama uzayının efektif boyutu daha düşük olabilir.
+Farklı bireylerin aynı objective noktasına çökmesi yalnızca bu bağımlılığı kanıtlamaz; ancak bu olasılığın test edilmesini zorunlu kılar.
+
+İkinci risk ölçüm çözünürlüğü ve örnek büyüklüğüdür:
+
+- scheduler sabit `2s` sleep kullanan polling loop ile çalışmaktadır
+- evaluator Pod durumunu poll etse de pending değerini gözlem anından değil `PodScheduled` condition zamanından hesaplamaktadır
+- buna rağmen mevcut sonuçlarda pending değerleri büyük ölçüde tam saniyelere çökmüştür
+- workload'lar yalnızca `4`, `4` ve `6` Pod içermektedir
+- optimizer içindeki her aday yalnızca bir kez değerlendirilmiştir
+
+Bu nedenle `0.67s` ile `1.00s` gibi küçük farkların ne kadarının policy davranışı, ne kadarının scheduler cadence ve timestamp çözünürlüğü olduğunu ayırmadan güçlü latency iddiası kurulamaz.
+
+Üçüncü risk workload baskısıdır:
+
+- mevcut workload'lar node yerleşim karakterini görünür kılmıştır
+- ancak Pod sayıları robust bir p95 dağılımı üretmek için küçüktür
+- tüm ölçümlerde `unschedulable=0` kalmıştır
+- optimizer'ın kapasite sınırı, kuyruk ve fragmentation davranışını yeterince zorlayıp zorlamadığı ayrıca doğrulanmalıdır
+
+Dördüncü risk dış baseline eksikliğidir:
+
+- mevcut üç preset custom policy uzayın anlamlı bölgelerini temsil etmektedir
+- ancak default `kube-scheduler` henüz deneysel referans olarak ölçülmemiştir
+- custom scheduler'ın polling modeli ile event-driven default scheduler arasında ham pending karşılaştırmasının adil olmayacağı ayrıca açıklanmalıdır
+
+Bu denetim sonrasında şu karar alındı:
+
+- `seed=42` ham sonuçları değiştirilmeyecek ve korunacak
+- bu sonuçlar `v1 pilot` kanıtı olarak sınıflandırılacak
+- daha önce planlanan `seed=123` ve `seed=999` koşuları iptal edilmedi, fakat `v2` policy ve ölçüm protokolü tamamlanana kadar ertelendi
+- aynı metodolojik sorunları taşıyan pahalı `v1` tekrarları yerine önce arama uzayı ve ölçüm zemini düzeltilecek
+- final paper ve CFP iddiaları yalnızca clean Git state üzerinde üretilen yeni official deneylerle güncellenecek
+
+Bu karar önceki planla bilinçli bir yön değişikliğidir.
+Önceki plan çoklu seed ile stokastik kararlılığı test etmeyi amaçlıyordu; yeni denetim ise seed kararlılığından önce ölçülen policy uzayının ve latency sinyalinin geçerli olması gerektiğini gösterdi.
+
+### 3.36. Agent-driven araştırma çalışma usulünü sabitledik
+
+Uzun süren bu çalışmada sohbet geçmişi tek doğruluk kaynağı olarak kabul edilmeyecektir.
+Kalıcı kaynaklar şunlardır:
+
+- Git commit geçmişi
+- `WALKTHROUGH.md`
+- commitlenmiş workload ve experiment config'leri
+- değiştirilmeyen ham sonuç klasörleri
+- her official deney için makine tarafından okunabilir manifest
+
+Deneyler üç sınıfa ayrıldı:
+
+- `official`: paper kanıtı olmaya aday; clean ve commitlenmiş tree gerektirir
+- `pilot`: karar vermeyi sağlayan keşif sonucu; final doğrulama değildir
+- `debug`: yalnızca sistem veya kod hatasını teşhis eder
+
+Official deney hard gate'i:
+
+1. working tree temiz olmalı
+2. kod, workload, config ve analiz şeması commitlenmiş olmalı
+3. Git SHA ve branch manifestte kaydedilmeli
+4. exact command, seed, tekrar ve explicit flag'ler kaydedilmeli
+5. input checksum'ları, cluster topolojisi, scheduler image/config ve sürümler kaydedilmeli
+6. cluster ve scheduler preflight başarılı olmalı
+7. output klasörü yeni olmalı veya resume kararı açıkça kayıtlı olmalı
+
+Dirty tree üzerinde alınan bir sonuç sessizce official kabul edilmeyecek; açıkça `pilot` veya `debug` olarak işaretlenecek.
+
+Git modeli hibrit olarak sabitlendi:
+
+- küçük dokümantasyon ve bakım değişiklikleri `main` üzerinde atomik commit olabilir
+- policy, measurement veya workload davranışını değiştiren işler kısa ömürlü `research/...` branch'lerinde yapılır
+- official deney yalnızca testleri geçmiş ve stable branch'e birleşmiş commit üzerinden çalışır
+- önemli deney protokolleri annotated Git tag ile dondurulur
+
+Commit ve kanıt sırası:
+
+1. test ve implementation commit'i
+2. değiştirilmeyen raw result commit'i
+3. türetilmiş analiz commit'i
+4. `WALKTHROUGH.md` ve paper yorumu commit'i
+
+Context kaybı veya reboot sonrasında recovery sırası:
+
+1. `git status` ve current branch
+2. son commitler
+3. bu dosyadaki current state ve next gate
+4. son experiment manifesti ve result klasörü
+5. cluster preflight
+
+Bu çalışma usulünü desteklemek için üç yerel Codex skill'i eklendi:
+
+- `research-experiment-ledger`: provenance, hard gate, manifest ve interruption recovery
+- `policy-space-audit`: weight invariance, feature bağımlılığı ve efektif arama uzayı denetimi
+- `paper-evidence-audit`: paper claim, tablo ve grafiklerini commitlenmiş kanıtlarla karşılaştırma
+
+Mevcut operasyon skill'lerinin sorumlulukları korunmuştur:
+
+- `kubernetes`: genel Kubernetes tasarım, deploy ve troubleshooting
+- `k8s-scheduler-experiment-ops`: scheduler deney preflight ve postflight
+- `multi-seed-experiment-runner`: seed'leri sırayla ve manifestli çalıştırma
+- `pareto-experiment-analysis`: unique Pareto noktaları ve baseline karşılaştırması
+
+Paper kaynakları da Git'e alınmıştır:
+
+- kaynak dosyalar, TikZ figürleri ve gerekli `IEEEtran.cls` izlenmektedir
+- LaTeX build çıktıları ve indirilen template paketi `.gitignore` kapsamındadır
+- sürekli değişen `main.pdf` repo yerine submission/release artifact olarak üretilecektir
+- bu ayrım `3173ae9` commit'i ile kaydedilmiştir
+
 ## 4. Şu Anki Durum
 
 Şu anda proje durumu şöyledir:
@@ -944,6 +1089,13 @@ için ayrı bir sensitivity analysis yapılmasıdır.
 - Pareto içinden dengeli temsilci çözüm için `knee point` yaklaşımı seçilmiş durumda
 - Tam ölçekli ilk optimizer koşusu (`seed=42`) tamamlanmış ve özetlenmiş durumda
 - `seed=42` altında iki baskın Pareto rejimi gözlenmiş durumda
+- `seed=42` ve mevcut resource-pressure matrix'i artık `v1 pilot` kanıtı olarak sınıflandırılmış durumda
+- Policy-space redundancy ve measurement-resolution riskleri kayıt altına alınmış durumda
+- `seed=123` ve `seed=999`, düzeltilmiş `v2` protokolüne kadar ertelenmiş durumda
+- Official deneyler için clean Git SHA, manifest ve preflight hard gate'i kabul edilmiş durumda
+- Hibrit branch ve atomik kanıt commit düzeni kabul edilmiş durumda
+- Paper kaynakları Git ile izleniyor; build ürünleri ignore ediliyor
+- Araştırma ledger, policy audit ve paper evidence audit skill'leri yerel Codex ortamına kurulmuş durumda
 
 Başka bir ifadeyle:
 
@@ -958,31 +1110,104 @@ Başka bir ifadeyle:
 - Adım 6 ve 7 için node-count tradeoff'u görünür hale gelmiş durumda
 - Adım 8 için gerekli evolutionary loop iskeleti kurulmuş durumda
 - Adım 8 için ilk tam seed sonucu alınmış ve Pareto özeti çıkarılmış durumda
+- Adım 8'in final doğrulaması, `v2` policy ve measurement protokolü tamamlanana kadar beklemede
 
 ## 5. Sıradaki Muhtemel Adımlar
 
-Buradan sonra mantıklı ilerleme sırası şudur:
+Yol haritası bağımlılık sırasına göre gate'lere ayrılmıştır.
 
-1. Tam optimizer koşularını tamamlamak:
-   - `seed=123`
-   - `seed=999`
-2. `seed=123` ve `seed=999` altında da benzersiz Pareto noktalarını çıkarmak
-3. Her seed için Pareto front'u baseline policy'lerle doğrudan karşılaştırmak
-4. Pareto kümesinden üç temsilci çözüm seçmek:
-   - pending-odaklı en iyi
-   - node-odaklı en iyi
-   - `knee point` ile seçilen dengeli uzlaşma çözümü
-5. Yardımcı metrikleri sonuç tablolarına eklemek:
-   - `unschedulable`
-   - `load variance`
-6. Sonuçları tablo/grafik üretimine bağlamak ve rapor anlatısını kurmak
+### Gate 0 - `v1` pilotu dondur ve provenance'ı tamamla
 
-İlk teknik iyileştirme adayları:
+- Mevcut `seed=42` ve matrix sonuçlarını değiştirmeden koru
+- Sonuçları final validation yerine pilot olarak etiketle
+- Eksik Git SHA, sürüm, cluster topolojisi ve exact command bilgisini bulunabildiği ölçüde geriye dönük kaydet
+- Raw result ile paper claim arasındaki mevcut bağlantıları audit et
 
-- Scheduler cadence etkisini ayırmak için tiny-control workload eklemek
-- Yardımcı metrik olarak `load variance` hesaplamasını evaluator'a eklemek
-- Farklı bireylerin aynı objective noktasına çökmesini dikkate alarak raporlamayı benzersiz Pareto noktaları üzerinden yapmak
-- Optimizer hiperparametreleri için ayrı sensitivity analysis yapmak
+Çıkış koşulu:
+
+- `v1` sonuçlarının neyi desteklediği ve neyi desteklemediği açık olmalı
+
+### Gate 1 - Policy space `v2`
+
+- Önce mevcut score için scale invariance ve ranking-equivalence testleri ekle
+- `Packing` bağımlılığını cebirsel ve ampirik olarak doğrula
+- Weight normalization ile temsil ölçeğini sabitle
+- `Packing` yerine bağımsız bir operasyonel sinyal seç veya mevcut bağımlılığı açıkça modelden çıkar
+- Her feature'ın en az bir temsilci durumda node sıralamasını bağımsız değiştirdiğini test et
+- Tie-breaking ve weight sınırlarını test et
+
+Karar noktası:
+
+- yeni sinyal fragmentation, dominant-resource residual, post-placement imbalance veya new-node activation davranışlarından hangisini en doğru temsil edecek?
+
+Çıkış koşulu:
+
+- optimizer'ın aradığı parametrelerin efektif policy farklılığı ürettiği testlerle gösterilmeli
+
+### Gate 2 - Measurement `v2`
+
+- Scheduler'ın `2s` cadence etkisini tiny-control deneyle ölç
+- Polling interval'i configurable yap veya event/watch tabanlı scheduling akışını değerlendir
+- Scheduling karar anını mümkün olduğunca scheduler kaynağında yüksek çözünürlükle kaydet
+- Evaluator gözlem gecikmesi ile scheduler karar gecikmesini ayır
+- Pending metriğinin semantiğini ve timestamp kaynağını manifestte kaydet
+- `maxActiveNodes` adını gerçek anlamına uygun biçimde `max workload-occupied worker nodes` olarak netleştir
+
+Çıkış koşulu:
+
+- Aynı policy tekrarlarında ölçüm tabanı, jitter ve timestamp çözünürlüğü raporlanabilir olmalı
+
+### Gate 3 - Workload ve metrik seti `v2`
+
+- Workload başına Pod sayısını p95 ve dağılım analizi için anlamlı seviyeye çıkar
+- CPU-tight, mem-tight ve fragmentation rejimlerini koru fakat gerçek kapasite baskısı oluştur
+- Optimizer'ın görmediği en az bir holdout workload tanımla
+- `unschedulable` değerini güvenlik/feasibility kısıtı olarak tut
+- Yardımcı metrik olarak load variance, utilization ve fragmentation ölçülerini değerlendir
+- Workload checksum ve instantiate edilen mutlak resource request'lerini manifestte sakla
+
+Çıkış koşulu:
+
+- Policy farkları yalnızca birkaç Pod veya tek cadence tick'ine bağlı olmadan ölçülebilmeli
+
+### Gate 4 - Baseline protokolü
+
+- `evok8s-default`, `evok8s-spread-heavy` ve `evok8s-packing-heavy` presetlerini `v2` policy'ye göre yeniden tanımla
+- Default `kube-scheduler`ı dış referans baseline olarak ekle
+- Uygunsa kube-scheduler `NodeResourcesFit` / `MostAllocated` benzeri packing referansını ayrıca ölç
+- Event-driven kube-scheduler ile polling custom scheduler arasındaki ham latency karşılaştırmasının sınırını açıkla
+- Placement ve consolidation metriklerini ortak karşılaştırma zemini olarak önceliklendir
+
+Çıkış koşulu:
+
+- Her baseline aynı workload, cluster ve raporlama protokolü altında izlenebilir olmalı
+
+### Gate 5 - Official optimization ve doğrulama
+
+- Clean stable commit ve annotated protocol tag oluştur
+- Preflight sonrasında `42`, `123`, `999` seed'lerini sequential çalıştır
+- Her seed için unique nondominated objective noktalarını çıkar
+- Finalist Pareto çözümlerini ve baseline'ları bağımsız tekrarlarla yeniden ölç
+- Merkezi eğilim yanında dağılım, worst-case ve güven aralığı raporla
+- Pareto yapısını all-measured solutions üzerinden yeniden kur
+- Pending-best, node-best ve yeterli nokta varsa knee-point temsilcisini seç
+- Holdout workload üzerinde genelleme kontrolü yap
+
+Çıkış koşulu:
+
+- Yeni Pareto rejimlerinin baseline ve seed gürültüsünün ötesinde tekrarlandığı gösterilmeli
+
+### Gate 6 - Paper, repo ve CFP hazırlığı
+
+- `paper-evidence-audit` ile her sayısal claim'i official artifact'e bağla
+- Abstract, results ve conclusion'ı yalnızca final protokol sonuçlarıyla güncelle
+- README, lisans, pinned sürümler ve tek komutlu reproduction akışı ekle
+- Grafiklerde uncertainty, baseline ve seed bilgisini görünür yap
+- Paper ve CFP anlatısını "evrensel en iyi scheduler" yerine canlı cluster üzerinde policy-space search sırasında öğrenilen tradeoff ve metodoloji dersleri üzerine kur
+
+Çıkış koşulu:
+
+- Repo, paper ve CFP metni aynı commitlenmiş kanıt setini referans göstermeli
 
 ## 6. Bu Dosya Nasıl Kullanılmalı
 
@@ -994,5 +1219,8 @@ Her anlamlı session sonunda bu dosya güncellenmelidir.
 - Sonra "bu session öncesi durum" kısa şekilde revize edilir
 - Ardından yeni session'da yapılan somut işler eklenir
 - En altta güncel durum ve sıradaki adım net biçimde yazılır
+
+Yeni bir agent veya context recovery sırasında önce `## 4. Şu Anki Durum`, sonra `## 5. Sıradaki Muhtemel Adımlar` okunmalıdır.
+Sonraki gate seçilmeden önce Git durumu ve son manifest doğrulanmalıdır.
 
 Bu sayede dosya hem ilerleme günlüğü hem de projeye geri döndüğümüzde hızlı onboarding rehberi olarak kullanılabilir.
