@@ -1202,6 +1202,33 @@ Gate 1 ara kararı:
 - bir sonraki adım weight temsilinin ölçeğini sabitlemek ve operasyonel olarak bağımsız yeni sinyali literatür ile sistem semantiğine göre seçmektir
 - yeni sinyal seçilmeden ve feature-independence testleri geçmeden resmi optimizer koşusu başlatılmayacaktır
 
+### 3.40. Yerel `gopls` cache izin hatasını giderdik
+
+Gate 1 testleri üzerinde çalışırken VS Code Go extension language server'ı başlatamadı.
+Birincil hata şuydu:
+
+```text
+gopls cannot access its persistent index: mkdir /home/ismail/.cache/gopls/11d335bd: permission denied
+```
+
+Ardından görülen `write EPIPE`, `connection got disposed` ve `startFailed` mesajları birincil cache hatasının ikincil sonuçlarıydı.
+Disk kullanımı normaldi; kök neden `/home/ismail/.cache/gopls` dizininin `nobody:nobody` sahipliğinde ve `0700` modunda olmasıydı.
+
+Geri dönüşü kolay tutmak için hatalı cache silinmedi:
+
+- eski dizin `/home/ismail/.cache/gopls.permission-backup-20260827-001433` adına taşındı
+- yeni `/home/ismail/.cache/gopls` dizini `ismail:ismail` sahipliği ve `0700` modu ile oluşturuldu
+- VS Code penceresi `Developer: Reload Window` ile yeniden yüklendi
+
+Doğrulama:
+
+- `gopls v0.23.0` gerçek kullanıcı ortamında başladı
+- `gopls check main.go` sıfır hata ile tamamlandı
+- `gopls check policy_space_test.go` sıfır hata ile tamamlandı
+- reload sonrasında VS Code durum çubuğu ve Go language server normale döndü
+
+Bu olay araştırma kodunu veya deney artifact'lerini değiştirmedi; yalnızca yerel geliştirme ortamı düzeltildi.
+
 ## 4. Şu Anki Durum
 
 Şu anda proje durumu şöyledir:
