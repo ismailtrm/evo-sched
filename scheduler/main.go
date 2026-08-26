@@ -22,21 +22,21 @@ type ResourceRequest struct {
 }
 
 type NodeState struct {
-	Name     string
-	AllocCPU int64
-	AllocMem int64
-	UsedCPU  int64
-	UsedMem  int64
-	FreeCPU  int64
-	FreeMem  int64
-	PodCount int
+	Name            string
+	AllocCPU        int64
+	AllocMem        int64
+	UsedCPU         int64
+	UsedMem         int64
+	FreeCPU         int64
+	FreeMem         int64
+	ManagedPodCount int
 }
 
 type ScoreWeights struct {
-	FreeCPU    float64
-	FreeMem    float64
-	PodPenalty float64
-	Packing    float64
+	FreeCPU       float64
+	FreeMem       float64
+	Balance       float64
+	Consolidation float64
 }
 
 func main() {
@@ -88,7 +88,7 @@ func tick(ctx context.Context, cs *kubernetes.Clientset, schedulerName string, w
 	if err != nil {
 		return fmt.Errorf("list all pods: %w", err)
 	}
-	nodeStates := buildNodeStates(nodes.Items, allPods.Items)
+	nodeStates := buildNodeStates(nodes.Items, allPods.Items, schedulerName)
 
 	for _, p := range pods.Items {
 		// Only handle pods targeting our scheduler.
@@ -125,7 +125,7 @@ func tick(ctx context.Context, cs *kubernetes.Clientset, schedulerName string, w
 		}
 
 		if state := nodeStates[nodeName]; state != nil {
-			applyRequestToNodeState(state, req)
+			applyRequestToNodeState(state, req, true)
 		}
 
 		log.Printf("bound pod=%s/%s -> node=%s score=%.4f", p.Namespace, p.Name, nodeName, score)
@@ -141,16 +141,12 @@ func chooseBestNode(
 	weights ScoreWeights,
 ) (string, float64) {
 	feasible := make([]*NodeState, 0, len(nodes))
-	maxPodCount := 0
 	for _, n := range nodes {
 		state := states[n.Name]
 		if state == nil || !fitsRequest(state, req) {
 			continue
 		}
 		feasible = append(feasible, state)
-		if state.PodCount > maxPodCount {
-			maxPodCount = state.PodCount
-		}
 	}
 	if len(feasible) == 0 {
 		return "", 0
@@ -159,7 +155,7 @@ func chooseBestNode(
 	bestName := ""
 	bestScore := math.Inf(-1)
 	for _, state := range feasible {
-		score := scoreNode(state, req, maxPodCount, weights)
+		score := scoreNode(state, req, weights)
 		if score > bestScore+1e-9 || (math.Abs(score-bestScore) <= 1e-9 && (bestName == "" || state.Name < bestName)) {
 			bestName = state.Name
 			bestScore = score
@@ -169,7 +165,7 @@ func chooseBestNode(
 	return bestName, bestScore
 }
 
-func buildNodeStates(nodes []corev1.Node, pods []corev1.Pod) map[string]*NodeState {
+func buildNodeStates(nodes []corev1.Node, pods []corev1.Pod, schedulerName string) map[string]*NodeState {
 	states := make(map[string]*NodeState, len(nodes))
 	for _, n := range nodes {
 		allocCPU := n.Status.Allocatable.Cpu().MilliValue()
@@ -191,7 +187,7 @@ func buildNodeStates(nodes []corev1.Node, pods []corev1.Pod) map[string]*NodeSta
 		if state == nil {
 			continue
 		}
-		applyRequestToNodeState(state, podRequests(&p))
+		applyRequestToNodeState(state, podRequests(&p), p.Spec.SchedulerName == schedulerName)
 	}
 
 	return states
@@ -218,10 +214,12 @@ func podRequests(pod *corev1.Pod) ResourceRequest {
 	return req
 }
 
-func applyRequestToNodeState(state *NodeState, req ResourceRequest) {
+func applyRequestToNodeState(state *NodeState, req ResourceRequest, managed bool) {
 	state.UsedCPU += req.CPUMilli
 	state.UsedMem += req.MemoryBytes
-	state.PodCount++
+	if managed {
+		state.ManagedPodCount++
+	}
 	state.FreeCPU = maxInt64(0, state.AllocCPU-state.UsedCPU)
 	state.FreeMem = maxInt64(0, state.AllocMem-state.UsedMem)
 }
@@ -230,25 +228,20 @@ func fitsRequest(state *NodeState, req ResourceRequest) bool {
 	return state.FreeCPU >= req.CPUMilli && state.FreeMem >= req.MemoryBytes
 }
 
-func scoreNode(state *NodeState, req ResourceRequest, maxPodCount int, weights ScoreWeights) float64 {
-	normFreeCPU := fraction(state.FreeCPU, state.AllocCPU)
-	normFreeMem := fraction(state.FreeMem, state.AllocMem)
+func scoreNode(state *NodeState, req ResourceRequest, weights ScoreWeights) float64 {
+	postFreeCPU := fraction(maxInt64(0, state.FreeCPU-req.CPUMilli), state.AllocCPU)
+	postFreeMem := fraction(maxInt64(0, state.FreeMem-req.MemoryBytes), state.AllocMem)
+	balance := 1.0 - math.Abs(postFreeCPU-postFreeMem)
 
-	normPodCount := 0.0
-	if maxPodCount > 0 {
-		normPodCount = float64(state.PodCount) / float64(maxPodCount)
+	consolidation := 0.0
+	if state.ManagedPodCount > 0 {
+		consolidation = 1.0
 	}
 
-	remainingCPU := maxInt64(0, state.FreeCPU-req.CPUMilli)
-	remainingMem := maxInt64(0, state.FreeMem-req.MemoryBytes)
-	remainingCPUFraction := fraction(remainingCPU, state.AllocCPU)
-	remainingMemFraction := fraction(remainingMem, state.AllocMem)
-	normPacking := 1.0 - ((remainingCPUFraction + remainingMemFraction) / 2.0)
-
-	return (weights.FreeCPU * normFreeCPU) +
-		(weights.FreeMem * normFreeMem) -
-		(weights.PodPenalty * normPodCount) +
-		(weights.Packing * normPacking)
+	return (weights.FreeCPU * postFreeCPU) +
+		(weights.FreeMem * postFreeMem) +
+		(weights.Balance * balance) +
+		(weights.Consolidation * consolidation)
 }
 
 func filterNodesForPod(pod *corev1.Pod, nodes []corev1.Node) []corev1.Node {
@@ -343,19 +336,52 @@ func loadScoreWeights() (ScoreWeights, error) {
 	if err != nil {
 		return ScoreWeights{}, err
 	}
-	podPenalty, err := getenvFloat64("WEIGHT_POD_PENALTY", 0.5)
+	balance, err := getenvFloat64("WEIGHT_BALANCE", 1.0)
 	if err != nil {
 		return ScoreWeights{}, err
 	}
-	packing, err := getenvFloat64("WEIGHT_PACKING", 0.2)
+	consolidation, err := getenvFloat64("WEIGHT_CONSOLIDATION", 1.0)
 	if err != nil {
 		return ScoreWeights{}, err
 	}
+	return normalizeScoreWeights(ScoreWeights{
+		FreeCPU:       freeCPU,
+		FreeMem:       freeMem,
+		Balance:       balance,
+		Consolidation: consolidation,
+	})
+}
+
+func normalizeScoreWeights(weights ScoreWeights) (ScoreWeights, error) {
+	values := []struct {
+		name  string
+		value float64
+	}{
+		{name: "FreeCPU", value: weights.FreeCPU},
+		{name: "FreeMem", value: weights.FreeMem},
+		{name: "Balance", value: weights.Balance},
+		{name: "Consolidation", value: weights.Consolidation},
+	}
+
+	total := 0.0
+	for _, item := range values {
+		if math.IsNaN(item.value) || math.IsInf(item.value, 0) {
+			return ScoreWeights{}, fmt.Errorf("score weight %s must be finite", item.name)
+		}
+		if item.value < 0 {
+			return ScoreWeights{}, fmt.Errorf("score weight %s must be non-negative", item.name)
+		}
+		total += item.value
+	}
+	if total <= 0 {
+		return ScoreWeights{}, fmt.Errorf("score weights must have a positive sum")
+	}
+
 	return ScoreWeights{
-		FreeCPU:    freeCPU,
-		FreeMem:    freeMem,
-		PodPenalty: podPenalty,
-		Packing:    packing,
+		FreeCPU:       weights.FreeCPU / total,
+		FreeMem:       weights.FreeMem / total,
+		Balance:       weights.Balance / total,
+		Consolidation: weights.Consolidation / total,
 	}, nil
 }
 

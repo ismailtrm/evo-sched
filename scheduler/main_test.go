@@ -1,6 +1,7 @@
 package main
 
 import (
+	"math"
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
@@ -177,10 +178,10 @@ func TestPodRequests(t *testing.T) {
 }
 
 func TestLoadScoreWeightsFromEnv(t *testing.T) {
-	t.Setenv("WEIGHT_FREE_CPU", "1.5")
-	t.Setenv("WEIGHT_FREE_MEM", "0.8")
-	t.Setenv("WEIGHT_POD_PENALTY", "0.3")
-	t.Setenv("WEIGHT_PACKING", "2.1")
+	t.Setenv("WEIGHT_FREE_CPU", "2")
+	t.Setenv("WEIGHT_FREE_MEM", "1")
+	t.Setenv("WEIGHT_BALANCE", "1")
+	t.Setenv("WEIGHT_CONSOLIDATION", "0")
 
 	got, err := loadScoreWeights()
 	if err != nil {
@@ -188,20 +189,48 @@ func TestLoadScoreWeightsFromEnv(t *testing.T) {
 	}
 
 	want := ScoreWeights{
-		FreeCPU:    1.5,
-		FreeMem:    0.8,
-		PodPenalty: 0.3,
-		Packing:    2.1,
+		FreeCPU:       0.5,
+		FreeMem:       0.25,
+		Balance:       0.25,
+		Consolidation: 0,
 	}
-	if got != want {
-		t.Fatalf("loadScoreWeights() = %+v, want %+v", got, want)
+	assertScoreWeightsClose(t, got, want)
+}
+
+func TestNormalizeScoreWeightsCanonicalizesPositiveScale(t *testing.T) {
+	base, err := normalizeScoreWeights(ScoreWeights{FreeCPU: 2, FreeMem: 1, Balance: 1})
+	if err != nil {
+		t.Fatalf("normalizeScoreWeights(base) error = %v", err)
+	}
+	scaled, err := normalizeScoreWeights(ScoreWeights{FreeCPU: 20, FreeMem: 10, Balance: 10})
+	if err != nil {
+		t.Fatalf("normalizeScoreWeights(scaled) error = %v", err)
+	}
+	assertScoreWeightsClose(t, base, scaled)
+}
+
+func TestNormalizeScoreWeightsRejectsInvalidVectors(t *testing.T) {
+	tests := []struct {
+		name    string
+		weights ScoreWeights
+	}{
+		{name: "all zero", weights: ScoreWeights{}},
+		{name: "negative", weights: ScoreWeights{FreeCPU: 1, Balance: -0.1}},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			if _, err := normalizeScoreWeights(tc.weights); err == nil {
+				t.Fatal("normalizeScoreWeights() error = nil, want non-nil")
+			}
+		})
 	}
 }
 
 func TestChooseBestNodePrefersMoreFreeCPU(t *testing.T) {
 	states := map[string]*NodeState{
-		"cpu-rich": newNodeState("cpu-rich", 4000, 4000, 1000, 1000, 2),
-		"cpu-poor": newNodeState("cpu-poor", 4000, 4000, 3000, 1000, 2),
+		"cpu-rich": newNodeState("cpu-rich", 4000, 4000, 1000, 1000, 0),
+		"cpu-poor": newNodeState("cpu-poor", 4000, 4000, 3000, 1000, 0),
 	}
 
 	got, _ := chooseBestNode(
@@ -215,44 +244,61 @@ func TestChooseBestNodePrefersMoreFreeCPU(t *testing.T) {
 	}
 }
 
-func TestChooseBestNodePrefersLowerPodPenalty(t *testing.T) {
+func TestChooseBestNodePrefersMoreFreeMemory(t *testing.T) {
 	states := map[string]*NodeState{
-		"few-pods":  newNodeState("few-pods", 4000, 4000, 1000, 1000, 1),
-		"many-pods": newNodeState("many-pods", 4000, 4000, 1000, 1000, 5),
+		"memory-rich": newNodeState("memory-rich", 4000, 4000, 1000, 1000, 0),
+		"memory-poor": newNodeState("memory-poor", 4000, 4000, 1000, 3000, 0),
 	}
 
 	got, _ := chooseBestNode(
-		candidateNodes("few-pods", "many-pods"),
+		candidateNodes("memory-rich", "memory-poor"),
 		states,
 		ResourceRequest{CPUMilli: 100, MemoryBytes: 100},
-		ScoreWeights{PodPenalty: 1.0},
+		ScoreWeights{FreeMem: 1.0},
 	)
-	if got != "few-pods" {
-		t.Fatalf("expected few-pods, got %s", got)
+	if got != "memory-rich" {
+		t.Fatalf("expected memory-rich, got %s", got)
 	}
 }
 
-func TestChooseBestNodePrefersPacking(t *testing.T) {
+func TestChooseBestNodePrefersPostPlacementBalance(t *testing.T) {
 	states := map[string]*NodeState{
-		"spread-node": newNodeState("spread-node", 4000, 4000, 1000, 1000, 1),
-		"packed-node": newNodeState("packed-node", 4000, 4000, 2500, 2500, 1),
+		"balanced-after":   newNodeState("balanced-after", 4000, 4000, 1500, 0, 0),
+		"unbalanced-after": newNodeState("unbalanced-after", 4000, 4000, 0, 0, 0),
 	}
 
 	got, _ := chooseBestNode(
-		candidateNodes("spread-node", "packed-node"),
+		candidateNodes("balanced-after", "unbalanced-after"),
 		states,
-		ResourceRequest{CPUMilli: 500, MemoryBytes: 500},
-		ScoreWeights{Packing: 1.0},
+		ResourceRequest{CPUMilli: 500, MemoryBytes: 2000},
+		ScoreWeights{Balance: 1.0},
 	)
-	if got != "packed-node" {
-		t.Fatalf("expected packed-node, got %s", got)
+	if got != "balanced-after" {
+		t.Fatalf("expected balanced-after, got %s", got)
+	}
+}
+
+func TestChooseBestNodePrefersConsolidation(t *testing.T) {
+	states := map[string]*NodeState{
+		"already-occupied":  newNodeState("already-occupied", 4000, 4000, 1000, 1000, 1),
+		"new-workload-node": newNodeState("new-workload-node", 4000, 4000, 1000, 1000, 0),
+	}
+
+	got, _ := chooseBestNode(
+		candidateNodes("already-occupied", "new-workload-node"),
+		states,
+		ResourceRequest{CPUMilli: 100, MemoryBytes: 100},
+		ScoreWeights{Consolidation: 1.0},
+	)
+	if got != "already-occupied" {
+		t.Fatalf("expected already-occupied, got %s", got)
 	}
 }
 
 func TestChooseBestNodeRejectsNodesThatDoNotFit(t *testing.T) {
 	states := map[string]*NodeState{
-		"small-a": newNodeState("small-a", 4000, 4000, 3900, 3900, 1),
-		"small-b": newNodeState("small-b", 4000, 4000, 3950, 3950, 1),
+		"small-a": newNodeState("small-a", 4000, 4000, 3900, 3900, 0),
+		"small-b": newNodeState("small-b", 4000, 4000, 3950, 3950, 0),
 	}
 
 	got, _ := chooseBestNode(
@@ -263,6 +309,53 @@ func TestChooseBestNodeRejectsNodesThatDoNotFit(t *testing.T) {
 	)
 	if got != "" {
 		t.Fatalf("expected no feasible node, got %s", got)
+	}
+}
+
+func TestChooseBestNodeUsesDeterministicNameTieBreak(t *testing.T) {
+	states := map[string]*NodeState{
+		"node-b": newNodeState("node-b", 4000, 4000, 1000, 1000, 0),
+		"node-a": newNodeState("node-a", 4000, 4000, 1000, 1000, 0),
+	}
+
+	got, _ := chooseBestNode(
+		candidateNodes("node-b", "node-a"),
+		states,
+		ResourceRequest{CPUMilli: 100, MemoryBytes: 100},
+		ScoreWeights{FreeCPU: 0.5, FreeMem: 0.5},
+	)
+	if got != "node-a" {
+		t.Fatalf("expected node-a, got %s", got)
+	}
+}
+
+func TestBuildNodeStatesTracksManagedPodsSeparately(t *testing.T) {
+	nodes := []corev1.Node{{
+		ObjectMeta: readyNodeMeta("worker-a"),
+		Status: corev1.NodeStatus{Allocatable: corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse("4"),
+			corev1.ResourceMemory: resource.MustParse("4Gi"),
+		}},
+	}}
+	pods := []corev1.Pod{
+		boundPod("managed", "worker-a", "evok8s-scheduler", corev1.PodRunning, "500m", "512Mi"),
+		boundPod("default", "worker-a", "default-scheduler", corev1.PodRunning, "250m", "256Mi"),
+		boundPod("finished", "worker-a", "evok8s-scheduler", corev1.PodSucceeded, "1000m", "1Gi"),
+	}
+
+	states := buildNodeStates(nodes, pods, "evok8s-scheduler")
+	state := states["worker-a"]
+	if state == nil {
+		t.Fatal("worker-a state is nil")
+	}
+	if state.UsedCPU != 750 {
+		t.Fatalf("UsedCPU = %d, want 750", state.UsedCPU)
+	}
+	if state.UsedMem != 805306368 {
+		t.Fatalf("UsedMem = %d, want 805306368", state.UsedMem)
+	}
+	if state.ManagedPodCount != 1 {
+		t.Fatalf("ManagedPodCount = %d, want 1", state.ManagedPodCount)
 	}
 }
 
@@ -286,15 +379,43 @@ func candidateNodes(names ...string) []corev1.Node {
 	return nodes
 }
 
-func newNodeState(name string, allocCPU, allocMem, usedCPU, usedMem int64, podCount int) *NodeState {
+func newNodeState(name string, allocCPU, allocMem, usedCPU, usedMem int64, managedPodCount int) *NodeState {
 	return &NodeState{
-		Name:     name,
-		AllocCPU: allocCPU,
-		AllocMem: allocMem,
-		UsedCPU:  usedCPU,
-		UsedMem:  usedMem,
-		FreeCPU:  allocCPU - usedCPU,
-		FreeMem:  allocMem - usedMem,
-		PodCount: podCount,
+		Name:            name,
+		AllocCPU:        allocCPU,
+		AllocMem:        allocMem,
+		UsedCPU:         usedCPU,
+		UsedMem:         usedMem,
+		FreeCPU:         allocCPU - usedCPU,
+		FreeMem:         allocMem - usedMem,
+		ManagedPodCount: managedPodCount,
+	}
+}
+
+func boundPod(name, nodeName, schedulerName string, phase corev1.PodPhase, cpu, memory string) corev1.Pod {
+	return corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{Name: name},
+		Spec: corev1.PodSpec{
+			NodeName:      nodeName,
+			SchedulerName: schedulerName,
+			Containers: []corev1.Container{{
+				Resources: corev1.ResourceRequirements{Requests: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse(cpu),
+					corev1.ResourceMemory: resource.MustParse(memory),
+				}},
+			}},
+		},
+		Status: corev1.PodStatus{Phase: phase},
+	}
+}
+
+func assertScoreWeightsClose(t *testing.T, got, want ScoreWeights) {
+	t.Helper()
+	gotValues := []float64{got.FreeCPU, got.FreeMem, got.Balance, got.Consolidation}
+	wantValues := []float64{want.FreeCPU, want.FreeMem, want.Balance, want.Consolidation}
+	for i := range gotValues {
+		if math.Abs(gotValues[i]-wantValues[i]) > 1e-12 {
+			t.Fatalf("weights[%d] = %.15f, want %.15f; got=%+v want=%+v", i, gotValues[i], wantValues[i], got, want)
+		}
 	}
 }
