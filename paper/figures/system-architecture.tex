@@ -1,0 +1,35 @@
+\begin{tikzpicture}[
+  node distance=6mm and 9mm,
+  every node/.style={font=\footnotesize},
+  block/.style={box, text width=2.55cm, minimum height=1.45cm},
+  wideblock/.style={databox, text width=2.7cm, minimum height=1.55cm},
+  metricblock/.style={databox, text width=2.8cm, minimum height=1.55cm},
+  flowlabel/.style={font=\scriptsize, fill=white, inner sep=1pt}
+]
+\node[wideblock] (workloads) {Workload JSONs\\cpu-tight\\mem-tight\\fragmenting-mix};
+\node[block, right=13mm of workloads] (evaluator) {Evaluator\\patch, rollout,\\replay, collect};
+\node[block, below=10mm of evaluator] (optimizer) {Evolutionary\\optimizer\\policy weights $\mathbf{w}$};
+\node[block, right=14mm of evaluator] (scheduler) {Custom scheduler\\deployment\\\texttt{evo-sched}};
+\node[block, right=9mm of scheduler] (cluster) {kind cluster\\4 workers\\real Pod binding};
+\node[metricblock, below=10mm of cluster] (metrics) {Metrics and artifacts\\pending, active nodes\\JSON / CSV / Pareto};
+
+\draw[line] (workloads) -- (evaluator);
+\draw[line] (optimizer.north) -- (evaluator.south);
+\node[flowlabel, left=1mm of $(optimizer.north)!0.5!(evaluator.south)$] {candidate weights};
+\draw[line] (evaluator) -- node[flowlabel, above] {env patch} (scheduler);
+\draw[line] (scheduler) -- node[flowlabel, above] {bind decisions} (cluster);
+\draw[line] (cluster.south) -- (metrics.north);
+\node[flowlabel, right=1mm of $(cluster.south)!0.5!(metrics.north)$] {runtime metrics};
+\draw[line] (metrics.west) -- (optimizer.east);
+\node[flowlabel, above=1mm of $(metrics.west)!0.5!(optimizer.east)$] {objectives};
+
+\begin{scope}[on background layer]
+  \node[
+    draw=softgray,
+    rounded corners=3pt,
+    fit=(scheduler)(cluster),
+    inner sep=6pt,
+    label={[font=\scriptsize]above:live Kubernetes experiment loop}
+  ] {};
+\end{scope}
+\end{tikzpicture}

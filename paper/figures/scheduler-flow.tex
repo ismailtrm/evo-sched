@@ -1,0 +1,20 @@
+\begin{tikzpicture}[
+  node distance=6mm and 7mm,
+  every node/.style={font=\footnotesize}
+]
+\node[box, minimum width=0.18\linewidth] (watch) {Watch pending Pods\\\texttt{schedulerName=evok8s-scheduler}};
+\node[box, right=of watch, minimum width=0.16\linewidth] (filter) {Feasibility filter\\Ready, schedulable,\\taints, fit};
+\node[box, right=of filter, minimum width=0.15\linewidth] (state) {Node state\\allocatable, used,\\free, pod count};
+\node[box, right=of state, minimum width=0.14\linewidth] (score) {Score feasible nodes\\weighted policy};
+\node[box, right=of score, minimum width=0.13\linewidth] (bind) {Choose best\\create Binding};
+
+\draw[line] (watch) -- (filter);
+\draw[line] (filter) -- (state);
+\draw[line] (state) -- (score);
+\draw[line] (score) -- (bind);
+
+\node[smallbox, below=5mm of filter, text width=0.24\linewidth] (note1) {Hard constraints are enforced before optimization.};
+\node[smallbox, below=5mm of score, text width=0.24\linewidth] (note2) {Only the scoring weights change across experiments.};
+\draw[line] (note1.north) -- ($(filter.south)+(0,-1mm)$);
+\draw[line] (note2.north) -- ($(score.south)+(0,-1mm)$);
+\end{tikzpicture}
