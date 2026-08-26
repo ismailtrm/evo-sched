@@ -1229,6 +1229,84 @@ Doğrulama:
 
 Bu olay araştırma kodunu veya deney artifact'lerini değiştirmedi; yalnızca yerel geliştirme ortamı düzeltildi.
 
+### 3.41. Policy space `v2` feature setini seçtik
+
+Gate 1 invariance kanıtından sonra eski `Packing` terimini yalnızca başka bir serbest-kaynak toplamıyla değiştirmek yeterli görülmedi.
+Çünkü `FreeCPU`, `FreeMem` ve `PodPenalty` mevcut işaretleriyle birlikte spread yönünde çalışıyor;
+Packing kaldırılıp yalnızca balance eklenirse workload-occupied worker sayısını azaltan açık bir consolidation sinyali kalmıyor.
+
+Karar öncesinde dört aday sinyal ailesi değerlendirildi:
+
+1. `RequestedToCapacityRatio` veya başka nonlinear utilization curve
+   - Kubernetes'in resmi `NodeResourcesFit` seçeneklerinden biridir
+   - fakat yine aynı CPU ve memory utilization değişkenlerinin dönüşümüdür; tek başına yeni operasyonel boyut sağlamaz
+2. dominant-resource residual veya best-fit
+   - doğrusal toplamdan farklı node sıralamaları üretebilir
+   - ancak CPU-memory fragmentation ile workload-occupied worker hedefini aynı terimde birleştirir ve yorumu belirsizleştirir
+3. post-placement resource balance
+   - Kubernetes `v1.35` `NodeResourcesBalancedAllocation` yaklaşımı CPU ve memory kullanım oranları arasındaki farkı kullanır
+   - nonlinear olduğu için iki serbest-kaynak terimine sabit katsayılarla emilemez
+   - complementary CPU-heavy ve memory-heavy Pod davranışını görünür kılar
+4. workload-node consolidation
+   - aday node zaten bu scheduler'ın aktif bir Pod'unu barındırıyorsa ayrı bir bonus üretir
+   - resource fraction'lardan bağımsız, doğrudan `max workload-occupied worker nodes` objective'inin placement karşılığıdır
+   - kind worker container'ının powered-on olduğunu iddia etmez; yalnızca workload occupancy ölçer
+
+Kaynak kontrolü:
+
+- Kubernetes, `MostAllocated` yaklaşımını yüksek allocation'a sahip node'ları tercih ederek daha boş node'ları scale-down için hazırlayan bin-packing stratejisi olarak tanımlar:
+  <https://kubernetes.io/docs/concepts/scheduling-eviction/resource-bin-packing/>
+- Kubernetes `release-1.35` `NodeResourcesBalancedAllocation`, CPU ve memory requested/capacity oranlarının standard deviation'ını kullanır:
+  <https://github.com/kubernetes/kubernetes/blob/release-1.35/pkg/scheduler/framework/plugins/noderesources/balanced_allocation.go>
+- Weng ve diğerleri, klasik packing ile fragmentation'ın aynı kavram olmadığını ve fragmentation sinyalinin workload talebine bağlı ele alınması gerektiğini gösterir:
+  <https://www.usenix.org/system/files/atc23-weng.pdf>
+
+Seçilen `v2` chromosome:
+
+```text
+[FreeCPU, FreeMem, Balance, Consolidation]
+```
+
+Feature tanımları:
+
+```text
+postFreeCPU = (FreeCPU - podCPURequest) / AllocCPU
+postFreeMem = (FreeMem - podMemRequest) / AllocMem
+
+balance = 1 - abs(postFreeCPU - postFreeMem)
+
+consolidation = 1, node bu scheduler'ın en az bir non-terminal Pod'unu barındırıyorsa
+                0, aksi halde
+```
+
+Yeni skor:
+
+```text
+score = wFreeCPU       * postFreeCPU
+      + wFreeMem       * postFreeMem
+      + wBalance       * balance
+      + wConsolidation * consolidation
+```
+
+Bütün feature'lar `[0,1]` aralığında olacaktır.
+Ağırlıklar negatif olmayacak ve scheduler/evaluator sınırında L1 normalize edilerek toplamları `1` yapılacaktır.
+Bu canonical simplex temsili, bütün weight'leri aynı pozitif katsayıyla çarpan eşdeğer genotype'ları kaldıracaktır.
+Toplamı sıfır olan weight vector geçersiz sayılacaktır.
+
+Eski feature'ların durumu:
+
+- `Packing`, cebirsel bağımlılık nedeniyle `v2`den çıkarılacaktır
+- `PodPenalty`, küçük ve büyük Pod'ları yalnızca adet üzerinden eşit saydığı ve yeni consolidation terimiyle iki farklı Pod-count sinyali oluşturacağı için çıkarılacaktır
+- `v1` testleri, sonuçları ve baseline dosyaları historical pilot evidence olarak korunacaktır
+- `v2` baseline ve output contract'ı yeni alan adlarıyla versioned olarak oluşturulacaktır; eski JSON dosyaları sessizce `v2` olarak yorumlanmayacaktır
+
+Uygulama hard gate'i:
+
+- dört feature'ın her biri en az bir deterministic representative state'te node sıralamasını tek başına değiştirmeli
+- normalization scale-equivalent vector'ları aynı canonical weight setine dönüştürmeli
+- deterministic tie-break korunmalı
+- eski `v1` artifact'ler ve deney tanımları değiştirilmemeli
+
 ## 4. Şu Anki Durum
 
 Şu anda proje durumu şöyledir:
@@ -1267,7 +1345,9 @@ Bu olay araştırma kodunu veya deney artifact'lerini değiştirmedi; yalnızca 
 - `v1` paper evidence audit'i tamamlanmış ve blocking bulgular makine-okunabilir biçimde kaydedilmiş durumda
 - Gate 0 tamam
 - Gate 1'in scale-invariance ve Packing-dependency tanı testleri tamamlanmış durumda
-- Gate 1'in sıradaki kararı weight normalization ve bağımsız `v2` sinyal seçimidir
+- Gate 1 için canonical weight normalization kararı verilmiş durumda
+- Gate 1 `v2` feature seti `FreeCPU`, `FreeMem`, `Balance`, `Consolidation` olarak seçilmiş durumda
+- Gate 1'in sıradaki işi test-first `v2` scoring ve weight contract implementasyonudur
 
 Başka bir ifadeyle:
 
@@ -1306,7 +1386,9 @@ Durum:
 - scale invariance testi tamamlandı
 - homojen worker'larda Packing ranking-equivalence testi tamamlandı
 - bağımlılığın heterojen kapasitelere genellenmediğini gösteren sınır testi tamamlandı
-- weight normalization ve bağımsız operasyonel sinyal seçimi bekliyor
+- weight normalization tasarımı nonnegative L1 simplex olarak seçildi
+- bağımsız operasyonel feature'lar `Balance` ve `Consolidation` olarak seçildi
+- test-first scheduler, evaluator ve optimizer implementasyonu bekliyor
 
 - Önce mevcut score için scale invariance ve ranking-equivalence testleri ekle
 - `Packing` bağımlılığını cebirsel ve ampirik olarak doğrula
