@@ -1083,6 +1083,74 @@ SciSpace deney kanıtı veya doğrulanmış kaynak yerine kullanılmayacaktır:
 Bu aşamada ek task-management veya dosya-yedekleme plugin'i kurulmadı.
 Roadmap için Git ve `WALKTHROUGH.md`, artifact saklama için repo ve release düzeni tek doğruluk kaynağı olarak korunmaktadır.
 
+### 3.38. Gate 0 provenance ve paper evidence audit'ini tamamladık
+
+`v1` pilot sonuçlarını değiştirmeden izlenebilir hale getirmek için iki geriye dönük manifest eklendi:
+
+- [results/2026-03-15-4worker-resource-pressure/manifest.json](./results/2026-03-15-4worker-resource-pressure/manifest.json)
+- [results/2026-03-15-optimizer-seed42/manifest.json](./results/2026-03-15-optimizer-seed42/manifest.json)
+
+Manifestlerde şu bilgiler ayrıştırıldı:
+
+- artifact'in üretildiği tarih ve kaydedildiği commit
+- zaman çizelgesine göre yüksek güvenle eşleştirilen execution commit
+- workload, baseline, optimizer ve source blob kimlikleri
+- raw artifact SHA-256 değerleri
+- cluster topolojisi ve doğrulanabilen toolchain bilgileri
+- geriye dönük doğrulanamayan exact command, dirty state ve runtime sürümleri
+
+Belirsiz alanlar tahmin edilmedi; açıkça `null` bırakıldı.
+Bu nedenle manifestler provenance'ı iyileştirir, fakat historical run'ları yeni hard gate açısından `official` hale getirmez.
+
+Ardından [paper/evidence-audit-v1.json](./paper/evidence-audit-v1.json) ile paper'daki ana sayısal ve metodolojik iddialar ham artifact'lere bağlandı.
+
+Desteklenen `v1 pilot` bulguları:
+
+- Packing, `cpu-tight` ve `mem-tight` altında mean occupied worker sayısını `4`ten `2`ye indirdi
+- dokuz baseline kombinasyonunda bütün Pod'lar schedule edilip tamamlandı ve `unschedulable=0` kaldı
+- `seed=42` artifact'i gerçekten `72` optimizer adayı, `75` toplam ölçüm, `4` combined nondominated üye ve `2` unique objective noktası içeriyor
+- Packing aynı optimizer stream içinde Pareto'da kalırken Default ve Spread domine edildi
+- paper tablo ve grafiklerindeki sayılar raw artifact'lerle rounding sonrasında eşleşiyor
+
+Audit sırasında çıkan kritik düzeltmeler:
+
+1. Repeated baseline matrix ana objective'lerde bir tradeoff göstermiyor.
+   - Packing ve Spread üç workload'un tamamında aynı mean p95 değerine sahip
+   - Packing her üçünde de daha az workload-occupied worker kullanıyor
+   - bu nedenle Packing, repeated baseline matrix'te Spread'i zayıf biçimde domine ediyor
+
+2. Dört weight nominal olarak dört bağımsız policy boyutu oluşturmuyor.
+   - homojen worker'larda mevcut Packing sinyali FreeCPU ve FreeMem ile doğrusal bağımlı hale geliyor
+   - tüm weight'lerin pozitif ortak ölçeklenmesi node sıralamasını koruyor
+
+3. Optimizer-only düşük-pending noktası artifact içinde gerçektir, fakat robust final bulgu değildir.
+   - her aday yalnızca bir kez değerlendirildi
+   - workload'lar `4`, `4` ve `6` Pod içeriyor
+   - ilgili workload-level p95 değerleri `0`, `1` ve `1` saniyeye çökmüş durumda
+   - scheduler cadence ve timestamp çözünürlüğü ayrıştırılmadı
+
+4. `maxActiveNodes` gerçek active/powered node sayısı değildir.
+   - evaluator'ın ölçtüğü şey non-terminal evaluator Pod'u barındıran distinct worker sayısıdır
+   - `v2` adı `max workload-occupied worker nodes` olarak netleştirilecektir
+
+5. `v1` workload'lar aggregate cluster saturation üretmiyor.
+   - CPU-tight toplamda yaklaşık `1.80` worker CPU'su
+   - mem-tight toplamda yaklaşık `1.80` worker memory'si
+   - fragmenting-mix her boyutta yaklaşık `1.76` worker kapasitesi istiyor
+   - bunlar 4-worker cluster'da placement/consolidation pressure üretir, fakat whole-cluster capacity pressure değildir
+
+6. Pending metriğinin tam timestamp kaynağı paper'da daha açık yazılmalıdır.
+   - evaluator, Pod creation timestamp ile `PodScheduled=True` condition `LastTransitionTime` farkını kullanır
+   - doğrudan ilk görülen `spec.nodeName` veya evaluator poll zamanı kullanılmaz
+
+Gate 0 kararı:
+
+- raw `v1` artifact'ler immutable pilot snapshot olarak korunacak
+- mevcut paper sayısal olarak trace edilebilir, fakat final submission evidence olarak bloklu kabul edilecek
+- `seed=123/999` mevcut `v1` üzerinde koşturulmayacak
+- bir sonraki çalışma `research/policy-space-v2` branch'inde Gate 1 invariance testleri ile başlayacak
+- final paper claim'leri ancak official `v2` kanıtı geldikten sonra güncellenecek
+
 ## 4. Şu Anki Durum
 
 Şu anda proje durumu şöyledir:
@@ -1117,6 +1185,9 @@ Roadmap için Git ve `WALKTHROUGH.md`, artifact saklama için repo ve release d�
 - Paper kaynakları Git ile izleniyor; build ürünleri ignore ediliyor
 - Araştırma ledger, policy audit ve paper evidence audit skill'leri yerel Codex ortamına kurulmuş durumda
 - SciSpace plugin'i related-work keşfi ve paper inceleme desteği için kurulmuş durumda
+- Gate 0 için iki retrospective pilot manifesti eklenmiş durumda
+- `v1` paper evidence audit'i tamamlanmış ve blocking bulgular makine-okunabilir biçimde kaydedilmiş durumda
+- Gate 0 tamam; sıradaki aktif kapı Gate 1 policy-space `v2`
 
 Başka bir ifadeyle:
 

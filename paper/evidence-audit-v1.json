@@ -1,0 +1,249 @@
+{
+  "auditVersion": 1,
+  "auditedAt": "2026-08-27T00:12:14+03:00",
+  "status": "blocking-findings",
+  "auditedPaper": {
+    "path": "paper/main.tex",
+    "gitCommit": "3173ae9",
+    "role": "draft derived from v1 pilot evidence"
+  },
+  "evidenceSources": [
+    {
+      "path": "results/2026-03-15-4worker-resource-pressure/manifest.json",
+      "artifactCommit": "4c20bee8515440b531276fcac4da4457ad669ac3",
+      "provenanceCommit": "1e5a256",
+      "runClass": "pilot"
+    },
+    {
+      "path": "results/2026-03-15-optimizer-seed42/manifest.json",
+      "artifactCommit": "5963556efc8acb5e4d61e9c3f737289b7c5daf25",
+      "provenanceCommit": "1e5a256",
+      "runClass": "pilot"
+    }
+  ],
+  "overallAssessment": {
+    "submissionEvidenceReady": false,
+    "reason": "The draft is numerically traceable to the v1 artifacts, but its central tradeoff and optimizer-discovery language is stronger than the repeated evidence supports. Policy-space identifiability and latency measurement must be corrected before official validation.",
+    "preservationDecision": "Keep the v1 paper and raw artifacts as a pilot snapshot. Do not rewrite raw results or present the current optimizer point as seed-stable final evidence."
+  },
+  "findings": [
+    {
+      "id": "F-001",
+      "severity": "blocking",
+      "title": "The repeated baseline matrix does not show a p95-versus-node tradeoff",
+      "paperLines": [
+        54,
+        66,
+        73,
+        249,
+        251,
+        330,
+        341,
+        343,
+        345
+      ],
+      "evidence": {
+        "path": "results/2026-03-15-4worker-resource-pressure/summary.json",
+        "observation": "For cpu-tight, mem-tight, and fragmenting-mix, Packing and Spread both have mean p95=1.6667 s, while Packing uses 2, 2, and 3 occupied workers versus Spread's 4, 4, and 4. Packing weakly dominates Spread on the two reported objectives in every repeated baseline workload."
+      },
+      "assessment": "The matrix proves that policy weights change placement and consolidation, but it does not by itself prove a conflicting primary-objective surface. The sentence after the fragmenting-mix comparison draws the opposite conclusion from the displayed values.",
+      "requiredAction": "Use the matrix only as pilot evidence of placement sensitivity. Build v2 workloads and measurements that can produce a repeated latency-consolidation conflict before restoring the tradeoff claim."
+    },
+    {
+      "id": "F-002",
+      "severity": "blocking",
+      "title": "The nominal four-dimensional policy representation is not identifiable on homogeneous workers",
+      "paperLines": [
+        64,
+        71,
+        81,
+        120,
+        145,
+        158,
+        168,
+        170,
+        305,
+        307
+      ],
+      "evidence": {
+        "codePath": "scheduler/main.go",
+        "codeLines": "233-251",
+        "derivation": "For a feasible candidate on homogeneous workers, packing = candidate-independent constant - 0.5*freeCPU - 0.5*freeMem. Node ranking therefore depends on effective coefficients (wCPU-0.5*wPacking), (wMem-0.5*wPacking), and wPod. Positive scaling of all weights also preserves rankings."
+      },
+      "assessment": "Different four-gene chromosomes may represent the same scheduler policy. Duplicate objective points cannot be interpreted as independent policy discoveries without a ranking-equivalence audit.",
+      "requiredAction": "Complete Gate 1: add invariance tests, normalize representation scale, and remove or redefine the dependent Packing signal before official optimization."
+    },
+    {
+      "id": "F-003",
+      "severity": "blocking",
+      "title": "The optimizer-only lower-pending point is numerically real but not robustly validated",
+      "paperLines": [
+        54,
+        73,
+        188,
+        289,
+        291,
+        303,
+        307,
+        332,
+        341,
+        343,
+        345
+      ],
+      "evidence": {
+        "path": "results/2026-03-15-optimizer-seed42/result.json",
+        "observation": "Two candidates have objectives (0.6667, 4.0), and the combined front has two unique points. Each candidate was evaluated once on workloads containing 4, 4, and 6 Pods. Workload-level p95 values for the lower-pending point are 0, 1, and 1 seconds."
+      },
+      "assessment": "The coordinates and Pareto membership are correctly reported for the single stream, but policy quality is confounded with scheduler cadence, timestamp resolution, and one-shot evaluation noise.",
+      "requiredAction": "Describe this point as a v1 pilot observation only. Re-evaluate official finalists repeatedly after policy and measurement v2, then test recurrence across seeds."
+    },
+    {
+      "id": "F-004",
+      "severity": "major",
+      "title": "The active-node objective name overstates what is measured",
+      "paperLines": [
+        54,
+        86,
+        88,
+        193,
+        203,
+        217,
+        259,
+        284,
+        316
+      ],
+      "evidence": {
+        "codePath": "scheduler/pkg/evaluator/runner.go",
+        "observation": "The evaluator counts distinct worker names hosting non-terminal evaluator-managed Pods at each poll. It does not observe powered, autoscaled, Ready, or billable nodes."
+      },
+      "assessment": "The detailed methodology defines the metric, but abstract labels and cost-proxy interpretation can be read as infrastructure activation.",
+      "requiredAction": "Rename it to max workload-occupied worker nodes in v2 artifacts and state separately that it is a consolidation proxy."
+    },
+    {
+      "id": "F-005",
+      "severity": "major",
+      "title": "The v1 workloads create placement pressure, not whole-cluster capacity pressure",
+      "paperLines": [
+        54,
+        66,
+        201,
+        242,
+        247,
+        251,
+        330,
+        341
+      ],
+      "evidence": {
+        "paths": [
+          "workloads/cpu-tight.json",
+          "workloads/mem-tight.json",
+          "workloads/fragmenting-mix.json"
+        ],
+        "observation": "The workloads request totals equivalent to 1.80 worker CPU, 1.80 worker memory, and 1.76 workers in each dimension respectively on a 4-worker cluster. They force multi-node placement but do not saturate aggregate cluster capacity."
+      },
+      "assessment": "Calling them resource-pressure workloads is acceptable as a project label but can imply queue-producing global saturation that is not present.",
+      "requiredAction": "Call v1 scenarios placement/consolidation pressure workloads, or make v2 demand and arrival patterns generate measurable queue and capacity pressure."
+    },
+    {
+      "id": "F-006",
+      "severity": "major",
+      "title": "Pending-time wording does not identify the actual timestamp source",
+      "paperLines": [
+        193,
+        203
+      ],
+      "evidence": {
+        "codePath": "scheduler/pkg/evaluator/runner.go",
+        "codeLines": "638-653",
+        "observation": "PendingSeconds is CreationTimestamp subtracted from the PodScheduled=True condition LastTransitionTime. It is not measured from the evaluator poll time or directly from the first observed spec.nodeName assignment."
+      },
+      "assessment": "The current prose is directionally correct but insufficient for reproducing or interpreting sub-second differences.",
+      "requiredAction": "State the exact condition and timestamp fields, quantify their resolution, and separate scheduler decision latency from evaluator observation latency in measurement v2."
+    },
+    {
+      "id": "F-007",
+      "severity": "major",
+      "title": "Historical run metadata is incomplete and reconstructed",
+      "paperLines": [
+        197,
+        205,
+        213,
+        220
+      ],
+      "evidence": {
+        "paths": [
+          "results/2026-03-15-4worker-resource-pressure/manifest.json",
+          "results/2026-03-15-optimizer-seed42/manifest.json"
+        ],
+        "observation": "Execution commits can be inferred with high confidence, but exact commands, dirty state, Kubernetes version, kind version, node image, and Go runtime version were not persisted."
+      },
+      "assessment": "The reconstructed manifests improve traceability but cannot convert the historical runs into official evidence under the new hard gate.",
+      "requiredAction": "Capture these fields at run start in official v2 manifests and include the protocol tag or commit in the final paper."
+    },
+    {
+      "id": "F-008",
+      "severity": "major",
+      "title": "Related work and external baseline coverage remain incomplete",
+      "paperLines": [
+        199,
+        334
+      ],
+      "evidence": {
+        "observation": "The draft explicitly excludes an experimental default kube-scheduler baseline and contains no standalone related-work synthesis for scheduler optimization and multi-objective search."
+      },
+      "assessment": "This is disclosed correctly, but it limits external validity and CFP reviewer context.",
+      "requiredAction": "Add a default kube-scheduler reference protocol and use SciSpace only for discovery, verifying every cited claim against primary papers or official documentation."
+    }
+  ],
+  "verifiedClaims": [
+    {
+      "id": "C-001",
+      "claim": "Packing reduces mean occupied workers from 4 to 2 on cpu-tight and mem-tight.",
+      "strength": "repeated v1 pilot observation",
+      "status": "supported",
+      "evidence": "results/2026-03-15-4worker-resource-pressure/summary.json"
+    },
+    {
+      "id": "C-002",
+      "claim": "All nine baseline combinations scheduled and completed all Pods with zero unschedulable count.",
+      "strength": "repeated v1 pilot observation",
+      "status": "supported",
+      "evidence": "results/2026-03-15-4worker-resource-pressure/summary.json"
+    },
+    {
+      "id": "C-003",
+      "claim": "The seed-42 optimizer artifact contains 72 evaluated candidates, 75 total measured solutions, four combined nondominated members, and two unique objective points.",
+      "strength": "single-stream v1 pilot observation",
+      "status": "supported",
+      "evidence": "results/2026-03-15-optimizer-seed42/result.json"
+    },
+    {
+      "id": "C-004",
+      "claim": "Packing survives the seed-42 combined front; Default and Spread are dominated in that stream.",
+      "strength": "single-stream v1 pilot observation",
+      "status": "supported",
+      "evidence": "results/2026-03-15-optimizer-seed42/result.json"
+    },
+    {
+      "id": "C-005",
+      "claim": "Table and figure values for the baseline means and seed-42 unique points match the committed raw artifacts after rounding.",
+      "strength": "artifact consistency check",
+      "status": "supported",
+      "evidence": "paper/main.tex and paper/figures/*.tex compared with committed JSON/CSV"
+    },
+    {
+      "id": "C-006",
+      "claim": "The paper distinguishes three-repeat baseline means from the single optimizer evaluation stream.",
+      "strength": "protocol wording check",
+      "status": "supported",
+      "evidence": "paper/main.tex:254 and paper/main.tex:289"
+    }
+  ],
+  "gate0Decision": {
+    "v1EvidenceClass": "pilot",
+    "rawArtifactsImmutable": true,
+    "paperSubmissionBlocked": true,
+    "nextGate": "Gate 1 - policy space v2",
+    "invalidationCondition": "This audit should be superseded, not edited into an official audit, after policy, measurement, workload, baseline, and multi-seed v2 evidence is committed."
+  }
+}
