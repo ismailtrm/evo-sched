@@ -1357,12 +1357,108 @@ Bu adımda kind cluster yeniden başlatılmadı ve deney koşturulmadı.
 Dolayısıyla bunlar official sonuç değil, Gate 1'in kod ve contract implementasyonudur.
 Gate 1'in kalan operasyonel çıkış koşulu, temiz commit üzerinden yapılacak hafif bir `debug` sınıfı live smoke testidir.
 
+### 3.43. Gate 1 live integration smoke testini tamamladık
+
+Bu koşu araştırma sonucu üretmek için değil, `v2` contract'ının gerçek Kubernetes akışında çalıştığını doğrulamak için `debug` sınıfında yapıldı.
+Koşu öncesinde working tree temizdi ve branch `research/policy-space-v2`, Git SHA `0bf6464` idi.
+
+Ortamın başlangıç durumu:
+
+- Önceki kind container'ları artık Docker'da mevcut değildi; cluster resume edilemedi.
+- [kind-config-4workers.yaml](./kind-config-4workers.yaml) ile temiz `evo-sched` cluster oluşturuldu.
+- `kind v0.31.0` ve `kindest/node:v1.35.0` kullanıldı.
+- Control plane ile dört worker'ın tamamı `Ready` olarak doğrulandı.
+- Host `PATH` içinde `kubectl` bulunmadığı için cluster image'ındaki `/usr/bin/kubectl` geçici olarak `/tmp/evo-kubectl` yoluna kopyalandı.
+- Geçici client ve cluster sürümü `v1.35.0` idi; kullanıcı PATH'i veya repo kalıcı olarak değiştirilmedi.
+
+Cluster oluşturma komutu:
+
+```text
+kind create cluster \
+  --name evo-sched \
+  --config kind-config-4workers.yaml \
+  --image kindest/node:v1.35.0 \
+  --wait 180s
+```
+
+Scheduler image'ı mevcut [scheduler/Dockerfile](./scheduler/Dockerfile) ile build edildi:
+
+```text
+docker build -t evok8s-scheduler:0.1.0 .
+kind load docker-image --name evo-sched evok8s-scheduler:0.1.0
+```
+
+Yerel image kimliği:
+
+```text
+sha256:56624343ea3f959d06fc21391e1d64cc09034b233b13b37f205560bd51e5ec05
+```
+
+Namespace, RBAC ve deployment uygulandıktan sonra rollout başarıyla tamamlandı.
+Scheduler başlangıç log'u default raw weight'lerin canonical sonucunu doğruladı:
+
+```text
+scheduler started name=evok8s-scheduler interval=2s weights={FreeCPU:0.25 FreeMem:0.25 Balance:0.25 Consolidation:0.25}
+```
+
+Smoke komutu:
+
+```text
+go run ./cmd/evaluator \
+  --workload ../workloads/uniform-small.json \
+  --weights-file ../experiments/weights-v2.json \
+  --timeout 60s \
+  --output /tmp/evo-v2-gate1-smoke.json
+```
+
+Geçici çıktılar:
+
+- `/tmp/evo-v2-gate1-smoke.json`
+- `/tmp/evo-v2-gate1-smoke.csv`
+
+Üç `v2` baseline'ın her biri için:
+
+- `scheduledCount = 4`
+- `completedCount = 4`
+- `unschedulableCount = 0`
+- top-level ve run-level `policyVersion = "v2"`
+- CSV `policy_version = v2`
+
+`uniform-small` altında üç policy de `averagePendingSeconds = 0.5`, `p95PendingSeconds = 1.0` ve `maxActiveNodes = 1` üretti.
+Bu workload yalnızca wiring smoke olduğu ve dört Pod içerdiği için bu eşitlik policy kalitesi hakkında kanıt veya araştırma bulgusu olarak yorumlanmayacaktır.
+
+Koşu sonrası güvenlik kontrolleri:
+
+- Scheduler deployment env değerleri `0.25/0.25/0.25/0.25` başlangıç setine geri döndü.
+- Restoration rollout başarıyla tamamlandı.
+- `evo-sched-eval` namespace içinde Pod kalmadı.
+- Working tree temiz kaldı.
+- Beş kind container batarya ve RAM tüketmemesi için silinmeden durduruldu.
+
+Container'ları durdurma komutu:
+
+```text
+docker stop evo-sched-control-plane evo-sched-worker evo-sched-worker2 evo-sched-worker3 evo-sched-worker4
+```
+
+Operasyonel borç:
+
+- Mevcut `k8s-scheduler-experiment-ops` preflight helper'ı `PodPenalty/Packing` bekleyen `v1` flag'lerine bağlıdır.
+- Bu smoke'ta V2 env ve readiness kontrolleri manuel yapıldı.
+- Gate 2 veya daha sonraki resmi koşulardan önce helper V2 contract ve policy version kontrolüyle güncellenmelidir.
+
+Gate 1 sonucu:
+
+- Unit-level feature independence ve canonicalization testleri geçmiştir.
+- Gerçek cluster'da patch, rollout, workload replay, versioned output, cleanup ve weight restoration akışı geçmiştir.
+- Gate 1 tamamlanmıştır; sıradaki araştırma gate'i Measurement `v2`dir.
+
 ## 4. Şu Anki Durum
 
 Şu anda proje durumu şöyledir:
 
 - 1. katmanın çekirdek akışı çalışıyor
-- Custom scheduler cluster içinde deploy edilmiş durumda
+- Custom scheduler cluster içine deploy edilip doğrulandı; kind container'ları şu anda durdurulmuş durumda
 - `schedulerName: evok8s-scheduler` kullanan pod'lar custom scheduler tarafından schedule edilebiliyor
 - Scheduler artık uygun olmayan node'ları filtreliyor
 - Scheduler artık parametreli bir skor fonksiyonu ile node seçiyor
@@ -1402,8 +1498,11 @@ Gate 1'in kalan operasyonel çıkış koşulu, temiz commit üzerinden yapılaca
 - `v2` experiment input'u legacy alanları reddediyor; JSON ve CSV output'ları policy version taşıyor
 - `v2` için üç yeni baseline [experiments/weights-v2.json](./experiments/weights-v2.json) içinde tanımlanmış durumda
 - Gate 1 kod doğrulamaları race detector ve `go vet` ile geçmiştir
-- Gate 1'in kalan işi temiz commit üzerinden debug sınıfı live integration smoke testidir
+- Gate 1 live integration smoke testi temiz commit üzerinden geçmiştir
+- Gate 1 tamamlanmıştır
+- Sıradaki araştırma işi Gate 2 Measurement `v2`dir
 - Official optimizer koşuları Gate 2-5 protokol çıkış koşullarına kadar blokludur
+- `evo-sched` kind container'ları smoke sonrasında silinmeden durdurulmuştur
 
 Başka bir ifadeyle:
 
@@ -1449,7 +1548,7 @@ Durum:
 - scale-equivalent vector'lar evaluation öncesinde canonical normalize ediliyor
 - dört feature'ın representative node kararlarını bağımsız değiştirdiği test edildi
 - legacy `v1` input'ların sessiz migration'ı engellendi
-- debug sınıfı live integration smoke testi bekliyor
+- debug sınıfı live integration smoke testi tamamlandı
 
 - [x] Mevcut score için scale invariance ve ranking-equivalence testleri ekle
 - [x] `Packing` bağımlılığını cebirsel ve ampirik olarak doğrula
@@ -1457,7 +1556,7 @@ Durum:
 - [x] `Packing` yerine bağımsız operasyonel sinyaller seç
 - [x] Her feature'ın en az bir temsilci durumda node sıralamasını bağımsız değiştirdiğini test et
 - [x] Tie-breaking ve weight sınırlarını test et
-- [ ] Temiz commit üzerinden debug sınıfı live integration smoke testi yap
+- [x] Temiz commit üzerinden debug sınıfı live integration smoke testi yap
 
 Karar:
 
@@ -1468,6 +1567,12 @@ Karar:
 
 - optimizer'ın aradığı parametrelerin efektif policy farklılığı ürettiği testlerle gösterilmeli
 - temiz commit üzerinden scheduler patch, rollout, workload replay ve default weight restoration akışı smoke testte geçmeli
+
+Sonuç:
+
+- Gate 1 çıkış koşulları tamamlandı
+- official deney başlatılmadı
+- Gate 2 başlamadan önce V2 preflight helper güncellenecek
 
 ### Gate 2 - Measurement `v2`
 
