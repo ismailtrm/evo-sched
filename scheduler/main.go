@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"time"
 
+	"evok8s-scheduler/pkg/measurement"
 	"evok8s-scheduler/pkg/policy"
 
 	corev1 "k8s.io/api/core/v1"
@@ -38,7 +39,10 @@ type ScoreWeights = policy.WeightSet
 
 func main() {
 	schedulerName := getenv("SCHEDULER_NAME", "evok8s-scheduler")
-	interval := 2 * time.Second
+	interval, err := loadSchedulerInterval()
+	if err != nil {
+		log.Fatalf("scheduler interval init failed: %v", err)
+	}
 	weights, err := loadScoreWeights()
 	if err != nil {
 		log.Fatalf("score weights init failed: %v", err)
@@ -49,7 +53,14 @@ func main() {
 		log.Fatalf("client init failed: %v", err)
 	}
 
-	log.Printf("scheduler started name=%s interval=%s weights=%+v", schedulerName, interval, weights)
+	log.Printf(
+		"scheduler started name=%s interval=%s policyVersion=%s measurementVersion=%s weights=%+v",
+		schedulerName,
+		interval,
+		policy.Version,
+		measurement.Version,
+		weights,
+	)
 
 	for {
 		if err := tick(context.Background(), clientset, schedulerName, weights); err != nil {
@@ -116,7 +127,8 @@ func tick(ctx context.Context, cs *kubernetes.Clientset, schedulerName string, w
 			continue
 		}
 
-		if err := bindPod(ctx, cs, p, nodeName); err != nil {
+		decisionAt := time.Now().UTC()
+		if err := bindPod(ctx, cs, p, nodeName, decisionAt); err != nil {
 			log.Printf("bind failed pod=%s/%s node=%s err=%v", p.Namespace, p.Name, nodeName, err)
 			continue
 		}
@@ -353,12 +365,35 @@ func normalizeScoreWeights(weights ScoreWeights) (ScoreWeights, error) {
 	return policy.Normalize(weights)
 }
 
-func bindPod(ctx context.Context, cs *kubernetes.Clientset, p corev1.Pod, nodeName string) error {
+func loadSchedulerInterval() (time.Duration, error) {
+	raw := getenv("SCHEDULER_INTERVAL", "2s")
+	interval, err := time.ParseDuration(raw)
+	if err != nil {
+		return 0, fmt.Errorf("parse SCHEDULER_INTERVAL=%q: %w", raw, err)
+	}
+	if interval <= 0 {
+		return 0, fmt.Errorf("SCHEDULER_INTERVAL must be positive, got %q", raw)
+	}
+	return interval, nil
+}
+
+func bindPod(
+	ctx context.Context,
+	cs kubernetes.Interface,
+	p corev1.Pod,
+	nodeName string,
+	decisionAt time.Time,
+) error {
 	b := &corev1.Binding{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      p.Name,
 			Namespace: p.Namespace,
 			UID:       p.UID,
+			Annotations: map[string]string{
+				measurement.DecisionAtAnnotation:         measurement.FormatTimestamp(decisionAt),
+				measurement.MeasurementVersionAnnotation: measurement.Version,
+				measurement.PolicyVersionAnnotation:      policy.Version,
+			},
 		},
 		Target: corev1.ObjectReference{
 			Kind: "Node",

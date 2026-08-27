@@ -1,12 +1,20 @@
 package main
 
 import (
+	"context"
 	"math"
 	"testing"
+	"time"
+
+	"evok8s-scheduler/pkg/measurement"
+	"evok8s-scheduler/pkg/policy"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/kubernetes/fake"
+	k8stesting "k8s.io/client-go/testing"
 )
 
 func TestFilterNodesForPod(t *testing.T) {
@@ -195,6 +203,60 @@ func TestLoadScoreWeightsFromEnv(t *testing.T) {
 		Consolidation: 0,
 	}
 	assertScoreWeightsClose(t, got, want)
+}
+
+func TestLoadSchedulerInterval(t *testing.T) {
+	t.Setenv("SCHEDULER_INTERVAL", "250ms")
+
+	got, err := loadSchedulerInterval()
+	if err != nil {
+		t.Fatalf("loadSchedulerInterval() error = %v", err)
+	}
+	if got != 250*time.Millisecond {
+		t.Fatalf("loadSchedulerInterval() = %s, want 250ms", got)
+	}
+}
+
+func TestLoadSchedulerIntervalRejectsInvalidValues(t *testing.T) {
+	for _, value := range []string{"invalid", "0s", "-1s"} {
+		t.Run(value, func(t *testing.T) {
+			t.Setenv("SCHEDULER_INTERVAL", value)
+			if _, err := loadSchedulerInterval(); err == nil {
+				t.Fatalf("loadSchedulerInterval() error = nil for %q", value)
+			}
+		})
+	}
+}
+
+func TestBindPodCarriesMeasurementAnnotations(t *testing.T) {
+	client := fake.NewSimpleClientset()
+	var got *corev1.Binding
+	client.PrependReactor("create", "pods", func(action k8stesting.Action) (bool, runtime.Object, error) {
+		if action.GetSubresource() != "binding" {
+			return false, nil, nil
+		}
+		createAction := action.(k8stesting.CreateAction)
+		got = createAction.GetObject().(*corev1.Binding)
+		return true, got, nil
+	})
+
+	decisionAt := time.Date(2026, time.August, 27, 4, 30, 15, 987654321, time.UTC)
+	pod := corev1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "pod-a", Namespace: "eval"}}
+	if err := bindPod(context.Background(), client, pod, "worker-a", decisionAt); err != nil {
+		t.Fatalf("bindPod() error = %v", err)
+	}
+	if got == nil {
+		t.Fatal("binding action was not captured")
+	}
+	if got.Annotations[measurement.DecisionAtAnnotation] != measurement.FormatTimestamp(decisionAt) {
+		t.Fatalf("decision annotation = %q", got.Annotations[measurement.DecisionAtAnnotation])
+	}
+	if got.Annotations[measurement.MeasurementVersionAnnotation] != measurement.Version {
+		t.Fatalf("measurement version annotation = %q", got.Annotations[measurement.MeasurementVersionAnnotation])
+	}
+	if got.Annotations[measurement.PolicyVersionAnnotation] != policy.Version {
+		t.Fatalf("policy version annotation = %q", got.Annotations[measurement.PolicyVersionAnnotation])
+	}
 }
 
 func TestNormalizeScoreWeightsCanonicalizesPositiveScale(t *testing.T) {

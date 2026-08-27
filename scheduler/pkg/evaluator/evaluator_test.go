@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"evok8s-scheduler/pkg/measurement"
+
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -233,6 +235,113 @@ func TestSummarizePods(t *testing.T) {
 	}
 	if got.MaxActiveNodes != 2 {
 		t.Fatalf("expected max active nodes 2, got %d", got.MaxActiveNodes)
+	}
+}
+
+func TestUpdateTimingSeparatesMeasurementSources(t *testing.T) {
+	submittedAt := time.Date(2026, time.August, 27, 4, 40, 0, 100_000_000, time.UTC)
+	decisionAt := submittedAt.Add(275 * time.Millisecond)
+	kubernetesScheduledAt := time.Date(2026, time.August, 27, 4, 40, 1, 0, time.UTC)
+	observedAt := decisionAt.Add(725 * time.Millisecond)
+	result := &PodTiming{Name: "pod-a"}
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "pod-a",
+			Annotations: map[string]string{
+				measurement.SubmittedAtAnnotation:        measurement.FormatTimestamp(submittedAt),
+				measurement.DecisionAtAnnotation:         measurement.FormatTimestamp(decisionAt),
+				measurement.MeasurementVersionAnnotation: measurement.Version,
+				measurement.PolicyVersionAnnotation:      PolicyVersion,
+			},
+		},
+		Spec: corev1.PodSpec{NodeName: "worker-a"},
+		Status: corev1.PodStatus{Conditions: []corev1.PodCondition{{
+			Type:               corev1.PodScheduled,
+			Status:             corev1.ConditionTrue,
+			LastTransitionTime: metav1.NewTime(kubernetesScheduledAt),
+		}}},
+	}
+
+	if err := updateTiming(result, pod, observedAt); err != nil {
+		t.Fatalf("updateTiming() error = %v", err)
+	}
+	if result.SubmittedAt == nil || !result.SubmittedAt.Equal(submittedAt) {
+		t.Fatalf("SubmittedAt = %v, want %v", result.SubmittedAt, submittedAt)
+	}
+	if result.SchedulerDecisionAt == nil || !result.SchedulerDecisionAt.Equal(decisionAt) {
+		t.Fatalf("SchedulerDecisionAt = %v, want %v", result.SchedulerDecisionAt, decisionAt)
+	}
+	if result.ScheduledAt == nil || !result.ScheduledAt.Equal(kubernetesScheduledAt) {
+		t.Fatalf("ScheduledAt = %v, want %v", result.ScheduledAt, kubernetesScheduledAt)
+	}
+	if result.EvaluatorObservedScheduledAt == nil || !result.EvaluatorObservedScheduledAt.Equal(observedAt) {
+		t.Fatalf("EvaluatorObservedScheduledAt = %v, want %v", result.EvaluatorObservedScheduledAt, observedAt)
+	}
+	if result.SchedulingDecisionLatencySeconds != 0.275 {
+		t.Fatalf("SchedulingDecisionLatencySeconds = %v, want 0.275", result.SchedulingDecisionLatencySeconds)
+	}
+	if result.EvaluatorObservationLagSeconds != 0.725 {
+		t.Fatalf("EvaluatorObservationLagSeconds = %v, want 0.725", result.EvaluatorObservationLagSeconds)
+	}
+}
+
+func TestUpdateTimingRejectsInvalidMeasurementTimestamp(t *testing.T) {
+	result := &PodTiming{Name: "pod-a"}
+	pod := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{
+		measurement.DecisionAtAnnotation:         "invalid",
+		measurement.MeasurementVersionAnnotation: measurement.Version,
+		measurement.PolicyVersionAnnotation:      PolicyVersion,
+	}}}
+
+	if err := updateTiming(result, pod, time.Now()); err == nil {
+		t.Fatal("updateTiming() error = nil, want invalid annotation error")
+	}
+}
+
+func TestUpdateTimingRejectsMeasurementVersionMismatch(t *testing.T) {
+	result := &PodTiming{Name: "pod-a"}
+	pod := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{
+		measurement.DecisionAtAnnotation:         measurement.FormatTimestamp(time.Now()),
+		measurement.MeasurementVersionAnnotation: "v1",
+		measurement.PolicyVersionAnnotation:      PolicyVersion,
+	}}}
+
+	if err := updateTiming(result, pod, time.Now()); err == nil {
+		t.Fatal("updateTiming() error = nil, want measurement version mismatch")
+	}
+}
+
+func TestCreateWorkloadPodStoresHighResolutionSubmissionTimestamp(t *testing.T) {
+	client := fake.NewSimpleClientset()
+	result := &PodTiming{Name: "pod-a"}
+	opts := DefaultRunnerOptions()
+	opts.Namespace = "eval"
+
+	if err := createWorkloadPod(
+		context.Background(),
+		client,
+		opts,
+		"run-a",
+		WorkloadItem{Name: "pod-a", CPUMilli: 100, MemoryMiB: 64, DurationSeconds: 1},
+		result,
+	); err != nil {
+		t.Fatalf("createWorkloadPod() error = %v", err)
+	}
+
+	pod, err := client.CoreV1().Pods("eval").Get(context.Background(), "run-a-pod-a", metav1.GetOptions{})
+	if err != nil {
+		t.Fatalf("get created pod: %v", err)
+	}
+	raw := pod.Annotations[measurement.SubmittedAtAnnotation]
+	got, err := measurement.ParseTimestamp(raw)
+	if err != nil {
+		t.Fatalf("parse submitted annotation: %v", err)
+	}
+	if result.SubmittedAt == nil || !result.SubmittedAt.Equal(got) {
+		t.Fatalf("result submittedAt = %v, annotation = %v", result.SubmittedAt, got)
+	}
+	if pod.Annotations[measurement.MeasurementVersionAnnotation] != measurement.Version {
+		t.Fatalf("measurement version annotation = %q", pod.Annotations[measurement.MeasurementVersionAnnotation])
 	}
 }
 

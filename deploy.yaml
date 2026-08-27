@@ -23,6 +23,8 @@ spec:
           env:
             - name: SCHEDULER_NAME
               value: evok8s-scheduler
+            - name: SCHEDULER_INTERVAL
+              value: "2s"
             - name: WEIGHT_FREE_CPU
               value: "1.0"
             - name: WEIGHT_FREE_MEM

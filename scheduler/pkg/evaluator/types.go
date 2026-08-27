@@ -3,10 +3,12 @@ package evaluator
 import (
 	"time"
 
+	"evok8s-scheduler/pkg/measurement"
 	"evok8s-scheduler/pkg/policy"
 )
 
 const PolicyVersion = policy.Version
+const MeasurementVersion = measurement.Version
 
 type WorkloadItem struct {
 	Name            string  `json:"name"`
@@ -37,15 +39,20 @@ type ExperimentSpec struct {
 }
 
 type PodTiming struct {
-	Name                string     `json:"name"`
-	CreatedAt           *time.Time `json:"createdAt,omitempty"`
-	ScheduledAt         *time.Time `json:"scheduledAt,omitempty"`
-	StartedAt           *time.Time `json:"startedAt,omitempty"`
-	FinishedAt          *time.Time `json:"finishedAt,omitempty"`
-	NodeName            string     `json:"nodeName,omitempty"`
-	Phase               string     `json:"phase,omitempty"`
-	PendingSeconds      float64    `json:"pendingSeconds"`
-	StartLatencySeconds float64    `json:"startLatencySeconds"`
+	Name                             string     `json:"name"`
+	SubmittedAt                      *time.Time `json:"submittedAt,omitempty"`
+	CreatedAt                        *time.Time `json:"createdAt,omitempty"`
+	SchedulerDecisionAt              *time.Time `json:"schedulerDecisionAt,omitempty"`
+	ScheduledAt                      *time.Time `json:"scheduledAt,omitempty"`
+	EvaluatorObservedScheduledAt     *time.Time `json:"evaluatorObservedScheduledAt,omitempty"`
+	StartedAt                        *time.Time `json:"startedAt,omitempty"`
+	FinishedAt                       *time.Time `json:"finishedAt,omitempty"`
+	NodeName                         string     `json:"nodeName,omitempty"`
+	Phase                            string     `json:"phase,omitempty"`
+	SchedulingDecisionLatencySeconds float64    `json:"schedulingDecisionLatencySeconds"`
+	PendingSeconds                   float64    `json:"pendingSeconds"`
+	EvaluatorObservationLagSeconds   float64    `json:"evaluatorObservationLagSeconds"`
+	StartLatencySeconds              float64    `json:"startLatencySeconds"`
 }
 
 type Summary struct {
@@ -59,19 +66,20 @@ type Summary struct {
 }
 
 type RunResult struct {
-	PolicyVersion string      `json:"policyVersion"`
-	Name          string      `json:"name"`
-	RunID         string      `json:"runId"`
-	Namespace     string      `json:"namespace"`
-	Scheduler     string      `json:"schedulerName"`
-	Workload      string      `json:"workload"`
-	Weights       WeightSet   `json:"weights"`
-	StartedAt     time.Time   `json:"startedAt"`
-	FinishedAt    time.Time   `json:"finishedAt"`
-	Summary       Summary     `json:"summary"`
-	Pods          []PodTiming `json:"pods"`
-	ActiveNodes   map[int]int `json:"activeNodesBySample"`
-	Notes         []string    `json:"notes,omitempty"`
+	PolicyVersion      string      `json:"policyVersion"`
+	MeasurementVersion string      `json:"measurementVersion"`
+	Name               string      `json:"name"`
+	RunID              string      `json:"runId"`
+	Namespace          string      `json:"namespace"`
+	Scheduler          string      `json:"schedulerName"`
+	Workload           string      `json:"workload"`
+	Weights            WeightSet   `json:"weights"`
+	StartedAt          time.Time   `json:"startedAt"`
+	FinishedAt         time.Time   `json:"finishedAt"`
+	Summary            Summary     `json:"summary"`
+	Pods               []PodTiming `json:"pods"`
+	ActiveNodes        map[int]int `json:"activeNodesBySample"`
+	Notes              []string    `json:"notes,omitempty"`
 }
 
 type ComparisonRow struct {
@@ -87,11 +95,12 @@ type ComparisonRow struct {
 }
 
 type BatchResult struct {
-	PolicyVersion    string          `json:"policyVersion"`
-	Workload         string          `json:"workload"`
-	WorkloadPath     string          `json:"workloadPath"`
-	WorkloadBase     *WorkloadBase   `json:"workloadBase,omitempty"`
-	ResolvedWorkload []WorkloadItem  `json:"resolvedWorkload,omitempty"`
-	Results          []ComparisonRow `json:"results"`
-	Runs             []RunResult     `json:"runs,omitempty"`
+	PolicyVersion      string          `json:"policyVersion"`
+	MeasurementVersion string          `json:"measurementVersion"`
+	Workload           string          `json:"workload"`
+	WorkloadPath       string          `json:"workloadPath"`
+	WorkloadBase       *WorkloadBase   `json:"workloadBase,omitempty"`
+	ResolvedWorkload   []WorkloadItem  `json:"resolvedWorkload,omitempty"`
+	Results            []ComparisonRow `json:"results"`
+	Runs               []RunResult     `json:"runs,omitempty"`
 }

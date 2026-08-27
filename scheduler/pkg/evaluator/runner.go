@@ -13,6 +13,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"evok8s-scheduler/pkg/measurement"
 	"evok8s-scheduler/pkg/policy"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -162,13 +163,14 @@ func RunBatch(ctx context.Context, cs kubernetes.Interface, opts RunnerOptions, 
 	}()
 
 	batch := BatchResult{
-		PolicyVersion:    PolicyVersion,
-		Workload:         workloadName(workloadPath),
-		WorkloadPath:     workloadPath,
-		WorkloadBase:     &workloadBase,
-		ResolvedWorkload: append([]WorkloadItem(nil), workload...),
-		Results:          make([]ComparisonRow, 0, len(runSpecs)),
-		Runs:             make([]RunResult, 0, len(runSpecs)),
+		PolicyVersion:      PolicyVersion,
+		MeasurementVersion: MeasurementVersion,
+		Workload:           workloadName(workloadPath),
+		WorkloadPath:       workloadPath,
+		WorkloadBase:       &workloadBase,
+		ResolvedWorkload:   append([]WorkloadItem(nil), workload...),
+		Results:            make([]ComparisonRow, 0, len(runSpecs)),
+		Runs:               make([]RunResult, 0, len(runSpecs)),
 	}
 
 	for _, spec := range runSpecs {
@@ -235,13 +237,14 @@ func EvaluateWorkloads(ctx context.Context, cs kubernetes.Interface, opts Runner
 		}
 
 		batch := BatchResult{
-			PolicyVersion:    PolicyVersion,
-			Workload:         workloadName(workloadPath),
-			WorkloadPath:     workloadPath,
-			WorkloadBase:     &workloadBase,
-			ResolvedWorkload: append([]WorkloadItem(nil), workload...),
-			Results:          make([]ComparisonRow, 0, 1),
-			Runs:             make([]RunResult, 0, 1),
+			PolicyVersion:      PolicyVersion,
+			MeasurementVersion: MeasurementVersion,
+			Workload:           workloadName(workloadPath),
+			WorkloadPath:       workloadPath,
+			WorkloadBase:       &workloadBase,
+			ResolvedWorkload:   append([]WorkloadItem(nil), workload...),
+			Results:            make([]ComparisonRow, 0, 1),
+			Runs:               make([]RunResult, 0, 1),
 		}
 
 		if err := cleanupManagedPods(ctx, cs, opts.Namespace); err != nil {
@@ -359,18 +362,19 @@ func executeRun(
 	pods := flattenResults(results)
 	sort.Slice(pods, func(i, j int) bool { return pods[i].Name < pods[j].Name })
 	runResult := RunResult{
-		PolicyVersion: PolicyVersion,
-		Name:          spec.Name,
-		RunID:         runID,
-		Namespace:     opts.Namespace,
-		Scheduler:     opts.SchedulerName,
-		Workload:      workloadPath,
-		Weights:       spec.Weights,
-		StartedAt:     startedAt,
-		FinishedAt:    finishedAt,
-		Summary:       SummarizePods(pods, int(maxActiveNodes.Load())),
-		Pods:          pods,
-		ActiveNodes:   activeSamples,
+		PolicyVersion:      PolicyVersion,
+		MeasurementVersion: MeasurementVersion,
+		Name:               spec.Name,
+		RunID:              runID,
+		Namespace:          opts.Namespace,
+		Scheduler:          opts.SchedulerName,
+		Workload:           workloadPath,
+		Weights:            spec.Weights,
+		StartedAt:          startedAt,
+		FinishedAt:         finishedAt,
+		Summary:            SummarizePods(pods, int(maxActiveNodes.Load())),
+		Pods:               pods,
+		ActiveNodes:        activeSamples,
 	}
 	if monitorErr != nil {
 		runResult.Notes = append(runResult.Notes, monitorErr.Error())
@@ -381,14 +385,15 @@ func executeRun(
 
 func emptyRunResult(opts RunnerOptions, spec ExperimentRunSpec, workloadPath string, startedAt time.Time) RunResult {
 	return RunResult{
-		PolicyVersion: PolicyVersion,
-		Name:          spec.Name,
-		Namespace:     opts.Namespace,
-		Scheduler:     opts.SchedulerName,
-		Workload:      workloadPath,
-		Weights:       spec.Weights,
-		StartedAt:     startedAt,
-		FinishedAt:    time.Now().UTC(),
+		PolicyVersion:      PolicyVersion,
+		MeasurementVersion: MeasurementVersion,
+		Name:               spec.Name,
+		Namespace:          opts.Namespace,
+		Scheduler:          opts.SchedulerName,
+		Workload:           workloadPath,
+		Weights:            spec.Weights,
+		StartedAt:          startedAt,
+		FinishedAt:         time.Now().UTC(),
 	}
 }
 
@@ -568,6 +573,7 @@ func createWorkloadPod(
 	item WorkloadItem,
 	result *PodTiming,
 ) error {
+	submittedAt := time.Now().UTC()
 	memBytes := item.MemoryMiB * 1024 * 1024
 	pod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
@@ -578,6 +584,10 @@ func createWorkloadPod(
 				"evo-sched/run-id":  runID,
 				"evo-sched/item":    item.Name,
 				"evo-sched/managed": "true",
+			},
+			Annotations: map[string]string{
+				measurement.SubmittedAtAnnotation:        measurement.FormatTimestamp(submittedAt),
+				measurement.MeasurementVersionAnnotation: measurement.Version,
 			},
 		},
 		Spec: corev1.PodSpec{
@@ -600,6 +610,7 @@ func createWorkloadPod(
 		},
 	}
 
+	result.SubmittedAt = &submittedAt
 	created, err := cs.CoreV1().Pods(opts.Namespace).Create(ctx, pod, metav1.CreateOptions{})
 	if err != nil {
 		return fmt.Errorf("create pod %s: %w", item.Name, err)
@@ -636,6 +647,7 @@ func monitorPods(
 				return fmt.Errorf("list evaluator pods: %w", err)
 			}
 
+			observedAt := time.Now().UTC()
 			active := make(map[string]struct{})
 			completed := 0
 			for _, pod := range pods.Items {
@@ -643,7 +655,10 @@ func monitorPods(
 				mu.Lock()
 				result := results[itemName]
 				if result != nil {
-					updateTiming(result, &pod)
+					if err := updateTiming(result, &pod, observedAt); err != nil {
+						mu.Unlock()
+						return fmt.Errorf("update timing pod=%s: %w", pod.Name, err)
+					}
 				}
 				mu.Unlock()
 
@@ -675,9 +690,47 @@ func monitorPods(
 	}
 }
 
-func updateTiming(result *PodTiming, pod *corev1.Pod) {
+func updateTiming(result *PodTiming, pod *corev1.Pod, observedAt time.Time) error {
 	result.NodeName = pod.Spec.NodeName
 	result.Phase = string(pod.Status.Phase)
+
+	if result.SubmittedAt == nil {
+		if raw := pod.Annotations[measurement.SubmittedAtAnnotation]; raw != "" {
+			if got := pod.Annotations[measurement.MeasurementVersionAnnotation]; got != measurement.Version {
+				return fmt.Errorf("measurement version annotation = %q, want %q", got, measurement.Version)
+			}
+			t, err := measurement.ParseTimestamp(raw)
+			if err != nil {
+				return err
+			}
+			result.SubmittedAt = &t
+		}
+	}
+	if result.SchedulerDecisionAt == nil {
+		if raw := pod.Annotations[measurement.DecisionAtAnnotation]; raw != "" {
+			if got := pod.Annotations[measurement.MeasurementVersionAnnotation]; got != measurement.Version {
+				return fmt.Errorf("measurement version annotation = %q, want %q", got, measurement.Version)
+			}
+			if got := pod.Annotations[measurement.PolicyVersionAnnotation]; got != PolicyVersion {
+				return fmt.Errorf("policy version annotation = %q, want %q", got, PolicyVersion)
+			}
+			t, err := measurement.ParseTimestamp(raw)
+			if err != nil {
+				return err
+			}
+			result.SchedulerDecisionAt = &t
+		}
+	}
+	if result.SubmittedAt != nil && result.SchedulerDecisionAt != nil {
+		result.SchedulingDecisionLatencySeconds = result.SchedulerDecisionAt.Sub(*result.SubmittedAt).Seconds()
+	}
+	if pod.Spec.NodeName != "" && result.EvaluatorObservedScheduledAt == nil {
+		t := observedAt.UTC()
+		result.EvaluatorObservedScheduledAt = &t
+		if result.SchedulerDecisionAt != nil {
+			result.EvaluatorObservationLagSeconds = t.Sub(*result.SchedulerDecisionAt).Seconds()
+		}
+	}
 
 	if result.CreatedAt == nil && !pod.CreationTimestamp.IsZero() {
 		t := pod.CreationTimestamp.Time.UTC()
@@ -714,6 +767,8 @@ func updateTiming(result *PodTiming, pod *corev1.Pod) {
 			break
 		}
 	}
+
+	return nil
 }
 
 func flattenResults(results map[string]*PodTiming) []PodTiming {
