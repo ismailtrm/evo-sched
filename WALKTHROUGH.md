@@ -1886,6 +1886,63 @@ Gate 3 debug acceptance tamamlandı. Sıradaki araştırma koşusu clean commit 
 olarak sınıflanacak ve official optimizer/seed deneyinden önce workload davranışını
 kontrol etmek için kullanılacak.
 
+### 3.50. İlk Gate 3 baseline pilotunu rollout yarışı nedeniyle geçersiz saydık
+
+Üç baseline x üç train workload acceptance matrix'ine geçmeden önce
+`cpu-tight-train` workload'u üzerinde üç V2 baseline'ı batch olarak çalıştırma
+girişimi yapıldı. Koşu clean `b67344b0df413d6ea1531d2b30dc1aaedb6f1dee`
+SHA'sından başlatıldı; preflight dört Ready worker, V2 policy, canonical weights ve
+boş evaluator namespace doğrulamalarını geçti. Scheduler ve evaluator interval'i
+`250ms` olarak ayarlanmıştı.
+
+Bu girişim geçerli bir pilot sonucu üretmedi:
+
+- evaluator süreci output JSON/CSV oluşturmadan kapandı
+- evaluator namespace run sonrasında boştu
+- scheduler loglarında aynı Pod için hem başarılı bind hem de
+  `pod ... is already assigned to node ...` bind hataları görüldü
+- bu nedenle kısmi gözlemler metrik veya policy kanıtı olarak korunmadı
+- `results/` altında artifact üretilmedi ve run `paperEvidenceEligible` değildir
+
+Cluster event ve deployment incelemesi kök nedeni rollout semantiğine bağladı.
+Deployment tek replica olsa da varsayılan `RollingUpdate` stratejisi yeni scheduler
+Pod'unu eski Pod tamamen kapanmadan başlatıyordu. Scheduler'da leader election
+bulunmadığı için iki proses kısa süre aynı unscheduled Pod listesini işleyip bind
+yarışına girebiliyordu. Evaluator'ın `deploymentReady` kontrolü de updated, ready ve
+available replica sayılarını doğruluyor; fakat toplam replica sayısının desired
+değere indiğini ve terminating replica kalmadığını kontrol etmiyordu.
+
+Düzeltme test-first uygulandı:
+
+1. desired replica `1` iken toplam replica `2` olan rollout'un hazır sayılmaması
+   için kırmızı test eklendi.
+2. `terminatingReplicas > 0` olan rollout'un hazır sayılmaması için kırmızı test
+   eklendi.
+3. `deploymentReady`, exact total/updated/ready/available replica convergence,
+   sıfır unavailable replica ve sıfır terminating replica gerektirecek şekilde
+   sıkılaştırıldı.
+4. Deneysel tek-replica scheduler deployment stratejisi `Recreate` yapıldı; weight
+   rollout'larında eski ve yeni scheduler proseslerinin örtüşmesi yapısal olarak
+   engellendi.
+
+Kod commit'i:
+
+- `512dff8 fix: prevent overlapping scheduler rollouts`
+
+Doğrulamalar:
+
+```bash
+cd scheduler
+go test -count=1 -short -race ./...
+go vet ./...
+```
+
+Her iki doğrulama ve `git diff --check` geçti. Kesilen girişimden sonra scheduler
+canonical `0.25/0.25/0.25/0.25` weight'lerine ve `2s` interval'e döndürüldü, tek
+scheduler Pod kaldığı doğrulandı ve beş kind container tekrar durduruldu. Gate 3
+acceptance matrix maddesi bu nedenle hâlâ tamamlanmış sayılmamaktadır; pilot yeni
+fix commit'i üzerinden baştan çalıştırılacaktır.
+
 ## 4. Şu Anki Durum
 
 Şu anda proje durumu şöyledir:
@@ -1951,6 +2008,7 @@ kontrol etmek için kullanılacak.
 - Gate 2 tamamlanmıştır
 - Gate 3 requested-resource support metric kodu ve V2 pressure workload suite'i commitlenmiştir
 - V2 `cpu-tight-train` debug live smoke'u `24/24` completion, 123 source-tagged resource sample ve temiz postflight ile tamamlanmıştır
+- İlk V2 baseline pilotu scheduler rollout overlap yarışı nedeniyle geçersiz sayılmış; deployment `Recreate` ve strict rollout convergence ile düzeltilmiştir
 - V2 train/holdout workload'ları için henüz comparative matrix veya official sonuç üretilmemiştir; sıradaki iş pilot acceptance matrix'tir
 
 Başka bir ifadeyle:
