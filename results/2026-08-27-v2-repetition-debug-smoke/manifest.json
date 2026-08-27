@@ -1,0 +1,110 @@
+{
+  "schemaVersion": "v1",
+  "policyVersion": "not-applicable",
+  "measurementVersion": "v2",
+  "runName": "v2-repetition-debug-smoke",
+  "class": "debug",
+  "status": "completed",
+  "paperEvidenceEligible": false,
+  "purpose": "Live acceptance of single-command repeated external-reference evaluation and merged JSON/CSV output.",
+  "startedAt": "2026-08-27T14:54:55.179766636Z",
+  "finishedAt": "2026-08-27T14:55:26.972446851Z",
+  "workingDirectory": "/home/ismail/evo-sched/scheduler",
+  "git": {
+    "sha": "4b149481b4ec31943ce934b44437ff5fac1f5251",
+    "branch": "research/policy-space-v2",
+    "dirtyAtStart": false
+  },
+  "command": "KUBECONFIG=/home/ismail/.kube/config go run ./cmd/evaluator --workload ../workloads/uniform-small.json --scheduler-mode external-reference --scheduler-name default-scheduler --run-name kube-scheduler-repeat-smoke --repetitions 2 --poll-interval 250ms --timeout 60s --output /tmp/evo-v2-repetition-debug.json",
+  "inputs": [
+    {
+      "path": "workloads/uniform-small.json",
+      "sha256": "ef1d9fbacc4e679f75494cf16b6d42ca76f0ba948fbf3816a1406eee88f5f332"
+    },
+    {
+      "path": "results/2026-08-27-v2-kube-scheduler-debug-smoke/kube-scheduler-static-pod.yaml",
+      "sha256": "3552f6d9c1ff8a8265bc143d51a0ddafdd5cd1fcd49ae5cf33f39b962066e5b8",
+      "note": "The same running kind cluster and default kube-scheduler static Pod configuration were used."
+    }
+  ],
+  "cluster": {
+    "context": "kind-evo-sched",
+    "workerCount": 4,
+    "workerAllocatableBase": {
+      "cpuMilli": 16000,
+      "memoryMiB": 31712
+    },
+    "nodeImage": "kindest/node:v1.35.0",
+    "kubernetesServerVersion": "v1.35.0"
+  },
+  "scheduler": {
+    "mode": "external-reference",
+    "name": "default-scheduler",
+    "image": "registry.k8s.io/kube-scheduler:v1.35.0",
+    "weightsApplicable": false,
+    "customSchedulerDeploymentPatched": false
+  },
+  "repetitionProtocol": {
+    "requestedRepetitions": 2,
+    "completedRepetitions": 2,
+    "naming": "<base>-rNN",
+    "runNames": [
+      "kube-scheduler-repeat-smoke-r01",
+      "kube-scheduler-repeat-smoke-r02"
+    ],
+    "mergedResultRows": 2,
+    "mergedRawRuns": 2,
+    "csvHeaderCount": 1
+  },
+  "summary": [
+    {
+      "name": "kube-scheduler-repeat-smoke-r01",
+      "scheduledCount": 4,
+      "completedCount": 4,
+      "unschedulableCount": 0,
+      "decisionTimestampCount": 0,
+      "kubernetesScheduledTimestampCount": 4,
+      "evaluatorObservationTimestampCount": 4,
+      "maxWorkloadOccupiedWorkerNodes": 3
+    },
+    {
+      "name": "kube-scheduler-repeat-smoke-r02",
+      "scheduledCount": 4,
+      "completedCount": 4,
+      "unschedulableCount": 0,
+      "decisionTimestampCount": 0,
+      "kubernetesScheduledTimestampCount": 4,
+      "evaluatorObservationTimestampCount": 4,
+      "maxWorkloadOccupiedWorkerNodes": 3
+    }
+  ],
+  "preflight": {
+    "passed": true,
+    "workersReady": 4,
+    "customSchedulerRolloutReady": true,
+    "customSchedulerCanonicalWeights": [0.25, 0.25, 0.25, 0.25],
+    "evaluatorNamespaceEmpty": true
+  },
+  "postflight": {
+    "passed": true,
+    "customSchedulerRolloutReady": true,
+    "customSchedulerCanonicalWeights": [0.25, 0.25, 0.25, 0.25],
+    "evaluatorNamespaceEmpty": true,
+    "kindContainersStopped": true
+  },
+  "outputs": [
+    {
+      "path": "result.json",
+      "sha256": "de04ad96f4906a335cbaeeba6135c367f86209fd38a044617b5051338b5af79e"
+    },
+    {
+      "path": "result.csv",
+      "sha256": "9d1be02178af07d072bb772cceb2607f9351db6a6a9d01a2f2ccdc99d6212650"
+    }
+  ],
+  "notes": [
+    "This smoke validates repetition naming, execution, merge, and cleanup only. It is not a workload or scheduler comparison.",
+    "The four-Pod historical uniform workload is intentionally used only as a low-cost debug input.",
+    "Official baseline runs will use three repetitions of each 24-Pod V2 train workload."
+  ]
+}
