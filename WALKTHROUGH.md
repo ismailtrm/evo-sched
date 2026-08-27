@@ -1721,6 +1721,120 @@ Postflight:
 - kind container'ları postflight doğrulamasından sonra silinmeden durduruldu
 - Gate 2 çıkış koşulları tamamlandı
 
+### 3.48. Gate 3 V2 workload ve destek metrik sözleşmesini hazırladık
+
+Gate 3'ün amacı, V1 pilotundaki 4/4/6-Pod workload'ların ve yalnızca iki objective'in
+oluşturduğu dar deney zeminini genişletmektir. Bu aşamada henüz official veya pilot
+sonuç üretilmedi; önce ölçüm sözleşmesi ve input suite'i Git'te ayrı commit'lerle
+sabitlendi:
+
+1. `46da163 feat: record requested resource support metrics`
+2. `3babc6f feat: add v2 pressure workload suite`
+
+#### Requested-resource metric kararı
+
+Kubernetes scheduler kararları Pod request ve Node allocatable kaynakları üzerinde
+çalıştığı için evaluator'ın yeni metrikleri `actual utilization` olarak
+adlandırılmayacaktır. Ölçülen değerler, yalnızca evaluator tarafından yaratılmış,
+node'a bind edilmiş ve terminal olmayan Pod'ların request toplamlarıdır. Payda,
+run başında alınan Ready/schedulable worker allocatable snapshot'ıdır.
+
+JSON `measurementProtocol.workloadResourceMetricSource` alanı bu semantiği açıkça
+taşır:
+
+```text
+non-terminal-bound-evaluator-pod-requests-over-run-start-worker-allocatable
+```
+
+Her evaluator poll sample'ında aşağıdaki değerler üretilir; run summary bunların
+zaman içindeki aritmetik ortalamasını saklar:
+
+- `meanWorkloadCPURequestedUtilization`
+- `meanWorkloadMemoryRequestedUtilization`
+- `meanWorkloadDominantRequestedLoadVariance`
+- `meanWorkloadCPUToMemoryImbalance`
+
+`dominant requested load`, worker başına `max(cpuRequestedRatio,
+memoryRequestedRatio)` olarak hesaplanır. `load variance`, tüm worker'lar
+üzerindeki population variance'tır; `CPU-to-memory imbalance` ise worker başına
+CPU ve memory requested ratio farkının mutlak değerinin ortalamasıdır. Bu iki
+metrik load distribution ve kaynak dengesizliğini gözlemek içindir. Pareto
+objective'leri değişmedi:
+
+- minimize `averageP95SchedulingDecisionLatency`
+- minimize `averageMaxWorkloadOccupiedWorkerNodes`
+
+Bu ayrım, destek metriğinin optimizer fitness'ini sessizce değiştirmesini engeller.
+Workload-demand-conditioned bir fragmentation formülü bu gate'te eklenmedi;
+`CPU-to-memory imbalance` açıkça sınırlı bir dengesizlik proxy'sidir, doğrudan
+fragmentation ölçümü değildir.
+
+#### Polling adequacy guard
+
+Occupancy ve requested-resource sample'ları evaluator polling'e bağlı olduğundan,
+minimum Pod duration / poll interval oranı output'a `workloadSamplingProfile`
+olarak yazılır. Runner ve optimizer bu oran `2.0` altındaysa workload'u objective
+üretmeden reddeder. Batch ve result row aynı sampling profile'ı taşımadığında da
+aggregation reddedilir.
+
+Bu, primary decision latency'nin polling ile ölçüldüğü anlamına gelmez; primary
+latency hâlâ scheduler'ın `decision-at` annotation'ından gelir. Guard yalnızca
+occupancy ve requested-resource destek metriklerinin yetersiz örneklenmesini
+engeller.
+
+Measurement version `v2` olarak korundu. Yeni alanlar primary timestamp veya
+objective semantiğini değiştirmiyor; fakat eski V2 cadence pilotu yeni resource
+source alanını taşımadığı için yeni optimizer aggregation'ına karışamaz. Böylece
+historical pilot korunurken yeni Gate 3 artifact'leri farklı metadata sözleşmesiyle
+ayrışır.
+
+#### V2 pressure workload suite
+
+Historical root-level workload dosyaları değiştirilmedi. Yeni suite
+[`workloads/v2`](./workloads/v2) altında tanımlandı ve her dosya portable fraction
+request'ler kullanır. Evaluator fraction'ları run başlangıcındaki worker snapshot'ına
+göre mutlak milliCPU/MiB request'lere çözer.
+
+| Workload | Rol | Pod ve burst düzeni | Her burst toplam request | Hedeflenen mekanizma |
+| --- | --- | --- | --- | --- |
+| `cpu-tight-train` | optimizer training | 2 x 12 Pod, t=0/16 s, 10 s duration | 2.64 CPU, 0.72 memory worker fraction | 4 Pod/node packing ile 3 worker; free-CPU spread ile 4 worker ayrımı |
+| `mem-tight-train` | optimizer training | 2 x 12 Pod, t=0/16 s, 10 s duration | 0.72 CPU, 2.64 memory worker fraction | CPU-tight'in memory-eksenli karşılığı |
+| `fragmenting-mix-train` | optimizer training | 2 x 6 CPU-heavy/memory-heavy çift, t=0/16 s, 10 s duration | 2.40 CPU, 2.40 memory worker fraction | tamamlayıcı CPU-memory istekleri altında balance/consolidation davranışı |
+| `mixed-burst-holdout` | optimizer dışı holdout | 2 x 4 CPU/memory/balanced triplet, t=0/16 s, 10 s duration | 1.80 CPU, 1.80 memory worker fraction | train suite'inden farklı üçlü mix altında genelleme kontrolü |
+
+Her dosya 24 Pod taşır. `250ms` evaluator poll interval'inde minimum duration/poll
+oranı `40x`tır; iki burst arasındaki 16 saniye, ilk 10 saniyelik burstün terminal
+olması için bilerek bırakılmıştır. Tablo yalnızca tasarım hedefini açıklar; 3 veya
+4 worker occupancy ayrımı henüz canlı deney sonucu olarak iddia edilmemektedir.
+
+`scheduler/pkg/evaluator/workload_v2_test.go` aşağıdaki contract'ı korur:
+
+- dört V2 workload dosyası evaluator tarafından portable çözülmelidir
+- her biri tam 24 Pod içermelidir
+- minimum duration 10 saniye olmalıdır
+- `250ms` poll interval için ratio en az `40x` olmalıdır
+
+Kod doğrulaması:
+
+```bash
+cd scheduler
+go test -count=1 -short -race ./...
+go vet ./...
+```
+
+Bu kontroller Gate 3 code commit'i öncesi ve V2 workload testinden sonra geçti.
+
+Sonraki Gate 3 adımı:
+
+1. Durdurulmuş 4-worker kind cluster'ı başlat.
+2. Clean `3babc6f` commit'i üzerinde V2 preflight çalıştır.
+3. `250ms` scheduler/poll interval ile tek V2 baseline ve tek train workload debug
+   smoke'u çalıştır.
+4. Resource summary, raw sample, source metadata, 24/24 completion ve namespace
+   cleanup'ını doğrula.
+5. Sonuca göre workload fraction'larını değiştirmek gerekirse yeni commit ile
+   değiştir; aksi halde Gate 3 acceptance matrix ve baseline protokolüne geç.
+
 ## 4. Şu Anki Durum
 
 Şu anda proje durumu şöyledir:
@@ -1784,7 +1898,8 @@ Postflight:
 - `2s` cadence'in `250ms` cadence'e göre mean decision latency'yi `4.11x`, p95'i `4.21x` artırdığı pilotta gözlenmiştir
 - Polling primary decision objective'inden ayrıştırılmış; watch/event implementation'ı koşullu future work olarak bırakılmıştır
 - Gate 2 tamamlanmıştır
-- Sıradaki araştırma işi Gate 3 workload ve metrik seti `v2`dir
+- Gate 3 requested-resource support metric kodu ve V2 pressure workload suite'i commitlenmiştir
+- V2 train/holdout workload'ları için henüz canlı sonuç üretilmemiştir; sıradaki iş debug sınıfı live smoke'tur
 
 Başka bir ifadeyle:
 
@@ -1878,12 +1993,14 @@ Sonuç:
 
 ### Gate 3 - Workload ve metrik seti `v2`
 
-- Workload başına Pod sayısını p95 ve dağılım analizi için anlamlı seviyeye çıkar
-- CPU-tight, mem-tight ve fragmentation rejimlerini koru fakat gerçek kapasite baskısı oluştur
-- Optimizer'ın görmediği en az bir holdout workload tanımla
-- `unschedulable` değerini güvenlik/feasibility kısıtı olarak tut
-- Yardımcı metrik olarak load variance, utilization ve fragmentation ölçülerini değerlendir
-- Workload checksum ve instantiate edilen mutlak resource request'lerini manifestte sakla
+- [x] Workload başına Pod sayısını p95 ve dağılım analizi için 24'e çıkar
+- [x] CPU-tight, mem-tight ve complementary resource mix rejimlerini portable capacity pressure ile tanımla
+- [x] Optimizer'ın görmediği bir holdout workload tanımla
+- [x] `unschedulable` değerini safety/feasibility kısıtı olarak koru
+- [x] Requested utilization, dominant-load variance ve CPU-memory imbalance destek metriklerini ekle
+- [x] Polling adequacy ratio ve resource metric source provenance'ını output contract'a ekle
+- [ ] Tek V2 baseline ile 24-Pod debug live smoke çalıştır
+- [ ] Workload checksum ve instantiate edilen mutlak resource request'lerini official manifestte sakla
 
 Çıkış koşulu:
 
