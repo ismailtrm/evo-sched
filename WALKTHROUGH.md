@@ -2025,6 +2025,108 @@ karakterleri occupied-worker/variance eksenlerinde görünür olmuştur. Sırada
 Gate 4 baseline protokolünü tamamlamak, özellikle default kube-scheduler dış
 referansını aynı workload ve artifact sözleşmesine bağlamaktır.
 
+### 3.52. Default kube-scheduler dış referans yolunu ekledik
+
+Gate 4'te default kube-scheduler'ı custom policy'lerle aynı scheduler gibi
+göstermemek için evaluator'a iki açık execution mode eklendi:
+
+- `custom-policy`: deployment weight patch, custom high-resolution decision
+  timestamp ve scheduler interval metadata'sı kullanılabilir
+- `external-reference`: scheduler deployment'ına dokunulmaz; Pod'lar verilen
+  `schedulerName` profiline gönderilir ve yalnızca ortak Kubernetes/placement
+  gözlemleri toplanır
+
+Kubernetes'in resmi scheduler configuration dokümantasyonu, varsayılan profil
+adının `default-scheduler` olduğunu ve Pod `.spec.schedulerName` alanının profili
+seçtiğini doğrular. Scheduling Framework dokümantasyonu da default scheduler'ın
+birden çok filtering/scoring plugin'ini birlikte kullandığını açıklar. Bu nedenle
+referans, tek bir `FreeCPU` veya packing heuristiği olarak değil, sürüme bağlı
+default plugin bileşimi olarak sınıflandırılmıştır:
+
+- [Scheduler Configuration](https://kubernetes.io/docs/reference/scheduling/config/)
+- [Scheduling Framework](https://kubernetes.io/docs/concepts/scheduling-eviction/scheduling-framework/)
+
+Implementasyon commit'i:
+
+- `0e5d6b5 feat: add external scheduler reference evaluation`
+
+Yeni evaluator command contract'ı:
+
+```bash
+go run ./cmd/evaluator \
+  --workload ../workloads/v2/cpu-tight-train.json \
+  --scheduler-mode external-reference \
+  --scheduler-name default-scheduler \
+  --run-name kube-scheduler-default \
+  --poll-interval 250ms \
+  --timeout 90s \
+  --output /tmp/evo-v2-kube-scheduler-debug.json
+```
+
+External mode için output semantiği özellikle ayrıştırıldı:
+
+- `policyVersion = not-applicable`
+- `schedulerMode = external-reference`
+- `weightsApplicable = false`; JSON'da weight nesnesi yazılmaz
+- `schedulerDecisionTimestampAvailable = false`
+- `schedulerIntervalApplicable = false`
+- CSV'de weight, custom decision latency ve decision-to-observation lag alanları
+  sıfır yerine boş bırakılır
+- Kubernetes `PodScheduled` condition zamanı coarse secondary reference olarak
+  korunur
+- occupied-worker ve requested-resource metrikleri custom policy ile aynı source
+  contract'ını kullanır
+
+Bu çalışma sırasında full race testi daha önce coverage'a girmeyen bir evaluator
+yarışını da yakaladı: creator goroutine `SubmittedAt/CreatedAt` yazarken monitor
+aynı `PodTiming` kaydını okuyabiliyordu. Create-time yazımları mevcut result mutex'i
+ile korundu; full `go test -count=1 -short -race ./...` ve `go vet ./...` temiz
+geçti.
+
+#### Live external-reference debug smoke
+
+Yeni yol clean `0e5d6b55fa6dc380392675902db9f1dcff50af0e` SHA'sından 4-worker
+kind cluster üzerinde `debug` sınıfında doğrulandı:
+
+- results commit: `bca6508 results: record kube-scheduler reference smoke`
+- artifact directory:
+  [`results/2026-08-27-v2-kube-scheduler-debug-smoke`](./results/2026-08-27-v2-kube-scheduler-debug-smoke)
+- `paperEvidenceEligible: false`
+
+Cluster'daki `kube-scheduler` Pod'u Ready ve image sürümü `v1.35.0`dı. Control-plane
+static Pod manifesti artifact'e kopyalandı. Manifestte `--config` argümanı yoktur;
+dolayısıyla bu koşu custom scheduler config'i değil, bu Kubernetes sürümünün dahili
+default profile/plugin configuration'ını kullanır.
+
+Smoke sonucu:
+
+- `cpu-tight-train` üzerinde `24/24` Pod schedule edildi ve tamamlandı
+- `unschedulableCount = 0`
+- `decisionTimestampCount = 0`, beklenen instrumentation yokluğudur
+- Kubernetes scheduled ve evaluator observation timestamp count'ları `24/24`tür
+- `maxWorkloadOccupiedWorkerNodes = 4`
+- mean dominant requested-load variance `0.00139`dur
+- custom scheduler deployment canonical weights ve `2s` interval'de değişmeden
+  kaldı
+- postflight geçti, namespace boş kaldı ve kind container'ları durduruldu
+
+Kubernetes condition tabanlı pending değerleri bu smoke'ta ikinci çözünürlüğünde
+tamamen sıfır çıktı. Bu değer default scheduler'ın custom scheduler'dan kesin olarak
+daha hızlı olduğu şeklinde yorumlanamaz; primary custom metric nanosecond-resolution
+submission-to-decision latency iken external scheduler'ın decision anı instrument
+edilmemiştir.
+
+Gate 4 kararı:
+
+- default kube-scheduler paper'da dış sistem referansı olarak yer alacak
+- doğrudan ortak karşılaştırma eksenleri completion/unschedulable,
+  max occupied workers ve requested-resource placement metrikleri olacak
+- coarse Kubernetes pending yalnızca ayrı sütun ve açık resolution notuyla verilecek
+- custom decision p95 ile default scheduler coarse pending aynı Pareto objective'ine
+  konulmayacak
+- official baseline için üç V2 train workload üzerinde tekrarlı koşular ve exact
+  kube-scheduler image/config provenance zorunlu olacak
+
 ## 4. Şu Anki Durum
 
 Şu anda proje durumu şöyledir:
@@ -2073,7 +2175,7 @@ referansını aynı workload ve artifact sözleşmesine bağlamaktır.
 - Gate 1 live integration smoke testi temiz commit üzerinden geçmiştir
 - Gate 1 tamamlanmıştır
 - Official optimizer koşuları Gate 3-5 protokol çıkış koşullarına kadar blokludur
-- `evo-sched` kind container'ları Gate 2 postflight sonrasında silinmeden durdurulmuştur
+- `evo-sched` kind container'ları son Gate 4 debug postflight sonrasında silinmeden durdurulmuştur
 - Scheduler experiment preflight skill'i V2 contract, canonical weights ve exact worker-count kontrolüyle güncellenmiştir
 - Güncellenen preflight helper'ın gerçek-cluster acceptance testi geçmiştir
 - Measurement `v2` timestamp semantiği source audit ile tanımlanmıştır
@@ -2092,7 +2194,8 @@ referansını aynı workload ve artifact sözleşmesine bağlamaktır.
 - V2 `cpu-tight-train` debug live smoke'u `24/24` completion, 123 source-tagged resource sample ve temiz postflight ile tamamlanmıştır
 - İlk V2 baseline pilotu scheduler rollout overlap yarışı nedeniyle geçersiz sayılmış; deployment `Recreate` ve strict rollout convergence ile düzeltilmiştir
 - Üç V2 baseline x üç train workload pilot acceptance matrix'i dokuz kombinasyonda tam completion ve policy separation ile tamamlanmıştır
-- V2 train/holdout workload'ları için henüz tekrarlı official baseline veya optimizer sonucu üretilmemiştir; sıradaki iş Gate 4 baseline protokolüdür
+- Default kube-scheduler için deployment patch yapmayan external-reference evaluator yolu ve live debug smoke tamamlanmıştır
+- V2 train/holdout workload'ları için henüz tekrarlı official baseline veya optimizer sonucu üretilmemiştir; sıradaki iş Gate 4 tekrarlı baseline protokolüdür
 
 Başka bir ifadeyle:
 
@@ -2209,11 +2312,14 @@ Sonuç:
 
 ### Gate 4 - Baseline protokolü
 
-- `evok8s-default`, `evok8s-spread-heavy` ve `evok8s-packing-heavy` presetlerini `v2` policy'ye göre yeniden tanımla
-- Default `kube-scheduler`ı dış referans baseline olarak ekle
-- Uygunsa kube-scheduler `NodeResourcesFit` / `MostAllocated` benzeri packing referansını ayrıca ölç
-- Event-driven kube-scheduler ile polling custom scheduler arasındaki ham latency karşılaştırmasının sınırını açıkla
-- Placement ve consolidation metriklerini ortak karşılaştırma zemini olarak önceliklendir
+- [x] V2 balanced, spread-heavy ve consolidation-heavy presetlerini tanımla
+- [x] Default kube-scheduler için external-reference execution ve output contract'ı ekle
+- [x] Event-driven kube-scheduler ile polling custom scheduler arasındaki ham latency karşılaştırmasının sınırını açıkla
+- [x] Placement ve consolidation metriklerini ortak karşılaştırma zemini olarak önceliklendir
+- [x] Default kube-scheduler external-reference debug smoke'unu clean commit üzerinden çalıştır
+- [ ] Üç V2 train workload üzerinde tekrarlı official default kube-scheduler baseline'ı çalıştır
+- [ ] Üç custom V2 baseline'ı aynı repetition ve manifest protokolüyle official çalıştır
+- [ ] Uygunsa kube-scheduler `NodeResourcesFit` / `MostAllocated` packing referansını ayrıca ölç
 
 Çıkış koşulu:
 
