@@ -1,0 +1,689 @@
+{
+  "policyVersion": "v2",
+  "measurementVersion": "v2",
+  "measurementProtocol": {
+    "version": "v2",
+    "submissionTimestampSource": "evaluator-client-before-create",
+    "schedulerDecisionTimestampSource": "scheduler-before-bind-request",
+    "kubernetesScheduledTimestampSource": "pod-condition-last-transition-time",
+    "evaluatorObservationTimestampSource": "evaluator-list-response",
+    "workloadOccupancySource": "non-terminal-evaluator-pods-on-run-start-worker-snapshot",
+    "schedulerIntervalSeconds": 2,
+    "podPollIntervalSeconds": 0.25
+  },
+  "workload": "tiny-control",
+  "workloadPath": "../workloads/tiny-control.json",
+  "workloadBase": {
+    "workerCount": 4,
+    "workerCPUMilli": 16000,
+    "workerMemoryMiB": 31712
+  },
+  "resolvedWorkload": [
+    {
+      "name": "tiny-001",
+      "arrivalSeconds": 0,
+      "cpuMilli": 10,
+      "memoryMiB": 16,
+      "durationSeconds": 5
+    },
+    {
+      "name": "tiny-002",
+      "arrivalSeconds": 1,
+      "cpuMilli": 10,
+      "memoryMiB": 16,
+      "durationSeconds": 5
+    },
+    {
+      "name": "tiny-003",
+      "arrivalSeconds": 2,
+      "cpuMilli": 10,
+      "memoryMiB": 16,
+      "durationSeconds": 5
+    },
+    {
+      "name": "tiny-004",
+      "arrivalSeconds": 3,
+      "cpuMilli": 10,
+      "memoryMiB": 16,
+      "durationSeconds": 5
+    },
+    {
+      "name": "tiny-005",
+      "arrivalSeconds": 4,
+      "cpuMilli": 10,
+      "memoryMiB": 16,
+      "durationSeconds": 5
+    },
+    {
+      "name": "tiny-006",
+      "arrivalSeconds": 5,
+      "cpuMilli": 10,
+      "memoryMiB": 16,
+      "durationSeconds": 5
+    },
+    {
+      "name": "tiny-007",
+      "arrivalSeconds": 6,
+      "cpuMilli": 10,
+      "memoryMiB": 16,
+      "durationSeconds": 5
+    },
+    {
+      "name": "tiny-008",
+      "arrivalSeconds": 7,
+      "cpuMilli": 10,
+      "memoryMiB": 16,
+      "durationSeconds": 5
+    },
+    {
+      "name": "tiny-009",
+      "arrivalSeconds": 8,
+      "cpuMilli": 10,
+      "memoryMiB": 16,
+      "durationSeconds": 5
+    },
+    {
+      "name": "tiny-010",
+      "arrivalSeconds": 9,
+      "cpuMilli": 10,
+      "memoryMiB": 16,
+      "durationSeconds": 5
+    },
+    {
+      "name": "tiny-011",
+      "arrivalSeconds": 10,
+      "cpuMilli": 10,
+      "memoryMiB": 16,
+      "durationSeconds": 5
+    },
+    {
+      "name": "tiny-012",
+      "arrivalSeconds": 11,
+      "cpuMilli": 10,
+      "memoryMiB": 16,
+      "durationSeconds": 5
+    }
+  ],
+  "results": [
+    {
+      "name": "cli-weights",
+      "weights": {
+        "freeCPU": 0.25,
+        "freeMem": 0.25,
+        "balance": 0.25,
+        "consolidation": 0.25
+      },
+      "podCount": 12,
+      "scheduledCount": 12,
+      "completedCount": 12,
+      "unschedulableCount": 0,
+      "decisionTimestampCount": 12,
+      "kubernetesScheduledTimestampCount": 12,
+      "evaluatorObservationTimestampCount": 12,
+      "averageSchedulingDecisionLatencySeconds": 1.286687205,
+      "p95SchedulingDecisionLatencySeconds": 1.8289290566999998,
+      "averageKubernetesPendingSeconds": 1.5,
+      "p95KubernetesPendingSeconds": 2,
+      "averageEvaluatorObservationLagSeconds": 0.17845370075,
+      "p95EvaluatorObservationLagSeconds": 0.2522839709,
+      "maxWorkloadOccupiedWorkerNodes": 1
+    }
+  ],
+  "runs": [
+    {
+      "policyVersion": "v2",
+      "measurementVersion": "v2",
+      "measurementProtocol": {
+        "version": "v2",
+        "submissionTimestampSource": "evaluator-client-before-create",
+        "schedulerDecisionTimestampSource": "scheduler-before-bind-request",
+        "kubernetesScheduledTimestampSource": "pod-condition-last-transition-time",
+        "evaluatorObservationTimestampSource": "evaluator-list-response",
+        "workloadOccupancySource": "non-terminal-evaluator-pods-on-run-start-worker-snapshot",
+        "schedulerIntervalSeconds": 2,
+        "podPollIntervalSeconds": 0.25
+      },
+      "name": "cli-weights",
+      "runId": "eval-cli-weights-1787822372",
+      "namespace": "evo-sched-eval",
+      "schedulerName": "evok8s-scheduler",
+      "workload": "../workloads/tiny-control.json",
+      "weights": {
+        "freeCPU": 0.25,
+        "freeMem": 0.25,
+        "balance": 0.25,
+        "consolidation": 0.25
+      },
+      "startedAt": "2026-08-27T09:19:32.867110729Z",
+      "finishedAt": "2026-08-27T09:19:52.622233394Z",
+      "summary": {
+        "podCount": 12,
+        "scheduledCount": 12,
+        "completedCount": 12,
+        "unschedulableCount": 0,
+        "decisionTimestampCount": 12,
+        "kubernetesScheduledTimestampCount": 12,
+        "evaluatorObservationTimestampCount": 12,
+        "averageSchedulingDecisionLatencySeconds": 1.286687205,
+        "p95SchedulingDecisionLatencySeconds": 1.8289290566999998,
+        "averageKubernetesPendingSeconds": 1.5,
+        "p95KubernetesPendingSeconds": 2,
+        "averageEvaluatorObservationLagSeconds": 0.17845370075,
+        "p95EvaluatorObservationLagSeconds": 0.2522839709,
+        "maxWorkloadOccupiedWorkerNodes": 1
+      },
+      "pods": [
+        {
+          "name": "tiny-001",
+          "submittedAt": "2026-08-27T09:19:32.869050007Z",
+          "createdAt": "2026-08-27T09:19:32Z",
+          "schedulerDecisionAt": "2026-08-27T09:19:33.592494981Z",
+          "kubernetesScheduledAt": "2026-08-27T09:19:33Z",
+          "evaluatorObservedScheduledAt": "2026-08-27T09:19:33.621747912Z",
+          "startedAt": "2026-08-27T09:19:34Z",
+          "finishedAt": "2026-08-27T09:19:39Z",
+          "nodeName": "evo-sched-worker",
+          "phase": "Succeeded",
+          "schedulingDecisionLatencySeconds": 0.723444974,
+          "kubernetesPendingSeconds": 1,
+          "evaluatorObservationLagSeconds": 0.029252931,
+          "startLatencySeconds": 2
+        },
+        {
+          "name": "tiny-002",
+          "submittedAt": "2026-08-27T09:19:33.867794427Z",
+          "createdAt": "2026-08-27T09:19:33Z",
+          "schedulerDecisionAt": "2026-08-27T09:19:35.608133695Z",
+          "kubernetesScheduledAt": "2026-08-27T09:19:35Z",
+          "evaluatorObservedScheduledAt": "2026-08-27T09:19:35.622712959Z",
+          "startedAt": "2026-08-27T09:19:36Z",
+          "finishedAt": "2026-08-27T09:19:41Z",
+          "nodeName": "evo-sched-worker",
+          "phase": "Succeeded",
+          "schedulingDecisionLatencySeconds": 1.740339268,
+          "kubernetesPendingSeconds": 2,
+          "evaluatorObservationLagSeconds": 0.014579264,
+          "startLatencySeconds": 3
+        },
+        {
+          "name": "tiny-003",
+          "submittedAt": "2026-08-27T09:19:34.867355438Z",
+          "createdAt": "2026-08-27T09:19:34Z",
+          "schedulerDecisionAt": "2026-08-27T09:19:35.620223806Z",
+          "kubernetesScheduledAt": "2026-08-27T09:19:35Z",
+          "evaluatorObservedScheduledAt": "2026-08-27T09:19:35.881594669Z",
+          "startedAt": "2026-08-27T09:19:36Z",
+          "finishedAt": "2026-08-27T09:19:41Z",
+          "nodeName": "evo-sched-worker",
+          "phase": "Succeeded",
+          "schedulingDecisionLatencySeconds": 0.752868368,
+          "kubernetesPendingSeconds": 1,
+          "evaluatorObservationLagSeconds": 0.261370863,
+          "startLatencySeconds": 2
+        },
+        {
+          "name": "tiny-004",
+          "submittedAt": "2026-08-27T09:19:35.867933493Z",
+          "createdAt": "2026-08-27T09:19:35Z",
+          "schedulerDecisionAt": "2026-08-27T09:19:37.630308283Z",
+          "kubernetesScheduledAt": "2026-08-27T09:19:37Z",
+          "evaluatorObservedScheduledAt": "2026-08-27T09:19:37.875157524Z",
+          "startedAt": "2026-08-27T09:19:38Z",
+          "finishedAt": "2026-08-27T09:19:43Z",
+          "nodeName": "evo-sched-worker",
+          "phase": "Succeeded",
+          "schedulingDecisionLatencySeconds": 1.76237479,
+          "kubernetesPendingSeconds": 2,
+          "evaluatorObservationLagSeconds": 0.244849241,
+          "startLatencySeconds": 3
+        },
+        {
+          "name": "tiny-005",
+          "submittedAt": "2026-08-27T09:19:36.867681882Z",
+          "createdAt": "2026-08-27T09:19:36Z",
+          "schedulerDecisionAt": "2026-08-27T09:19:37.645960509Z",
+          "kubernetesScheduledAt": "2026-08-27T09:19:37Z",
+          "evaluatorObservedScheduledAt": "2026-08-27T09:19:37.875157524Z",
+          "startedAt": "2026-08-27T09:19:38Z",
+          "finishedAt": "2026-08-27T09:19:43Z",
+          "nodeName": "evo-sched-worker",
+          "phase": "Succeeded",
+          "schedulingDecisionLatencySeconds": 0.778278627,
+          "kubernetesPendingSeconds": 1,
+          "evaluatorObservationLagSeconds": 0.229197015,
+          "startLatencySeconds": 2
+        },
+        {
+          "name": "tiny-006",
+          "submittedAt": "2026-08-27T09:19:37.867713341Z",
+          "createdAt": "2026-08-27T09:19:37Z",
+          "schedulerDecisionAt": "2026-08-27T09:19:39.655787923Z",
+          "kubernetesScheduledAt": "2026-08-27T09:19:39Z",
+          "evaluatorObservedScheduledAt": "2026-08-27T09:19:39.875736457Z",
+          "startedAt": "2026-08-27T09:19:40Z",
+          "finishedAt": "2026-08-27T09:19:45Z",
+          "nodeName": "evo-sched-worker",
+          "phase": "Succeeded",
+          "schedulingDecisionLatencySeconds": 1.7880745820000001,
+          "kubernetesPendingSeconds": 2,
+          "evaluatorObservationLagSeconds": 0.219948534,
+          "startLatencySeconds": 3
+        },
+        {
+          "name": "tiny-007",
+          "submittedAt": "2026-08-27T09:19:38.867503055Z",
+          "createdAt": "2026-08-27T09:19:38Z",
+          "schedulerDecisionAt": "2026-08-27T09:19:39.661412632Z",
+          "kubernetesScheduledAt": "2026-08-27T09:19:39Z",
+          "evaluatorObservedScheduledAt": "2026-08-27T09:19:39.875736457Z",
+          "startedAt": "2026-08-27T09:19:40Z",
+          "finishedAt": "2026-08-27T09:19:45Z",
+          "nodeName": "evo-sched-worker",
+          "phase": "Succeeded",
+          "schedulingDecisionLatencySeconds": 0.793909577,
+          "kubernetesPendingSeconds": 1,
+          "evaluatorObservationLagSeconds": 0.214323825,
+          "startLatencySeconds": 2
+        },
+        {
+          "name": "tiny-008",
+          "submittedAt": "2026-08-27T09:19:39.86775526Z",
+          "createdAt": "2026-08-27T09:19:39Z",
+          "schedulerDecisionAt": "2026-08-27T09:19:41.671939486Z",
+          "kubernetesScheduledAt": "2026-08-27T09:19:41Z",
+          "evaluatorObservedScheduledAt": "2026-08-27T09:19:41.872841977Z",
+          "startedAt": "2026-08-27T09:19:42Z",
+          "finishedAt": "2026-08-27T09:19:47Z",
+          "nodeName": "evo-sched-worker",
+          "phase": "Succeeded",
+          "schedulingDecisionLatencySeconds": 1.8041842259999998,
+          "kubernetesPendingSeconds": 2,
+          "evaluatorObservationLagSeconds": 0.200902491,
+          "startLatencySeconds": 3
+        },
+        {
+          "name": "tiny-009",
+          "submittedAt": "2026-08-27T09:19:40.86782539Z",
+          "createdAt": "2026-08-27T09:19:40Z",
+          "schedulerDecisionAt": "2026-08-27T09:19:41.67715719Z",
+          "kubernetesScheduledAt": "2026-08-27T09:19:41Z",
+          "evaluatorObservedScheduledAt": "2026-08-27T09:19:41.872841977Z",
+          "startedAt": "2026-08-27T09:19:42Z",
+          "finishedAt": "2026-08-27T09:19:47Z",
+          "nodeName": "evo-sched-worker",
+          "phase": "Succeeded",
+          "schedulingDecisionLatencySeconds": 0.8093318,
+          "kubernetesPendingSeconds": 1,
+          "evaluatorObservationLagSeconds": 0.195684787,
+          "startLatencySeconds": 2
+        },
+        {
+          "name": "tiny-010",
+          "submittedAt": "2026-08-27T09:19:41.868130857Z",
+          "createdAt": "2026-08-27T09:19:41Z",
+          "schedulerDecisionAt": "2026-08-27T09:19:43.68857985Z",
+          "kubernetesScheduledAt": "2026-08-27T09:19:43Z",
+          "evaluatorObservedScheduledAt": "2026-08-27T09:19:43.874851532Z",
+          "startedAt": "2026-08-27T09:19:44Z",
+          "finishedAt": "2026-08-27T09:19:49Z",
+          "nodeName": "evo-sched-worker",
+          "phase": "Succeeded",
+          "schedulingDecisionLatencySeconds": 1.8204489929999998,
+          "kubernetesPendingSeconds": 2,
+          "evaluatorObservationLagSeconds": 0.186271682,
+          "startLatencySeconds": 3
+        },
+        {
+          "name": "tiny-011",
+          "submittedAt": "2026-08-27T09:19:42.867305433Z",
+          "createdAt": "2026-08-27T09:19:42Z",
+          "schedulerDecisionAt": "2026-08-27T09:19:43.695003109Z",
+          "kubernetesScheduledAt": "2026-08-27T09:19:43Z",
+          "evaluatorObservedScheduledAt": "2026-08-27T09:19:43.874851532Z",
+          "startedAt": "2026-08-27T09:19:44Z",
+          "finishedAt": "2026-08-27T09:19:49Z",
+          "nodeName": "evo-sched-worker",
+          "phase": "Succeeded",
+          "schedulingDecisionLatencySeconds": 0.827697676,
+          "kubernetesPendingSeconds": 1,
+          "evaluatorObservationLagSeconds": 0.179848423,
+          "startLatencySeconds": 2
+        },
+        {
+          "name": "tiny-012",
+          "submittedAt": "2026-08-27T09:19:43.867467699Z",
+          "createdAt": "2026-08-27T09:19:43Z",
+          "schedulerDecisionAt": "2026-08-27T09:19:45.706761278Z",
+          "kubernetesScheduledAt": "2026-08-27T09:19:45Z",
+          "evaluatorObservedScheduledAt": "2026-08-27T09:19:45.871976631Z",
+          "startedAt": "2026-08-27T09:19:46Z",
+          "finishedAt": "2026-08-27T09:19:51Z",
+          "nodeName": "evo-sched-worker",
+          "phase": "Succeeded",
+          "schedulingDecisionLatencySeconds": 1.839293579,
+          "kubernetesPendingSeconds": 2,
+          "evaluatorObservationLagSeconds": 0.165215353,
+          "startLatencySeconds": 3
+        }
+      ],
+      "workloadOccupiedWorkerNodeSamples": [
+        {
+          "observedAt": "2026-08-27T09:19:33.122092588Z",
+          "workloadOccupiedWorkerNodes": 0
+        },
+        {
+          "observedAt": "2026-08-27T09:19:33.371648378Z",
+          "workloadOccupiedWorkerNodes": 0
+        },
+        {
+          "observedAt": "2026-08-27T09:19:33.621747912Z",
+          "workloadOccupiedWorkerNodes": 1
+        },
+        {
+          "observedAt": "2026-08-27T09:19:33.879975335Z",
+          "workloadOccupiedWorkerNodes": 1
+        },
+        {
+          "observedAt": "2026-08-27T09:19:34.121285058Z",
+          "workloadOccupiedWorkerNodes": 1
+        },
+        {
+          "observedAt": "2026-08-27T09:19:34.371290164Z",
+          "workloadOccupiedWorkerNodes": 1
+        },
+        {
+          "observedAt": "2026-08-27T09:19:34.621478391Z",
+          "workloadOccupiedWorkerNodes": 1
+        },
+        {
+          "observedAt": "2026-08-27T09:19:34.884731898Z",
+          "workloadOccupiedWorkerNodes": 1
+        },
+        {
+          "observedAt": "2026-08-27T09:19:35.121855367Z",
+          "workloadOccupiedWorkerNodes": 1
+        },
+        {
+          "observedAt": "2026-08-27T09:19:35.370904671Z",
+          "workloadOccupiedWorkerNodes": 1
+        },
+        {
+          "observedAt": "2026-08-27T09:19:35.622712959Z",
+          "workloadOccupiedWorkerNodes": 1
+        },
+        {
+          "observedAt": "2026-08-27T09:19:35.881594669Z",
+          "workloadOccupiedWorkerNodes": 1
+        },
+        {
+          "observedAt": "2026-08-27T09:19:36.122070114Z",
+          "workloadOccupiedWorkerNodes": 1
+        },
+        {
+          "observedAt": "2026-08-27T09:19:36.372893839Z",
+          "workloadOccupiedWorkerNodes": 1
+        },
+        {
+          "observedAt": "2026-08-27T09:19:36.621466298Z",
+          "workloadOccupiedWorkerNodes": 1
+        },
+        {
+          "observedAt": "2026-08-27T09:19:36.871681502Z",
+          "workloadOccupiedWorkerNodes": 1
+        },
+        {
+          "observedAt": "2026-08-27T09:19:37.121125857Z",
+          "workloadOccupiedWorkerNodes": 1
+        },
+        {
+          "observedAt": "2026-08-27T09:19:37.371342838Z",
+          "workloadOccupiedWorkerNodes": 1
+        },
+        {
+          "observedAt": "2026-08-27T09:19:37.621310119Z",
+          "workloadOccupiedWorkerNodes": 1
+        },
+        {
+          "observedAt": "2026-08-27T09:19:37.875157524Z",
+          "workloadOccupiedWorkerNodes": 1
+        },
+        {
+          "observedAt": "2026-08-27T09:19:38.120790796Z",
+          "workloadOccupiedWorkerNodes": 1
+        },
+        {
+          "observedAt": "2026-08-27T09:19:38.371263123Z",
+          "workloadOccupiedWorkerNodes": 1
+        },
+        {
+          "observedAt": "2026-08-27T09:19:38.621195336Z",
+          "workloadOccupiedWorkerNodes": 1
+        },
+        {
+          "observedAt": "2026-08-27T09:19:38.874214316Z",
+          "workloadOccupiedWorkerNodes": 1
+        },
+        {
+          "observedAt": "2026-08-27T09:19:39.12166105Z",
+          "workloadOccupiedWorkerNodes": 1
+        },
+        {
+          "observedAt": "2026-08-27T09:19:39.372439887Z",
+          "workloadOccupiedWorkerNodes": 1
+        },
+        {
+          "observedAt": "2026-08-27T09:19:39.62147893Z",
+          "workloadOccupiedWorkerNodes": 1
+        },
+        {
+          "observedAt": "2026-08-27T09:19:39.875736457Z",
+          "workloadOccupiedWorkerNodes": 1
+        },
+        {
+          "observedAt": "2026-08-27T09:19:40.121448696Z",
+          "workloadOccupiedWorkerNodes": 1
+        },
+        {
+          "observedAt": "2026-08-27T09:19:40.371396947Z",
+          "workloadOccupiedWorkerNodes": 1
+        },
+        {
+          "observedAt": "2026-08-27T09:19:40.621369815Z",
+          "workloadOccupiedWorkerNodes": 1
+        },
+        {
+          "observedAt": "2026-08-27T09:19:40.872527112Z",
+          "workloadOccupiedWorkerNodes": 1
+        },
+        {
+          "observedAt": "2026-08-27T09:19:41.122337689Z",
+          "workloadOccupiedWorkerNodes": 1
+        },
+        {
+          "observedAt": "2026-08-27T09:19:41.37153317Z",
+          "workloadOccupiedWorkerNodes": 1
+        },
+        {
+          "observedAt": "2026-08-27T09:19:41.621806818Z",
+          "workloadOccupiedWorkerNodes": 1
+        },
+        {
+          "observedAt": "2026-08-27T09:19:41.872841977Z",
+          "workloadOccupiedWorkerNodes": 1
+        },
+        {
+          "observedAt": "2026-08-27T09:19:42.121749983Z",
+          "workloadOccupiedWorkerNodes": 1
+        },
+        {
+          "observedAt": "2026-08-27T09:19:42.372222129Z",
+          "workloadOccupiedWorkerNodes": 1
+        },
+        {
+          "observedAt": "2026-08-27T09:19:42.627136358Z",
+          "workloadOccupiedWorkerNodes": 1
+        },
+        {
+          "observedAt": "2026-08-27T09:19:42.874993564Z",
+          "workloadOccupiedWorkerNodes": 1
+        },
+        {
+          "observedAt": "2026-08-27T09:19:43.121919177Z",
+          "workloadOccupiedWorkerNodes": 1
+        },
+        {
+          "observedAt": "2026-08-27T09:19:43.3711011Z",
+          "workloadOccupiedWorkerNodes": 1
+        },
+        {
+          "observedAt": "2026-08-27T09:19:43.621328697Z",
+          "workloadOccupiedWorkerNodes": 1
+        },
+        {
+          "observedAt": "2026-08-27T09:19:43.874851532Z",
+          "workloadOccupiedWorkerNodes": 1
+        },
+        {
+          "observedAt": "2026-08-27T09:19:44.121006912Z",
+          "workloadOccupiedWorkerNodes": 1
+        },
+        {
+          "observedAt": "2026-08-27T09:19:44.371124121Z",
+          "workloadOccupiedWorkerNodes": 1
+        },
+        {
+          "observedAt": "2026-08-27T09:19:44.621542942Z",
+          "workloadOccupiedWorkerNodes": 1
+        },
+        {
+          "observedAt": "2026-08-27T09:19:44.872349502Z",
+          "workloadOccupiedWorkerNodes": 1
+        },
+        {
+          "observedAt": "2026-08-27T09:19:45.1221169Z",
+          "workloadOccupiedWorkerNodes": 1
+        },
+        {
+          "observedAt": "2026-08-27T09:19:45.371693359Z",
+          "workloadOccupiedWorkerNodes": 1
+        },
+        {
+          "observedAt": "2026-08-27T09:19:45.621902369Z",
+          "workloadOccupiedWorkerNodes": 1
+        },
+        {
+          "observedAt": "2026-08-27T09:19:45.871976631Z",
+          "workloadOccupiedWorkerNodes": 1
+        },
+        {
+          "observedAt": "2026-08-27T09:19:46.121367034Z",
+          "workloadOccupiedWorkerNodes": 1
+        },
+        {
+          "observedAt": "2026-08-27T09:19:46.564727498Z",
+          "workloadOccupiedWorkerNodes": 1
+        },
+        {
+          "observedAt": "2026-08-27T09:19:46.65461318Z",
+          "workloadOccupiedWorkerNodes": 1
+        },
+        {
+          "observedAt": "2026-08-27T09:19:46.872317589Z",
+          "workloadOccupiedWorkerNodes": 1
+        },
+        {
+          "observedAt": "2026-08-27T09:19:47.121664695Z",
+          "workloadOccupiedWorkerNodes": 1
+        },
+        {
+          "observedAt": "2026-08-27T09:19:47.371479279Z",
+          "workloadOccupiedWorkerNodes": 1
+        },
+        {
+          "observedAt": "2026-08-27T09:19:47.621890644Z",
+          "workloadOccupiedWorkerNodes": 1
+        },
+        {
+          "observedAt": "2026-08-27T09:19:47.871794669Z",
+          "workloadOccupiedWorkerNodes": 1
+        },
+        {
+          "observedAt": "2026-08-27T09:19:48.124052578Z",
+          "workloadOccupiedWorkerNodes": 1
+        },
+        {
+          "observedAt": "2026-08-27T09:19:48.372705602Z",
+          "workloadOccupiedWorkerNodes": 1
+        },
+        {
+          "observedAt": "2026-08-27T09:19:48.621997381Z",
+          "workloadOccupiedWorkerNodes": 1
+        },
+        {
+          "observedAt": "2026-08-27T09:19:48.87392098Z",
+          "workloadOccupiedWorkerNodes": 1
+        },
+        {
+          "observedAt": "2026-08-27T09:19:49.122236089Z",
+          "workloadOccupiedWorkerNodes": 1
+        },
+        {
+          "observedAt": "2026-08-27T09:19:49.370660222Z",
+          "workloadOccupiedWorkerNodes": 1
+        },
+        {
+          "observedAt": "2026-08-27T09:19:49.622410136Z",
+          "workloadOccupiedWorkerNodes": 1
+        },
+        {
+          "observedAt": "2026-08-27T09:19:49.871196371Z",
+          "workloadOccupiedWorkerNodes": 1
+        },
+        {
+          "observedAt": "2026-08-27T09:19:50.121193351Z",
+          "workloadOccupiedWorkerNodes": 1
+        },
+        {
+          "observedAt": "2026-08-27T09:19:50.371572187Z",
+          "workloadOccupiedWorkerNodes": 1
+        },
+        {
+          "observedAt": "2026-08-27T09:19:50.621369882Z",
+          "workloadOccupiedWorkerNodes": 1
+        },
+        {
+          "observedAt": "2026-08-27T09:19:50.871026146Z",
+          "workloadOccupiedWorkerNodes": 1
+        },
+        {
+          "observedAt": "2026-08-27T09:19:51.12132124Z",
+          "workloadOccupiedWorkerNodes": 1
+        },
+        {
+          "observedAt": "2026-08-27T09:19:51.370449746Z",
+          "workloadOccupiedWorkerNodes": 1
+        },
+        {
+          "observedAt": "2026-08-27T09:19:51.621106478Z",
+          "workloadOccupiedWorkerNodes": 1
+        },
+        {
+          "observedAt": "2026-08-27T09:19:51.871400553Z",
+          "workloadOccupiedWorkerNodes": 1
+        },
+        {
+          "observedAt": "2026-08-27T09:19:52.121603056Z",
+          "workloadOccupiedWorkerNodes": 1
+        },
+        {
+          "observedAt": "2026-08-27T09:19:52.371813999Z",
+          "workloadOccupiedWorkerNodes": 1
+        },
+        {
+          "observedAt": "2026-08-27T09:19:52.622202486Z",
+          "workloadOccupiedWorkerNodes": 0
+        }
+      ]
+    }
+  ]
+}

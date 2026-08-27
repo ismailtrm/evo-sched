@@ -1,0 +1,70 @@
+{
+  "schemaVersion": "v1",
+  "measurementVersion": "v2",
+  "runClass": "pilot",
+  "workload": "tiny-control",
+  "groups": [
+    {
+      "schedulerIntervalSeconds": 0.25,
+      "evaluatorPollIntervalSeconds": 0.25,
+      "repetitions": 3,
+      "podObservations": 36,
+      "decisionTimestampCount": 36,
+      "unschedulableCount": 0,
+      "decisionLatencySeconds": {
+        "mean": 0.3112119446388888,
+        "median": 0.325773353,
+        "p95": 0.466296747,
+        "min": 0.103431173,
+        "max": 0.466829201,
+        "stddev": 0.13842441636253822,
+        "meanRunAverage": 0.31121194463888885,
+        "meanRunP95": 0.41735195560000005
+      },
+      "kubernetesPendingSeconds": {
+        "mean": 0.3888888888888889,
+        "p95": 1
+      },
+      "evaluatorObservationLagSeconds": {
+        "mean": 0.2689050931666666,
+        "p95": 0.42772895875
+      },
+      "maxWorkloadOccupiedWorkerNodes": 1
+    },
+    {
+      "schedulerIntervalSeconds": 2,
+      "evaluatorPollIntervalSeconds": 0.25,
+      "repetitions": 3,
+      "podObservations": 36,
+      "decisionTimestampCount": 36,
+      "unschedulableCount": 0,
+      "decisionLatencySeconds": {
+        "mean": 1.278972042305556,
+        "median": 1.225630426,
+        "p95": 1.962268761,
+        "min": 0.484066192,
+        "max": 1.985512313,
+        "stddev": 0.5243348990883138,
+        "meanRunAverage": 1.2789720423055553,
+        "meanRunP95": 1.8441353691666666
+      },
+      "kubernetesPendingSeconds": {
+        "mean": 1.5,
+        "p95": 2
+      },
+      "evaluatorObservationLagSeconds": {
+        "mean": 0.10754985308333333,
+        "p95": 0.2462794465
+      },
+      "maxWorkloadOccupiedWorkerNodes": 1
+    }
+  ],
+  "cadenceEffect": {
+    "slowIntervalSeconds": 2,
+    "fastIntervalSeconds": 0.25,
+    "meanDecisionLatencyRatioSlowOverFast": 4.1096495951966,
+    "meanDecisionLatencyReductionPercent": 75.66702520894214,
+    "p95DecisionLatencyRatioSlowOverFast": 4.208197405674803,
+    "p95DecisionLatencyReductionPercent": 76.23685622134816
+  }
+}

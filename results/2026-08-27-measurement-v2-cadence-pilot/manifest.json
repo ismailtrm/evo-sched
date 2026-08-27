@@ -1,0 +1,119 @@
+{
+  "schemaVersion": "v1",
+  "measurementVersion": "v2",
+  "runName": "measurement-v2-cadence-pilot",
+  "class": "pilot",
+  "status": "completed",
+  "startedAt": "2026-08-27T12:16:02+03:00",
+  "finishedAt": "2026-08-27T12:26:14+03:00",
+  "purpose": "Isolate the custom scheduler loop cadence effect on high-resolution scheduling decision latency without resource pressure.",
+  "paperEvidenceEligible": false,
+  "workingDirectory": "/home/ismail/evo-sched/scheduler",
+  "git": {
+    "sha": "b89c67199b71f63cacee304059716c7f73f30878",
+    "branch": "research/policy-space-v2",
+    "dirtyAtStart": false
+  },
+  "inputs": [
+    {
+      "path": "workloads/tiny-control.json",
+      "sha256": "ea66d0b92159769e7d1053a92b729b019e0457ab229f0462e5fbaa8284f0a37d"
+    },
+    {
+      "path": "deploy.yaml",
+      "sha256": "233db8b84500ea3c337d7a50bd493cfbb4f9f1316d6f36095e2eb4039e79c6a2"
+    },
+    {
+      "path": "kind-config-4workers.yaml",
+      "sha256": "d26c091ff873418387e8c45148283a71235a2190efe1d8f021fc566de0bd664f"
+    }
+  ],
+  "cluster": {
+    "context": "kind-evo-sched",
+    "workerCount": 4,
+    "nodeImage": "kindest/node:v1.35.0",
+    "schedulerNamespace": "evo-sched",
+    "schedulerDeployment": "evok8s-scheduler",
+    "evaluatorNamespace": "evo-sched-eval"
+  },
+  "schedulerImage": {
+    "tag": "evok8s-scheduler:0.1.0",
+    "id": "sha256:e502784e7071c53e7ffc586a41ed68d24825836b25d318b4a662553e37ac4375"
+  },
+  "versions": {
+    "go": "go1.27.0-X:nodwarf5",
+    "kind": "v0.31.0",
+    "kubectlClient": "v1.35.0",
+    "kubernetesServer": "v1.35.0"
+  },
+  "design": {
+    "schedulerIntervals": ["2s", "250ms"],
+    "evaluatorPollInterval": "250ms",
+    "repetitionsPerInterval": 3,
+    "weights": {
+      "freeCPU": 0.25,
+      "freeMem": 0.25,
+      "balance": 0.25,
+      "consolidation": 0.25
+    },
+    "podCountPerRun": 12,
+    "arrivalSpacingSeconds": 1,
+    "podDurationSeconds": 5
+  },
+  "commandTemplate": "KUBECONFIG=/home/ismail/.kube/config go run ./cmd/evaluator --workload ../workloads/tiny-control.json --weights 1,1,1,1 --poll-interval 250ms --timeout 45s --output ../results/2026-08-27-measurement-v2-cadence-pilot/<interval>-repeat-<n>.json",
+  "schedulerIntervalCommand": "/tmp/evo-kubectl set env deployment/evok8s-scheduler -n evo-sched SCHEDULER_INTERVAL=<interval>",
+  "rolloutGateCommand": "/tmp/evo-kubectl rollout status deployment/evok8s-scheduler -n evo-sched --timeout=120s",
+  "preflight": {
+    "passed": true,
+    "workersReady": 4,
+    "schedulerRolloutReady": true,
+    "policyVersion": "v2",
+    "measurementVersion": "v2",
+    "canonicalWeights": [0.25, 0.25, 0.25, 0.25],
+    "evaluatorNamespaceEmpty": true
+  },
+  "outputs": [
+    {"path": "2s-repeat-1.json", "sha256": "20ada8588d30458d9e6441a59511e1e0bb62d9e519d29b77a60dd42325a545c0"},
+    {"path": "2s-repeat-1.csv", "sha256": "9179ce38d771155e9cc6f756e90e1245644d92dcbc64ec3841235a67c53708e2"},
+    {"path": "2s-repeat-2.json", "sha256": "0f49d2ad666fa3ebeb63f24637224852d614a3c4b0adb4c495a9944d30e267a1"},
+    {"path": "2s-repeat-2.csv", "sha256": "c5c52a7d0114590a131c64eae207a902d105269de1810da7acad3a2c008b169e"},
+    {"path": "2s-repeat-3.json", "sha256": "aadc857d49111e948986ba28854aff8ae2e6edfe7b809558bae9dbe51b8d00ab"},
+    {"path": "2s-repeat-3.csv", "sha256": "938e83251b7259ede29d0731bb805d8e35de6ef04254b67919c100d35ea94bc9"},
+    {"path": "250ms-repeat-1.json", "sha256": "8e68ea223cdafa31e5211bbf01604b44a17e703fd999e20d54dd932f176b85e2"},
+    {"path": "250ms-repeat-1.csv", "sha256": "c759b8d3b1ea5245cb647e06965c4d71fcebac0fefbf173defa618aa6724fbaf"},
+    {"path": "250ms-repeat-2.json", "sha256": "3aac18adda88d630c506a7ed8d2122b5addee906205de519fb00f8d16c78b1d8"},
+    {"path": "250ms-repeat-2.csv", "sha256": "831f88af878bf40470f6fac1900a779ee46392ec5e294a91697ea354ab20e60e"},
+    {"path": "250ms-repeat-3.json", "sha256": "66fb9596ea406a9aa4aedb2a3d8c0b73904f305e542700331ee7fe318b921e1d"},
+    {"path": "250ms-repeat-3.csv", "sha256": "af4c8d2dff4e3c133961c33edcb862c5f2fa89a8391b799a7d312e3aed2be595"},
+    {"path": "summary.json", "sha256": "a33485d1edbf112a2a2612291ea24ee96018a058b55d2c1bc6add24112229641"},
+    {"path": "summary.csv", "sha256": "e3fc314ae9f9374465eae35b1ea8a22a214b73770d9ed3b365e3df30c8bec8dc"}
+  ],
+  "summary": {
+    "fastIntervalSeconds": 0.25,
+    "slowIntervalSeconds": 2.0,
+    "podObservationsPerGroup": 36,
+    "fastMeanDecisionLatencySeconds": 0.3112119446388888,
+    "slowMeanDecisionLatencySeconds": 1.278972042305556,
+    "fastP95DecisionLatencySeconds": 0.466296747,
+    "slowP95DecisionLatencySeconds": 1.962268761,
+    "meanDecisionLatencyRatioSlowOverFast": 4.1096495951966,
+    "p95DecisionLatencyRatioSlowOverFast": 4.208197405674803,
+    "meanDecisionLatencyReductionPercent": 75.66702520894214,
+    "p95DecisionLatencyReductionPercent": 76.23685622134816,
+    "unschedulableCount": 0
+  },
+  "postflight": {
+    "passed": true,
+    "schedulerIntervalRestored": "2s",
+    "workersReady": 4,
+    "schedulerRolloutReady": true,
+    "canonicalWeights": [0.25, 0.25, 0.25, 0.25],
+    "evaluatorNamespaceEmpty": true
+  },
+  "failure": null,
+  "notes": [
+    "This is a cadence-isolation pilot, not an official scheduler-policy comparison.",
+    "The evaluator poll interval is fixed across both groups; the primary decision latency does not use evaluator observation time.",
+    "The scheduler interval will be restored to 2s after the pilot."
+  ]
+}
