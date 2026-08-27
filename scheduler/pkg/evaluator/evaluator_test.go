@@ -12,6 +12,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	apiresource "k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
 )
@@ -172,22 +173,87 @@ func TestCurrentDeploymentWeightsRejectsInvalidEnvironment(t *testing.T) {
 	}
 }
 
+func TestCurrentDeploymentSchedulerInterval(t *testing.T) {
+	client := fake.NewSimpleClientset(testSchedulerDeployment([]corev1.EnvVar{
+		{Name: "SCHEDULER_INTERVAL", Value: "250ms"},
+	}))
+
+	got, err := CurrentDeploymentSchedulerInterval(context.Background(), client, "evo-sched", "evok8s-scheduler")
+	if err != nil {
+		t.Fatalf("CurrentDeploymentSchedulerInterval() error = %v", err)
+	}
+	if got != 250*time.Millisecond {
+		t.Fatalf("CurrentDeploymentSchedulerInterval() = %v, want 250ms", got)
+	}
+}
+
+func TestCurrentDeploymentSchedulerIntervalRejectsMissingEnvironment(t *testing.T) {
+	client := fake.NewSimpleClientset(testSchedulerDeployment(nil))
+
+	if _, err := CurrentDeploymentSchedulerInterval(context.Background(), client, "evo-sched", "evok8s-scheduler"); err == nil {
+		t.Fatal("CurrentDeploymentSchedulerInterval() error = nil, want missing env rejection")
+	}
+}
+
+func TestMeasurementProtocolForRecordsSourcesAndIntervals(t *testing.T) {
+	opts := DefaultRunnerOptions()
+	opts.PollInterval = 250 * time.Millisecond
+	got := MeasurementProtocolFor(opts, 500*time.Millisecond)
+
+	if got.Version != MeasurementVersion {
+		t.Fatalf("measurement protocol version = %q, want %q", got.Version, MeasurementVersion)
+	}
+	if got.SchedulerIntervalSeconds != 0.5 || got.PodPollIntervalSeconds != 0.25 {
+		t.Fatalf("unexpected measurement intervals: %+v", got)
+	}
+	if got.SchedulerDecisionTimestampSource == "" || got.WorkloadOccupancySource == "" {
+		t.Fatalf("measurement sources must be explicit: %+v", got)
+	}
+}
+
+func TestCurrentWorkloadBaseUsesReadySchedulableWorkerSnapshot(t *testing.T) {
+	client := fake.NewSimpleClientset(
+		testWorkerNode("worker-a", "4", "8Gi", true),
+		testWorkerNode("worker-b", "2", "4Gi", true),
+		testWorkerNode("worker-not-ready", "8", "16Gi", false),
+		testControlPlaneNode("control-plane"),
+	)
+
+	got, err := CurrentWorkloadBase(context.Background(), client)
+	if err != nil {
+		t.Fatalf("CurrentWorkloadBase() error = %v", err)
+	}
+	want := WorkloadBase{WorkerCount: 2, WorkerCPUMilli: 2000, WorkerMemoryMiB: 4096}
+	if got != want {
+		t.Fatalf("CurrentWorkloadBase() = %+v, want %+v", got, want)
+	}
+}
+
 func TestWriteComparisonCSV(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "result.csv")
 	rows := []ComparisonRow{
 		{
-			Name:               "baseline",
-			Weights:            WeightSet{FreeCPU: 0.4, FreeMem: 0.3, Balance: 0.2, Consolidation: 0.1},
-			ScheduledCount:     4,
-			CompletedCount:     4,
-			UnschedulableCount: 0,
-			AveragePending:     1.5,
-			P95Pending:         2.0,
-			MaxActiveNodes:     2,
+			Name:                               "baseline",
+			Weights:                            WeightSet{FreeCPU: 0.4, FreeMem: 0.3, Balance: 0.2, Consolidation: 0.1},
+			PodCount:                           4,
+			ScheduledCount:                     4,
+			CompletedCount:                     4,
+			UnschedulableCount:                 0,
+			DecisionTimestampCount:             4,
+			KubernetesScheduledTimestampCount:  4,
+			EvaluatorObservationTimestampCount: 4,
+			AverageSchedulingDecisionLatency:   0.75,
+			P95SchedulingDecisionLatency:       1.25,
+			AverageKubernetesPending:           1.5,
+			P95KubernetesPending:               2.0,
+			AverageEvaluatorObservationLag:     0.4,
+			P95EvaluatorObservationLag:         0.8,
+			MaxWorkloadOccupiedWorkerNodes:     2,
 		},
 	}
 
-	if err := WriteComparisonCSV(path, rows); err != nil {
+	protocol := MeasurementProtocolFor(DefaultRunnerOptions(), 2*time.Second)
+	if err := WriteComparisonCSV(path, protocol, rows); err != nil {
 		t.Fatalf("WriteComparisonCSV() error = %v", err)
 	}
 
@@ -196,10 +262,10 @@ func TestWriteComparisonCSV(t *testing.T) {
 		t.Fatalf("read csv: %v", err)
 	}
 	content := string(data)
-	if !strings.Contains(content, "policy_version,run_name,free_cpu,free_mem,balance,consolidation") {
+	if !strings.Contains(content, "policy_version,measurement_version,scheduler_interval_seconds,pod_poll_interval_seconds,run_name,free_cpu,free_mem,balance,consolidation") {
 		t.Fatalf("missing csv header: %s", content)
 	}
-	if !strings.Contains(content, "v2,baseline,0.4,0.3,0.2,0.1,4,4,0,1.500000,2.000000,2,") {
+	if !strings.Contains(content, "v2,v2,2.000000,1.000000,baseline,0.4,0.3,0.2,0.1,4,4,4,0,4,4,4,0.750000,1.250000,1.500000,2.000000,0.400000,0.800000,2,") {
 		t.Fatalf("missing csv row: %s", content)
 	}
 }
@@ -208,15 +274,29 @@ func TestSummarizePods(t *testing.T) {
 	now := time.Now()
 	pods := []PodTiming{
 		{
-			Name:           "scheduled-fast",
-			ScheduledAt:    ptrTime(now),
-			FinishedAt:     ptrTime(now.Add(10 * time.Second)),
-			PendingSeconds: 1.0,
+			Name:                             "scheduled-fast",
+			NodeName:                         "worker-a",
+			SubmittedAt:                      ptrTime(now),
+			CreatedAt:                        ptrTime(now),
+			SchedulerDecisionAt:              ptrTime(now.Add(250 * time.Millisecond)),
+			KubernetesScheduledAt:            ptrTime(now.Add(time.Second)),
+			EvaluatorObservedScheduledAt:     ptrTime(now.Add(750 * time.Millisecond)),
+			FinishedAt:                       ptrTime(now.Add(10 * time.Second)),
+			SchedulingDecisionLatencySeconds: 0.25,
+			KubernetesPendingSeconds:         1.0,
+			EvaluatorObservationLagSeconds:   0.5,
 		},
 		{
-			Name:           "scheduled-slow",
-			ScheduledAt:    ptrTime(now),
-			PendingSeconds: 5.0,
+			Name:                             "scheduled-slow",
+			NodeName:                         "worker-b",
+			SubmittedAt:                      ptrTime(now),
+			CreatedAt:                        ptrTime(now),
+			SchedulerDecisionAt:              ptrTime(now.Add(1250 * time.Millisecond)),
+			KubernetesScheduledAt:            ptrTime(now.Add(2 * time.Second)),
+			EvaluatorObservedScheduledAt:     ptrTime(now.Add(2 * time.Second)),
+			SchedulingDecisionLatencySeconds: 1.25,
+			KubernetesPendingSeconds:         2.0,
+			EvaluatorObservationLagSeconds:   0.75,
 		},
 		{
 			Name: "never-scheduled",
@@ -227,14 +307,26 @@ func TestSummarizePods(t *testing.T) {
 	if got.PodCount != 3 || got.ScheduledCount != 2 || got.CompletedCount != 1 || got.UnschedulableCount != 1 {
 		t.Fatalf("unexpected summary counts: %+v", got)
 	}
-	if got.AveragePending != 3.0 {
-		t.Fatalf("expected average pending 3.0, got %v", got.AveragePending)
+	if got.DecisionTimestampCount != 2 {
+		t.Fatalf("DecisionTimestampCount = %d, want 2", got.DecisionTimestampCount)
 	}
-	if got.P95Pending <= 4.0 {
-		t.Fatalf("expected p95 pending above 4.0, got %v", got.P95Pending)
+	if got.KubernetesScheduledTimestampCount != 2 || got.EvaluatorObservationTimestampCount != 2 {
+		t.Fatalf("unexpected measurement source counts: %+v", got)
 	}
-	if got.MaxActiveNodes != 2 {
-		t.Fatalf("expected max active nodes 2, got %d", got.MaxActiveNodes)
+	if got.AverageSchedulingDecisionLatency != 0.75 {
+		t.Fatalf("AverageSchedulingDecisionLatency = %v, want 0.75", got.AverageSchedulingDecisionLatency)
+	}
+	if got.P95SchedulingDecisionLatency != 1.2 {
+		t.Fatalf("P95SchedulingDecisionLatency = %v, want 1.2", got.P95SchedulingDecisionLatency)
+	}
+	if got.AverageKubernetesPending != 1.5 || got.P95KubernetesPending != 1.95 {
+		t.Fatalf("unexpected Kubernetes pending summary: %+v", got)
+	}
+	if got.AverageEvaluatorObservationLag != 0.625 || got.P95EvaluatorObservationLag != 0.7375 {
+		t.Fatalf("unexpected observation lag summary: %+v", got)
+	}
+	if got.MaxWorkloadOccupiedWorkerNodes != 2 {
+		t.Fatalf("MaxWorkloadOccupiedWorkerNodes = %d, want 2", got.MaxWorkloadOccupiedWorkerNodes)
 	}
 }
 
@@ -271,8 +363,8 @@ func TestUpdateTimingSeparatesMeasurementSources(t *testing.T) {
 	if result.SchedulerDecisionAt == nil || !result.SchedulerDecisionAt.Equal(decisionAt) {
 		t.Fatalf("SchedulerDecisionAt = %v, want %v", result.SchedulerDecisionAt, decisionAt)
 	}
-	if result.ScheduledAt == nil || !result.ScheduledAt.Equal(kubernetesScheduledAt) {
-		t.Fatalf("ScheduledAt = %v, want %v", result.ScheduledAt, kubernetesScheduledAt)
+	if result.KubernetesScheduledAt == nil || !result.KubernetesScheduledAt.Equal(kubernetesScheduledAt) {
+		t.Fatalf("KubernetesScheduledAt = %v, want %v", result.KubernetesScheduledAt, kubernetesScheduledAt)
 	}
 	if result.EvaluatorObservedScheduledAt == nil || !result.EvaluatorObservedScheduledAt.Equal(observedAt) {
 		t.Fatalf("EvaluatorObservedScheduledAt = %v, want %v", result.EvaluatorObservedScheduledAt, observedAt)
@@ -356,4 +448,27 @@ func testSchedulerDeployment(env []corev1.EnvVar) *appsv1.Deployment {
 			Containers: []corev1.Container{{Name: "scheduler", Env: env}},
 		}}},
 	}
+}
+
+func testWorkerNode(name, cpu, memory string, ready bool) *corev1.Node {
+	status := corev1.ConditionFalse
+	if ready {
+		status = corev1.ConditionTrue
+	}
+	return &corev1.Node{
+		ObjectMeta: metav1.ObjectMeta{Name: name},
+		Status: corev1.NodeStatus{
+			Allocatable: corev1.ResourceList{
+				corev1.ResourceCPU:    apiresource.MustParse(cpu),
+				corev1.ResourceMemory: apiresource.MustParse(memory),
+			},
+			Conditions: []corev1.NodeCondition{{Type: corev1.NodeReady, Status: status}},
+		},
+	}
+}
+
+func testControlPlaneNode(name string) *corev1.Node {
+	node := testWorkerNode(name, "4", "8Gi", true)
+	node.Labels = map[string]string{"node-role.kubernetes.io/control-plane": ""}
+	return node
 }

@@ -130,7 +130,7 @@ func emitOutputs(batch evaluator.BatchResult, opts options) error {
 	if csvPath == "" {
 		return nil
 	}
-	if err := evaluator.WriteComparisonCSV(csvPath, batch.Results); err != nil {
+	if err := evaluator.WriteComparisonCSV(csvPath, batch.MeasurementProtocol, batch.Results); err != nil {
 		return err
 	}
 	log.Printf("wrote evaluator csv to %s", csvPath)

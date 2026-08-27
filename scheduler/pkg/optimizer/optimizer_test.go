@@ -3,15 +3,18 @@ package optimizer
 import (
 	"math"
 	"math/rand"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"evok8s-scheduler/pkg/evaluator"
 )
 
 func TestDominates(t *testing.T) {
-	a := Candidate{Objectives: Objectives{AverageP95Pending: 1.0, AverageMaxActiveNodes: 2.0}}
-	b := Candidate{Objectives: Objectives{AverageP95Pending: 1.2, AverageMaxActiveNodes: 3.0}}
-	c := Candidate{Objectives: Objectives{AverageP95Pending: 0.9, AverageMaxActiveNodes: 4.0}}
+	a := Candidate{Objectives: Objectives{AverageP95SchedulingDecisionLatency: 1.0, AverageMaxWorkloadOccupiedWorkerNodes: 2.0}}
+	b := Candidate{Objectives: Objectives{AverageP95SchedulingDecisionLatency: 1.2, AverageMaxWorkloadOccupiedWorkerNodes: 3.0}}
+	c := Candidate{Objectives: Objectives{AverageP95SchedulingDecisionLatency: 0.9, AverageMaxWorkloadOccupiedWorkerNodes: 4.0}}
 
 	if !dominates(a, b) {
 		t.Fatalf("expected a to dominate b")
@@ -23,9 +26,9 @@ func TestDominates(t *testing.T) {
 
 func TestParetoFront(t *testing.T) {
 	candidates := []Candidate{
-		{Name: "a", Objectives: Objectives{AverageP95Pending: 1.0, AverageMaxActiveNodes: 4.0}},
-		{Name: "b", Objectives: Objectives{AverageP95Pending: 1.2, AverageMaxActiveNodes: 2.0}},
-		{Name: "c", Objectives: Objectives{AverageP95Pending: 1.5, AverageMaxActiveNodes: 5.0}},
+		{Name: "a", Objectives: Objectives{AverageP95SchedulingDecisionLatency: 1.0, AverageMaxWorkloadOccupiedWorkerNodes: 4.0}},
+		{Name: "b", Objectives: Objectives{AverageP95SchedulingDecisionLatency: 1.2, AverageMaxWorkloadOccupiedWorkerNodes: 2.0}},
+		{Name: "c", Objectives: Objectives{AverageP95SchedulingDecisionLatency: 1.5, AverageMaxWorkloadOccupiedWorkerNodes: 5.0}},
 	}
 
 	front := paretoFront(candidates)
@@ -102,8 +105,8 @@ func TestRunKeepsPopulationSize(t *testing.T) {
 	evaluate := func(weights evaluator.WeightSet) (EvaluationData, error) {
 		return EvaluationData{
 			Objectives: Objectives{
-				AverageP95Pending:     math.Round((weights.FreeCPU+weights.FreeMem)*1000) / 1000,
-				AverageMaxActiveNodes: math.Round((weights.Balance+weights.Consolidation)*1000) / 1000,
+				AverageP95SchedulingDecisionLatency:   math.Round((weights.FreeCPU+weights.FreeMem)*1000) / 1000,
+				AverageMaxWorkloadOccupiedWorkerNodes: math.Round((weights.Balance+weights.Consolidation)*1000) / 1000,
 			},
 		}, nil
 	}
@@ -117,5 +120,37 @@ func TestRunKeepsPopulationSize(t *testing.T) {
 	}
 	if len(result.ParetoFront) == 0 {
 		t.Fatalf("expected non-empty pareto front")
+	}
+}
+
+func TestWriteCandidatesCSVIncludesMeasurementContract(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "candidates.csv")
+	protocol := evaluator.MeasurementProtocol{
+		Version:                  evaluator.MeasurementVersion,
+		SchedulerIntervalSeconds: 0.5,
+		PodPollIntervalSeconds:   0.25,
+	}
+	candidates := []Candidate{{
+		ID:   "candidate-1",
+		Name: "candidate-1",
+		Objectives: Objectives{
+			AverageP95SchedulingDecisionLatency:   0.75,
+			AverageMaxWorkloadOccupiedWorkerNodes: 2,
+		},
+	}}
+
+	if err := WriteCandidatesCSV(path, protocol, candidates); err != nil {
+		t.Fatalf("WriteCandidatesCSV() error = %v", err)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read candidates CSV: %v", err)
+	}
+	content := string(data)
+	if !strings.Contains(content, "policy_version,measurement_version,scheduler_interval_seconds,pod_poll_interval_seconds") {
+		t.Fatalf("missing measurement contract header: %s", content)
+	}
+	if !strings.Contains(content, "v2,v2,0.500000,0.250000,candidate-1") {
+		t.Fatalf("missing measurement contract row: %s", content)
 	}
 }

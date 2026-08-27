@@ -5,36 +5,56 @@ import (
 	"sort"
 )
 
-func SummarizePods(pods []PodTiming, maxActiveNodes int) Summary {
+func SummarizePods(pods []PodTiming, maxWorkloadOccupiedWorkerNodes int) Summary {
 	summary := Summary{
-		PodCount:       len(pods),
-		MaxActiveNodes: maxActiveNodes,
+		PodCount:                       len(pods),
+		MaxWorkloadOccupiedWorkerNodes: maxWorkloadOccupiedWorkerNodes,
 	}
 
-	pendingValues := make([]float64, 0, len(pods))
+	decisionLatencies := make([]float64, 0, len(pods))
+	kubernetesPendingValues := make([]float64, 0, len(pods))
+	observationLags := make([]float64, 0, len(pods))
 	for _, pod := range pods {
-		if pod.ScheduledAt != nil {
+		if pod.KubernetesScheduledAt != nil || pod.NodeName != "" {
 			summary.ScheduledCount++
-			pendingValues = append(pendingValues, pod.PendingSeconds)
 		} else {
 			summary.UnschedulableCount++
+		}
+		if pod.SubmittedAt != nil && pod.SchedulerDecisionAt != nil {
+			summary.DecisionTimestampCount++
+			decisionLatencies = append(decisionLatencies, pod.SchedulingDecisionLatencySeconds)
+		}
+		if pod.CreatedAt != nil && pod.KubernetesScheduledAt != nil {
+			summary.KubernetesScheduledTimestampCount++
+			kubernetesPendingValues = append(kubernetesPendingValues, pod.KubernetesPendingSeconds)
+		}
+		if pod.SchedulerDecisionAt != nil && pod.EvaluatorObservedScheduledAt != nil {
+			summary.EvaluatorObservationTimestampCount++
+			observationLags = append(observationLags, pod.EvaluatorObservationLagSeconds)
 		}
 		if pod.FinishedAt != nil {
 			summary.CompletedCount++
 		}
 	}
 
-	if len(pendingValues) == 0 {
-		return summary
-	}
-
-	var total float64
-	for _, v := range pendingValues {
-		total += v
-	}
-	summary.AveragePending = total / float64(len(pendingValues))
-	summary.P95Pending = percentile(pendingValues, 95)
+	summary.AverageSchedulingDecisionLatency = average(decisionLatencies)
+	summary.P95SchedulingDecisionLatency = percentile(decisionLatencies, 95)
+	summary.AverageKubernetesPending = average(kubernetesPendingValues)
+	summary.P95KubernetesPending = percentile(kubernetesPendingValues, 95)
+	summary.AverageEvaluatorObservationLag = average(observationLags)
+	summary.P95EvaluatorObservationLag = percentile(observationLags, 95)
 	return summary
+}
+
+func average(values []float64) float64 {
+	if len(values) == 0 {
+		return 0
+	}
+	var total float64
+	for _, value := range values {
+		total += value
+	}
+	return total / float64(len(values))
 }
 
 func percentile(values []float64, p float64) float64 {

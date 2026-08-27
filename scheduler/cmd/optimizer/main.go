@@ -100,6 +100,16 @@ func run(opts options) error {
 	runnerOpts.PollInterval = opts.pollInterval
 	runnerOpts.Timeout = opts.timeout
 	runnerOpts.Cleanup = opts.cleanup
+	schedulerInterval, err := evaluator.CurrentDeploymentSchedulerInterval(
+		context.Background(),
+		clientset,
+		opts.schedulerNamespace,
+		opts.schedulerDeployment,
+	)
+	if err != nil {
+		return err
+	}
+	measurementProtocol := evaluator.MeasurementProtocolFor(runnerOpts, schedulerInterval)
 
 	cfg := optimizer.Config{
 		PopulationSize: opts.populationSize,
@@ -114,6 +124,7 @@ func run(opts options) error {
 
 	clusterEval := newClusterEvaluator(clientset, runnerOpts, workloadPaths)
 	result, runErr := optimizer.Run(cfg, baselines, clusterEval.Evaluate)
+	result.MeasurementProtocol = measurementProtocol
 	if err := emitOutputs(result, opts); err != nil {
 		return err
 	}
@@ -147,27 +158,135 @@ func (e *clusterEvaluator) Evaluate(weights evaluator.WeightSet) (optimizer.Eval
 	if err != nil {
 		return optimizer.EvaluationData{}, err
 	}
+	data, err := aggregateEvaluationBatches(batches)
+	if err != nil {
+		return optimizer.EvaluationData{}, err
+	}
 
+	e.cache[key] = cloneEvaluationData(data)
+	return cloneEvaluationData(data), nil
+}
+
+func aggregateEvaluationBatches(batches []evaluator.BatchResult) (optimizer.EvaluationData, error) {
+	if len(batches) == 0 {
+		return optimizer.EvaluationData{}, fmt.Errorf("evaluation returned no workload batches")
+	}
+
+	protocol := batches[0].MeasurementProtocol
+	if protocol.SchedulerIntervalSeconds <= 0 || protocol.PodPollIntervalSeconds <= 0 {
+		return optimizer.EvaluationData{}, fmt.Errorf(
+			"measurement protocol has invalid intervals: scheduler=%v poll=%v",
+			protocol.SchedulerIntervalSeconds,
+			protocol.PodPollIntervalSeconds,
+		)
+	}
 	workloads := make([]optimizer.WorkloadMetrics, 0, len(batches))
-	var totalP95 float64
-	var totalMaxActive float64
+	var totalP95DecisionLatency float64
+	var totalMaxOccupiedWorkers float64
 	notes := make([]string, 0)
 	for _, batch := range batches {
-		if len(batch.Results) == 0 {
-			return optimizer.EvaluationData{}, fmt.Errorf("workload %s returned no results", batch.WorkloadPath)
+		if batch.MeasurementVersion != evaluator.MeasurementVersion || batch.MeasurementProtocol.Version != evaluator.MeasurementVersion {
+			return optimizer.EvaluationData{}, fmt.Errorf(
+				"workload %s measurement contract mismatch: result=%q protocol=%q want=%q",
+				batch.Workload,
+				batch.MeasurementVersion,
+				batch.MeasurementProtocol.Version,
+				evaluator.MeasurementVersion,
+			)
+		}
+		if batch.MeasurementProtocol != protocol {
+			return optimizer.EvaluationData{}, fmt.Errorf("workload %s uses a different measurement protocol", batch.Workload)
+		}
+		if len(batch.Results) != 1 {
+			return optimizer.EvaluationData{}, fmt.Errorf("workload %s returned %d results, want 1", batch.WorkloadPath, len(batch.Results))
 		}
 		row := batch.Results[0]
+		if row.PodCount <= 0 {
+			return optimizer.EvaluationData{}, fmt.Errorf("workload %s has no pods", batch.Workload)
+		}
+		if row.ScheduledCount+row.UnschedulableCount != row.PodCount {
+			return optimizer.EvaluationData{}, fmt.Errorf(
+				"workload %s count mismatch: scheduled=%d unschedulable=%d pods=%d",
+				batch.Workload,
+				row.ScheduledCount,
+				row.UnschedulableCount,
+				row.PodCount,
+			)
+		}
+		if row.UnschedulableCount != 0 || row.ScheduledCount != row.PodCount {
+			return optimizer.EvaluationData{}, fmt.Errorf(
+				"workload %s is not fully schedulable: scheduled=%d unschedulable=%d pods=%d",
+				batch.Workload,
+				row.ScheduledCount,
+				row.UnschedulableCount,
+				row.PodCount,
+			)
+		}
+		if row.CompletedCount != row.PodCount {
+			return optimizer.EvaluationData{}, fmt.Errorf(
+				"workload %s is incomplete: completed=%d pods=%d",
+				batch.Workload,
+				row.CompletedCount,
+				row.PodCount,
+			)
+		}
+		if row.DecisionTimestampCount != row.ScheduledCount {
+			return optimizer.EvaluationData{}, fmt.Errorf(
+				"workload %s has %d scheduler decision timestamps for %d scheduled pods",
+				batch.Workload,
+				row.DecisionTimestampCount,
+				row.ScheduledCount,
+			)
+		}
+		if row.KubernetesScheduledTimestampCount != row.ScheduledCount {
+			return optimizer.EvaluationData{}, fmt.Errorf(
+				"workload %s has %d Kubernetes scheduled timestamps for %d scheduled pods",
+				batch.Workload,
+				row.KubernetesScheduledTimestampCount,
+				row.ScheduledCount,
+			)
+		}
+		if row.EvaluatorObservationTimestampCount != row.ScheduledCount {
+			return optimizer.EvaluationData{}, fmt.Errorf(
+				"workload %s has %d evaluator observations for %d scheduled pods",
+				batch.Workload,
+				row.EvaluatorObservationTimestampCount,
+				row.ScheduledCount,
+			)
+		}
+		if row.P95SchedulingDecisionLatency < 0 {
+			return optimizer.EvaluationData{}, fmt.Errorf("workload %s has negative decision latency", batch.Workload)
+		}
+		if row.MaxWorkloadOccupiedWorkerNodes <= 0 {
+			return optimizer.EvaluationData{}, fmt.Errorf("workload %s has no observed occupied worker nodes", batch.Workload)
+		}
+		if batch.WorkloadBase != nil && row.MaxWorkloadOccupiedWorkerNodes > batch.WorkloadBase.WorkerCount {
+			return optimizer.EvaluationData{}, fmt.Errorf(
+				"workload %s occupied worker count %d exceeds worker snapshot size %d",
+				batch.Workload,
+				row.MaxWorkloadOccupiedWorkerNodes,
+				batch.WorkloadBase.WorkerCount,
+			)
+		}
 		workloads = append(workloads, optimizer.WorkloadMetrics{
-			Workload:           batch.Workload,
-			AveragePending:     row.AveragePending,
-			P95Pending:         row.P95Pending,
-			MaxActiveNodes:     row.MaxActiveNodes,
-			ScheduledCount:     row.ScheduledCount,
-			CompletedCount:     row.CompletedCount,
-			UnschedulableCount: row.UnschedulableCount,
+			Workload:                           batch.Workload,
+			AverageSchedulingDecisionLatency:   row.AverageSchedulingDecisionLatency,
+			P95SchedulingDecisionLatency:       row.P95SchedulingDecisionLatency,
+			AverageKubernetesPending:           row.AverageKubernetesPending,
+			P95KubernetesPending:               row.P95KubernetesPending,
+			AverageEvaluatorObservationLag:     row.AverageEvaluatorObservationLag,
+			P95EvaluatorObservationLag:         row.P95EvaluatorObservationLag,
+			MaxWorkloadOccupiedWorkerNodes:     row.MaxWorkloadOccupiedWorkerNodes,
+			PodCount:                           row.PodCount,
+			ScheduledCount:                     row.ScheduledCount,
+			CompletedCount:                     row.CompletedCount,
+			UnschedulableCount:                 row.UnschedulableCount,
+			DecisionTimestampCount:             row.DecisionTimestampCount,
+			KubernetesScheduledTimestampCount:  row.KubernetesScheduledTimestampCount,
+			EvaluatorObservationTimestampCount: row.EvaluatorObservationTimestampCount,
 		})
-		totalP95 += row.P95Pending
-		totalMaxActive += float64(row.MaxActiveNodes)
+		totalP95DecisionLatency += row.P95SchedulingDecisionLatency
+		totalMaxOccupiedWorkers += float64(row.MaxWorkloadOccupiedWorkerNodes)
 		if len(row.Notes) > 0 {
 			notes = append(notes, fmt.Sprintf("%s: %s", batch.Workload, strings.Join(row.Notes, " | ")))
 		}
@@ -175,14 +294,13 @@ func (e *clusterEvaluator) Evaluate(weights evaluator.WeightSet) (optimizer.Eval
 
 	data := optimizer.EvaluationData{
 		Objectives: optimizer.Objectives{
-			AverageP95Pending:     totalP95 / float64(len(workloads)),
-			AverageMaxActiveNodes: totalMaxActive / float64(len(workloads)),
+			AverageP95SchedulingDecisionLatency:   totalP95DecisionLatency / float64(len(workloads)),
+			AverageMaxWorkloadOccupiedWorkerNodes: totalMaxOccupiedWorkers / float64(len(workloads)),
 		},
 		Workloads: workloads,
 		Notes:     notes,
 	}
-	e.cache[key] = cloneEvaluationData(data)
-	return cloneEvaluationData(data), nil
+	return data, nil
 }
 
 func cloneEvaluationData(data optimizer.EvaluationData) optimizer.EvaluationData {
@@ -232,7 +350,7 @@ func emitOutputs(result optimizer.Result, opts options) error {
 
 	paretoCSVPath := deriveParetoCSVOutputPath(opts)
 	if paretoCSVPath != "" {
-		if err := optimizer.WriteCandidatesCSV(paretoCSVPath, result.CombinedParetoFront); err != nil {
+		if err := optimizer.WriteCandidatesCSV(paretoCSVPath, result.MeasurementProtocol, result.CombinedParetoFront); err != nil {
 			return err
 		}
 		log.Printf("wrote optimizer pareto csv to %s", paretoCSVPath)
@@ -243,7 +361,7 @@ func emitOutputs(result optimizer.Result, opts options) error {
 		allCandidates := make([]optimizer.Candidate, 0, len(result.Baselines)+len(result.Evaluated))
 		allCandidates = append(allCandidates, result.Baselines...)
 		allCandidates = append(allCandidates, result.Evaluated...)
-		if err := optimizer.WriteCandidatesCSV(allCSVPath, allCandidates); err != nil {
+		if err := optimizer.WriteCandidatesCSV(allCSVPath, result.MeasurementProtocol, allCandidates); err != nil {
 			return err
 		}
 		log.Printf("wrote optimizer all-candidates csv to %s", allCSVPath)

@@ -20,9 +20,10 @@ func Run(cfg Config, baselines []evaluator.ExperimentRunSpec, evaluate EvaluateF
 
 	rng := rand.New(rand.NewSource(cfg.Seed))
 	result := Result{
-		PolicyVersion: policy.Version,
-		StartedAt:     time.Now().UTC(),
-		Config:        cfg,
+		PolicyVersion:      policy.Version,
+		MeasurementVersion: evaluator.MeasurementVersion,
+		StartedAt:          time.Now().UTC(),
+		Config:             cfg,
 	}
 
 	for _, baseline := range baselines {
@@ -215,10 +216,10 @@ func clampWeight(value, minWeight, maxWeight float64) float64 {
 }
 
 func dominates(a, b Candidate) bool {
-	betterOrEqualP95 := a.Objectives.AverageP95Pending <= b.Objectives.AverageP95Pending
-	betterOrEqualNodes := a.Objectives.AverageMaxActiveNodes <= b.Objectives.AverageMaxActiveNodes
-	strictlyBetterP95 := a.Objectives.AverageP95Pending < b.Objectives.AverageP95Pending
-	strictlyBetterNodes := a.Objectives.AverageMaxActiveNodes < b.Objectives.AverageMaxActiveNodes
+	betterOrEqualP95 := a.Objectives.AverageP95SchedulingDecisionLatency <= b.Objectives.AverageP95SchedulingDecisionLatency
+	betterOrEqualNodes := a.Objectives.AverageMaxWorkloadOccupiedWorkerNodes <= b.Objectives.AverageMaxWorkloadOccupiedWorkerNodes
+	strictlyBetterP95 := a.Objectives.AverageP95SchedulingDecisionLatency < b.Objectives.AverageP95SchedulingDecisionLatency
+	strictlyBetterNodes := a.Objectives.AverageMaxWorkloadOccupiedWorkerNodes < b.Objectives.AverageMaxWorkloadOccupiedWorkerNodes
 	return betterOrEqualP95 && betterOrEqualNodes && (strictlyBetterP95 || strictlyBetterNodes)
 }
 
@@ -292,8 +293,8 @@ func assignCrowding(candidates []Candidate, front []int) {
 	}
 
 	objectiveFns := []func(Candidate) float64{
-		func(c Candidate) float64 { return c.Objectives.AverageP95Pending },
-		func(c Candidate) float64 { return c.Objectives.AverageMaxActiveNodes },
+		func(c Candidate) float64 { return c.Objectives.AverageP95SchedulingDecisionLatency },
+		func(c Candidate) float64 { return c.Objectives.AverageMaxWorkloadOccupiedWorkerNodes },
 	}
 
 	for _, objective := range objectiveFns {
@@ -380,10 +381,10 @@ func paretoFront(candidates []Candidate) []Candidate {
 		}
 	}
 	sort.Slice(front, func(i, j int) bool {
-		if front[i].Objectives.AverageP95Pending == front[j].Objectives.AverageP95Pending {
-			return front[i].Objectives.AverageMaxActiveNodes < front[j].Objectives.AverageMaxActiveNodes
+		if front[i].Objectives.AverageP95SchedulingDecisionLatency == front[j].Objectives.AverageP95SchedulingDecisionLatency {
+			return front[i].Objectives.AverageMaxWorkloadOccupiedWorkerNodes < front[j].Objectives.AverageMaxWorkloadOccupiedWorkerNodes
 		}
-		return front[i].Objectives.AverageP95Pending < front[j].Objectives.AverageP95Pending
+		return front[i].Objectives.AverageP95SchedulingDecisionLatency < front[j].Objectives.AverageP95SchedulingDecisionLatency
 	})
 	return front
 }

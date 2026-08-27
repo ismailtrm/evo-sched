@@ -51,6 +51,19 @@ func DefaultRunnerOptions() RunnerOptions {
 	}
 }
 
+func MeasurementProtocolFor(opts RunnerOptions, schedulerInterval time.Duration) MeasurementProtocol {
+	return MeasurementProtocol{
+		Version:                             MeasurementVersion,
+		SubmissionTimestampSource:           "evaluator-client-before-create",
+		SchedulerDecisionTimestampSource:    "scheduler-before-bind-request",
+		KubernetesScheduledTimestampSource:  "pod-condition-last-transition-time",
+		EvaluatorObservationTimestampSource: "evaluator-list-response",
+		WorkloadOccupancySource:             "non-terminal-evaluator-pods-on-run-start-worker-snapshot",
+		SchedulerIntervalSeconds:            schedulerInterval.Seconds(),
+		PodPollIntervalSeconds:              opts.PollInterval.Seconds(),
+	}
+}
+
 func NewClientset() (*kubernetes.Clientset, error) {
 	cfg, err := rest.InClusterConfig()
 	if err == nil {
@@ -103,25 +116,42 @@ func CurrentDeploymentWeights(ctx context.Context, cs kubernetes.Interface, name
 	})
 }
 
-func CurrentWorkloadBase(ctx context.Context, cs kubernetes.Interface) (WorkloadBase, error) {
-	nodes, err := cs.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
+func CurrentDeploymentSchedulerInterval(ctx context.Context, cs kubernetes.Interface, namespace, deployment string) (time.Duration, error) {
+	deploy, err := cs.AppsV1().Deployments(namespace).Get(ctx, deployment, metav1.GetOptions{})
 	if err != nil {
-		return WorkloadBase{}, fmt.Errorf("list nodes for workload base: %w", err)
+		return 0, fmt.Errorf("get scheduler deployment for interval: %w", err)
+	}
+	if len(deploy.Spec.Template.Spec.Containers) == 0 {
+		return 0, fmt.Errorf("scheduler deployment has no containers")
 	}
 
-	base := WorkloadBase{}
-	for _, node := range nodes.Items {
-		if !isWorkerCandidate(&node) {
+	for _, item := range deploy.Spec.Template.Spec.Containers[0].Env {
+		if item.Name != "SCHEDULER_INTERVAL" {
 			continue
 		}
+		interval, err := time.ParseDuration(item.Value)
+		if err != nil {
+			return 0, fmt.Errorf("parse SCHEDULER_INTERVAL=%q: %w", item.Value, err)
+		}
+		if interval <= 0 {
+			return 0, fmt.Errorf("SCHEDULER_INTERVAL must be positive, got %q", item.Value)
+		}
+		return interval, nil
+	}
 
+	return 0, fmt.Errorf("scheduler deployment is missing SCHEDULER_INTERVAL")
+}
+
+func CurrentWorkloadBase(ctx context.Context, cs kubernetes.Interface) (WorkloadBase, error) {
+	workers, err := currentWorkerNodes(ctx, cs)
+	if err != nil {
+		return WorkloadBase{}, err
+	}
+
+	base := WorkloadBase{WorkerCount: len(workers)}
+	for _, node := range workers {
 		cpuMilli := node.Status.Allocatable.Cpu().MilliValue()
 		memMiB := node.Status.Allocatable.Memory().Value() / (1024 * 1024)
-		if cpuMilli <= 0 || memMiB <= 0 {
-			continue
-		}
-
-		base.WorkerCount++
 		if base.WorkerCPUMilli == 0 || cpuMilli < base.WorkerCPUMilli {
 			base.WorkerCPUMilli = cpuMilli
 		}
@@ -130,10 +160,32 @@ func CurrentWorkloadBase(ctx context.Context, cs kubernetes.Interface) (Workload
 		}
 	}
 
-	if base.WorkerCount == 0 {
-		return WorkloadBase{}, fmt.Errorf("no ready schedulable worker nodes found for workload base")
-	}
 	return base, nil
+}
+
+func currentWorkerNodes(ctx context.Context, cs kubernetes.Interface) ([]corev1.Node, error) {
+	nodes, err := cs.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("list worker nodes: %w", err)
+	}
+
+	workers := make([]corev1.Node, 0, len(nodes.Items))
+	for _, node := range nodes.Items {
+		if !isWorkerCandidate(&node) {
+			continue
+		}
+		cpuMilli := node.Status.Allocatable.Cpu().MilliValue()
+		memMiB := node.Status.Allocatable.Memory().Value() / (1024 * 1024)
+		if cpuMilli <= 0 || memMiB <= 0 {
+			continue
+		}
+		workers = append(workers, node)
+	}
+
+	if len(workers) == 0 {
+		return nil, fmt.Errorf("no ready schedulable worker nodes found")
+	}
+	return workers, nil
 }
 
 func RunBatch(ctx context.Context, cs kubernetes.Interface, opts RunnerOptions, workloadPath string, runSpecs []ExperimentRunSpec) (BatchResult, error) {
@@ -156,6 +208,11 @@ func RunBatch(ctx context.Context, cs kubernetes.Interface, opts RunnerOptions, 
 	if err != nil {
 		return BatchResult{}, err
 	}
+	schedulerInterval, err := CurrentDeploymentSchedulerInterval(ctx, cs, opts.SchedulerNamespace, opts.SchedulerDeployment)
+	if err != nil {
+		return BatchResult{}, err
+	}
+	protocol := MeasurementProtocolFor(opts, schedulerInterval)
 	defer func() {
 		if restoreErr := applyWeights(context.Background(), cs, opts.SchedulerNamespace, opts.SchedulerDeployment, originalWeights); restoreErr != nil {
 			log.Printf("restore scheduler weights error: %v", restoreErr)
@@ -163,14 +220,15 @@ func RunBatch(ctx context.Context, cs kubernetes.Interface, opts RunnerOptions, 
 	}()
 
 	batch := BatchResult{
-		PolicyVersion:      PolicyVersion,
-		MeasurementVersion: MeasurementVersion,
-		Workload:           workloadName(workloadPath),
-		WorkloadPath:       workloadPath,
-		WorkloadBase:       &workloadBase,
-		ResolvedWorkload:   append([]WorkloadItem(nil), workload...),
-		Results:            make([]ComparisonRow, 0, len(runSpecs)),
-		Runs:               make([]RunResult, 0, len(runSpecs)),
+		PolicyVersion:       PolicyVersion,
+		MeasurementVersion:  MeasurementVersion,
+		MeasurementProtocol: protocol,
+		Workload:            workloadName(workloadPath),
+		WorkloadPath:        workloadPath,
+		WorkloadBase:        &workloadBase,
+		ResolvedWorkload:    append([]WorkloadItem(nil), workload...),
+		Results:             make([]ComparisonRow, 0, len(runSpecs)),
+		Runs:                make([]RunResult, 0, len(runSpecs)),
 	}
 
 	for _, spec := range runSpecs {
@@ -186,7 +244,7 @@ func RunBatch(ctx context.Context, cs kubernetes.Interface, opts RunnerOptions, 
 			return batch, err
 		}
 
-		runResult, runErr := executeRun(ctx, cs, opts, workloadPath, workload, spec)
+		runResult, runErr := executeRun(ctx, cs, opts, workloadPath, workload, spec, protocol)
 		batch.Runs = append(batch.Runs, runResult)
 		batch.Results = append(batch.Results, ComparisonRowFromRun(runResult))
 		if runErr != nil {
@@ -214,6 +272,11 @@ func EvaluateWorkloads(ctx context.Context, cs kubernetes.Interface, opts Runner
 	if err != nil {
 		return nil, err
 	}
+	schedulerInterval, err := CurrentDeploymentSchedulerInterval(ctx, cs, opts.SchedulerNamespace, opts.SchedulerDeployment)
+	if err != nil {
+		return nil, err
+	}
+	protocol := MeasurementProtocolFor(opts, schedulerInterval)
 	defer func() {
 		if restoreErr := applyWeights(context.Background(), cs, opts.SchedulerNamespace, opts.SchedulerDeployment, originalWeights); restoreErr != nil {
 			log.Printf("restore scheduler weights error: %v", restoreErr)
@@ -237,21 +300,22 @@ func EvaluateWorkloads(ctx context.Context, cs kubernetes.Interface, opts Runner
 		}
 
 		batch := BatchResult{
-			PolicyVersion:      PolicyVersion,
-			MeasurementVersion: MeasurementVersion,
-			Workload:           workloadName(workloadPath),
-			WorkloadPath:       workloadPath,
-			WorkloadBase:       &workloadBase,
-			ResolvedWorkload:   append([]WorkloadItem(nil), workload...),
-			Results:            make([]ComparisonRow, 0, 1),
-			Runs:               make([]RunResult, 0, 1),
+			PolicyVersion:       PolicyVersion,
+			MeasurementVersion:  MeasurementVersion,
+			MeasurementProtocol: protocol,
+			Workload:            workloadName(workloadPath),
+			WorkloadPath:        workloadPath,
+			WorkloadBase:        &workloadBase,
+			ResolvedWorkload:    append([]WorkloadItem(nil), workload...),
+			Results:             make([]ComparisonRow, 0, 1),
+			Runs:                make([]RunResult, 0, 1),
 		}
 
 		if err := cleanupManagedPods(ctx, cs, opts.Namespace); err != nil {
 			return results, err
 		}
 
-		runResult, runErr := executeRun(ctx, cs, opts, workloadPath, workload, spec)
+		runResult, runErr := executeRun(ctx, cs, opts, workloadPath, workload, spec, protocol)
 		batch.Runs = append(batch.Runs, runResult)
 		batch.Results = append(batch.Results, ComparisonRowFromRun(runResult))
 		results = append(results, batch)
@@ -302,6 +366,7 @@ func executeRun(
 	workloadPath string,
 	workload []WorkloadItem,
 	spec ExperimentRunSpec,
+	protocol MeasurementProtocol,
 ) (RunResult, error) {
 	timeout := opts.Timeout
 	if timeout <= 0 {
@@ -313,15 +378,24 @@ func executeRun(
 
 	runID := makeRunID(spec.Name)
 	startedAt := time.Now().UTC()
+	workerNodes, err := currentWorkerNodes(runCtx, cs)
+	if err != nil {
+		return emptyRunResult(opts, spec, workloadPath, startedAt, protocol), err
+	}
+	workerNodeNames := make(map[string]struct{}, len(workerNodes))
+	for _, node := range workerNodes {
+		workerNodeNames[node.Name] = struct{}{}
+	}
+
 	selector := runSelector(runID)
 	results := make(map[string]*PodTiming, len(workload))
 	for _, item := range workload {
 		results[item.Name] = &PodTiming{Name: item.Name}
 	}
 
-	var maxActiveNodes atomic.Int64
+	var maxWorkloadOccupiedWorkerNodes atomic.Int64
 	var creatorDone atomic.Bool
-	activeSamples := map[int]int{}
+	occupancySamples := make([]NodeOccupancySample, 0)
 	var mu sync.Mutex
 	doneCh := make(chan error, 1)
 
@@ -334,19 +408,20 @@ func executeRun(
 			opts.PollInterval,
 			results,
 			&mu,
-			&maxActiveNodes,
-			activeSamples,
+			&maxWorkloadOccupiedWorkerNodes,
+			&occupancySamples,
 			&creatorDone,
 			len(workload),
+			workerNodeNames,
 		)
 	}()
 
 	for _, item := range workload {
 		if err := waitUntilArrival(runCtx, startedAt, item.ArrivalSeconds); err != nil {
-			return emptyRunResult(opts, spec, workloadPath, startedAt), err
+			return emptyRunResult(opts, spec, workloadPath, startedAt, protocol), err
 		}
 		if err := createWorkloadPod(runCtx, cs, opts, runID, item, results[item.Name]); err != nil {
-			return emptyRunResult(opts, spec, workloadPath, startedAt), err
+			return emptyRunResult(opts, spec, workloadPath, startedAt, protocol), err
 		}
 	}
 	creatorDone.Store(true)
@@ -362,19 +437,20 @@ func executeRun(
 	pods := flattenResults(results)
 	sort.Slice(pods, func(i, j int) bool { return pods[i].Name < pods[j].Name })
 	runResult := RunResult{
-		PolicyVersion:      PolicyVersion,
-		MeasurementVersion: MeasurementVersion,
-		Name:               spec.Name,
-		RunID:              runID,
-		Namespace:          opts.Namespace,
-		Scheduler:          opts.SchedulerName,
-		Workload:           workloadPath,
-		Weights:            spec.Weights,
-		StartedAt:          startedAt,
-		FinishedAt:         finishedAt,
-		Summary:            SummarizePods(pods, int(maxActiveNodes.Load())),
-		Pods:               pods,
-		ActiveNodes:        activeSamples,
+		PolicyVersion:                     PolicyVersion,
+		MeasurementVersion:                MeasurementVersion,
+		MeasurementProtocol:               protocol,
+		Name:                              spec.Name,
+		RunID:                             runID,
+		Namespace:                         opts.Namespace,
+		Scheduler:                         opts.SchedulerName,
+		Workload:                          workloadPath,
+		Weights:                           spec.Weights,
+		StartedAt:                         startedAt,
+		FinishedAt:                        finishedAt,
+		Summary:                           SummarizePods(pods, int(maxWorkloadOccupiedWorkerNodes.Load())),
+		Pods:                              pods,
+		WorkloadOccupiedWorkerNodeSamples: occupancySamples,
 	}
 	if monitorErr != nil {
 		runResult.Notes = append(runResult.Notes, monitorErr.Error())
@@ -383,17 +459,18 @@ func executeRun(
 	return runResult, monitorErr
 }
 
-func emptyRunResult(opts RunnerOptions, spec ExperimentRunSpec, workloadPath string, startedAt time.Time) RunResult {
+func emptyRunResult(opts RunnerOptions, spec ExperimentRunSpec, workloadPath string, startedAt time.Time, protocol MeasurementProtocol) RunResult {
 	return RunResult{
-		PolicyVersion:      PolicyVersion,
-		MeasurementVersion: MeasurementVersion,
-		Name:               spec.Name,
-		Namespace:          opts.Namespace,
-		Scheduler:          opts.SchedulerName,
-		Workload:           workloadPath,
-		Weights:            spec.Weights,
-		StartedAt:          startedAt,
-		FinishedAt:         time.Now().UTC(),
+		PolicyVersion:       PolicyVersion,
+		MeasurementVersion:  MeasurementVersion,
+		MeasurementProtocol: protocol,
+		Name:                spec.Name,
+		Namespace:           opts.Namespace,
+		Scheduler:           opts.SchedulerName,
+		Workload:            workloadPath,
+		Weights:             spec.Weights,
+		StartedAt:           startedAt,
+		FinishedAt:          time.Now().UTC(),
 	}
 }
 
@@ -628,15 +705,15 @@ func monitorPods(
 	pollInterval time.Duration,
 	results map[string]*PodTiming,
 	mu *sync.Mutex,
-	maxActiveNodes *atomic.Int64,
-	activeSamples map[int]int,
+	maxWorkloadOccupiedWorkerNodes *atomic.Int64,
+	occupancySamples *[]NodeOccupancySample,
 	creatorDone *atomic.Bool,
 	expected int,
+	workerNodeNames map[string]struct{},
 ) error {
 	ticker := time.NewTicker(pollInterval)
 	defer ticker.Stop()
 
-	sample := 0
 	for {
 		select {
 		case <-ctx.Done():
@@ -662,8 +739,13 @@ func monitorPods(
 				}
 				mu.Unlock()
 
-				if pod.Spec.NodeName != "" && !isTerminalPhase(pod.Status.Phase) {
-					active[pod.Spec.NodeName] = struct{}{}
+				if pod.Spec.NodeName != "" {
+					if _, ok := workerNodeNames[pod.Spec.NodeName]; !ok {
+						return fmt.Errorf("evaluator pod %s assigned to node %s outside worker snapshot", pod.Name, pod.Spec.NodeName)
+					}
+					if !isTerminalPhase(pod.Status.Phase) {
+						active[pod.Spec.NodeName] = struct{}{}
+					}
 				}
 				if isTerminalPhase(pod.Status.Phase) {
 					completed++
@@ -672,16 +754,18 @@ func monitorPods(
 
 			count := int64(len(active))
 			for {
-				prev := maxActiveNodes.Load()
-				if count <= prev || maxActiveNodes.CompareAndSwap(prev, count) {
+				prev := maxWorkloadOccupiedWorkerNodes.Load()
+				if count <= prev || maxWorkloadOccupiedWorkerNodes.CompareAndSwap(prev, count) {
 					break
 				}
 			}
 
 			mu.Lock()
-			activeSamples[sample] = len(active)
+			*occupancySamples = append(*occupancySamples, NodeOccupancySample{
+				ObservedAt:                  observedAt,
+				WorkloadOccupiedWorkerNodes: len(active),
+			})
 			mu.Unlock()
-			sample++
 
 			if creatorDone.Load() && len(pods.Items) == expected && completed == expected {
 				return nil
@@ -738,11 +822,11 @@ func updateTiming(result *PodTiming, pod *corev1.Pod, observedAt time.Time) erro
 	}
 
 	for _, cond := range pod.Status.Conditions {
-		if cond.Type == corev1.PodScheduled && cond.Status == corev1.ConditionTrue && result.ScheduledAt == nil {
+		if cond.Type == corev1.PodScheduled && cond.Status == corev1.ConditionTrue && result.KubernetesScheduledAt == nil {
 			t := cond.LastTransitionTime.Time.UTC()
-			result.ScheduledAt = &t
+			result.KubernetesScheduledAt = &t
 			if result.CreatedAt != nil {
-				result.PendingSeconds = t.Sub(*result.CreatedAt).Seconds()
+				result.KubernetesPendingSeconds = t.Sub(*result.CreatedAt).Seconds()
 			}
 		}
 	}

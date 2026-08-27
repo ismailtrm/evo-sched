@@ -55,14 +55,22 @@ func LoadExperiment(path string) (ExperimentSpec, error) {
 
 func ComparisonRowFromRun(run RunResult) ComparisonRow {
 	return ComparisonRow{
-		Name:               run.Name,
-		Weights:            run.Weights,
-		ScheduledCount:     run.Summary.ScheduledCount,
-		CompletedCount:     run.Summary.CompletedCount,
-		UnschedulableCount: run.Summary.UnschedulableCount,
-		AveragePending:     run.Summary.AveragePending,
-		P95Pending:         run.Summary.P95Pending,
-		MaxActiveNodes:     run.Summary.MaxActiveNodes,
-		Notes:              append([]string(nil), run.Notes...),
+		Name:                               run.Name,
+		Weights:                            run.Weights,
+		PodCount:                           run.Summary.PodCount,
+		ScheduledCount:                     run.Summary.ScheduledCount,
+		CompletedCount:                     run.Summary.CompletedCount,
+		UnschedulableCount:                 run.Summary.UnschedulableCount,
+		DecisionTimestampCount:             run.Summary.DecisionTimestampCount,
+		KubernetesScheduledTimestampCount:  run.Summary.KubernetesScheduledTimestampCount,
+		EvaluatorObservationTimestampCount: run.Summary.EvaluatorObservationTimestampCount,
+		AverageSchedulingDecisionLatency:   run.Summary.AverageSchedulingDecisionLatency,
+		P95SchedulingDecisionLatency:       run.Summary.P95SchedulingDecisionLatency,
+		AverageKubernetesPending:           run.Summary.AverageKubernetesPending,
+		P95KubernetesPending:               run.Summary.P95KubernetesPending,
+		AverageEvaluatorObservationLag:     run.Summary.AverageEvaluatorObservationLag,
+		P95EvaluatorObservationLag:         run.Summary.P95EvaluatorObservationLag,
+		MaxWorkloadOccupiedWorkerNodes:     run.Summary.MaxWorkloadOccupiedWorkerNodes,
+		Notes:                              append([]string(nil), run.Notes...),
 	}
 }
