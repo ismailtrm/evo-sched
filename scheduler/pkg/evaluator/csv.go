@@ -19,6 +19,11 @@ func WriteComparisonCSV(path string, protocol MeasurementProtocol, rows []Compar
 	if err := w.Write([]string{
 		"policy_version",
 		"measurement_version",
+		"scheduler_mode",
+		"scheduler_name",
+		"weights_applicable",
+		"custom_decision_timestamp_available",
+		"scheduler_interval_applicable",
 		"scheduler_interval_seconds",
 		"pod_poll_interval_seconds",
 		"workload_resource_metric_source",
@@ -54,17 +59,48 @@ func WriteComparisonCSV(path string, protocol MeasurementProtocol, rows []Compar
 	}
 
 	for _, row := range rows {
+		schedulerInterval := ""
+		if protocol.SchedulerIntervalApplicable {
+			schedulerInterval = strconv.FormatFloat(protocol.SchedulerIntervalSeconds, 'f', 6, 64)
+		}
+		weightValues := []string{"", "", "", ""}
+		if row.WeightsApplicable {
+			if row.Weights == nil {
+				return fmt.Errorf("run %q marks weights applicable but has no weights", row.Name)
+			}
+			weightValues = []string{
+				strconv.FormatFloat(row.Weights.FreeCPU, 'g', -1, 64),
+				strconv.FormatFloat(row.Weights.FreeMem, 'g', -1, 64),
+				strconv.FormatFloat(row.Weights.Balance, 'g', -1, 64),
+				strconv.FormatFloat(row.Weights.Consolidation, 'g', -1, 64),
+			}
+		}
+		averageDecisionLatency := ""
+		p95DecisionLatency := ""
+		averageObservationLag := ""
+		p95ObservationLag := ""
+		if protocol.SchedulerDecisionTimestampAvailable {
+			averageDecisionLatency = strconv.FormatFloat(row.AverageSchedulingDecisionLatency, 'f', 6, 64)
+			p95DecisionLatency = strconv.FormatFloat(row.P95SchedulingDecisionLatency, 'f', 6, 64)
+			averageObservationLag = strconv.FormatFloat(row.AverageEvaluatorObservationLag, 'f', 6, 64)
+			p95ObservationLag = strconv.FormatFloat(row.P95EvaluatorObservationLag, 'f', 6, 64)
+		}
 		record := []string{
-			PolicyVersion,
+			row.PolicyVersion,
 			protocol.Version,
-			strconv.FormatFloat(protocol.SchedulerIntervalSeconds, 'f', 6, 64),
+			string(row.SchedulerMode),
+			row.SchedulerName,
+			strconv.FormatBool(row.WeightsApplicable),
+			strconv.FormatBool(protocol.SchedulerDecisionTimestampAvailable),
+			strconv.FormatBool(protocol.SchedulerIntervalApplicable),
+			schedulerInterval,
 			strconv.FormatFloat(protocol.PodPollIntervalSeconds, 'f', 6, 64),
 			protocol.WorkloadResourceMetricSource,
 			row.Name,
-			strconv.FormatFloat(row.Weights.FreeCPU, 'g', -1, 64),
-			strconv.FormatFloat(row.Weights.FreeMem, 'g', -1, 64),
-			strconv.FormatFloat(row.Weights.Balance, 'g', -1, 64),
-			strconv.FormatFloat(row.Weights.Consolidation, 'g', -1, 64),
+			weightValues[0],
+			weightValues[1],
+			weightValues[2],
+			weightValues[3],
 			strconv.Itoa(row.PodCount),
 			strconv.Itoa(row.ScheduledCount),
 			strconv.Itoa(row.CompletedCount),
@@ -72,12 +108,12 @@ func WriteComparisonCSV(path string, protocol MeasurementProtocol, rows []Compar
 			strconv.Itoa(row.DecisionTimestampCount),
 			strconv.Itoa(row.KubernetesScheduledTimestampCount),
 			strconv.Itoa(row.EvaluatorObservationTimestampCount),
-			strconv.FormatFloat(row.AverageSchedulingDecisionLatency, 'f', 6, 64),
-			strconv.FormatFloat(row.P95SchedulingDecisionLatency, 'f', 6, 64),
+			averageDecisionLatency,
+			p95DecisionLatency,
 			strconv.FormatFloat(row.AverageKubernetesPending, 'f', 6, 64),
 			strconv.FormatFloat(row.P95KubernetesPending, 'f', 6, 64),
-			strconv.FormatFloat(row.AverageEvaluatorObservationLag, 'f', 6, 64),
-			strconv.FormatFloat(row.P95EvaluatorObservationLag, 'f', 6, 64),
+			averageObservationLag,
+			p95ObservationLag,
 			strconv.Itoa(row.MaxWorkloadOccupiedWorkerNodes),
 			strconv.FormatFloat(row.MeanWorkloadCPURequestedUtilization, 'f', 6, 64),
 			strconv.FormatFloat(row.MeanWorkloadMemoryRequestedUtilization, 'f', 6, 64),

@@ -29,6 +29,7 @@ import (
 const managedPodsSelector = "app=evo-sched-eval,evo-sched/managed=true"
 
 type RunnerOptions struct {
+	SchedulerMode       SchedulerMode
 	Namespace           string
 	SchedulerNamespace  string
 	SchedulerDeployment string
@@ -41,6 +42,7 @@ type RunnerOptions struct {
 
 func DefaultRunnerOptions() RunnerOptions {
 	return RunnerOptions{
+		SchedulerMode:       SchedulerModeCustomPolicy,
 		Namespace:           "evo-sched-eval",
 		SchedulerNamespace:  "evo-sched",
 		SchedulerDeployment: "evok8s-scheduler",
@@ -54,13 +56,33 @@ func DefaultRunnerOptions() RunnerOptions {
 func MeasurementProtocolFor(opts RunnerOptions, schedulerInterval time.Duration) MeasurementProtocol {
 	return MeasurementProtocol{
 		Version:                             MeasurementVersion,
+		SchedulerMode:                       SchedulerModeCustomPolicy,
 		SubmissionTimestampSource:           "evaluator-client-before-create",
 		SchedulerDecisionTimestampSource:    "scheduler-before-bind-request",
+		SchedulerDecisionTimestampAvailable: true,
 		KubernetesScheduledTimestampSource:  "pod-condition-last-transition-time",
 		EvaluatorObservationTimestampSource: "evaluator-list-response",
 		WorkloadOccupancySource:             "non-terminal-evaluator-pods-on-run-start-worker-snapshot",
 		WorkloadResourceMetricSource:        WorkloadRequestedResourceMetricSource,
 		SchedulerIntervalSeconds:            schedulerInterval.Seconds(),
+		SchedulerIntervalApplicable:         true,
+		PodPollIntervalSeconds:              opts.PollInterval.Seconds(),
+	}
+}
+
+func MeasurementProtocolForExternalReference(opts RunnerOptions) MeasurementProtocol {
+	return MeasurementProtocol{
+		Version:                             MeasurementVersion,
+		SchedulerMode:                       SchedulerModeExternalReference,
+		SubmissionTimestampSource:           "evaluator-client-before-create",
+		SchedulerDecisionTimestampSource:    "unavailable-external-scheduler",
+		SchedulerDecisionTimestampAvailable: false,
+		KubernetesScheduledTimestampSource:  "pod-condition-last-transition-time",
+		EvaluatorObservationTimestampSource: "evaluator-list-response",
+		WorkloadOccupancySource:             "non-terminal-evaluator-pods-on-run-start-worker-snapshot",
+		WorkloadResourceMetricSource:        WorkloadRequestedResourceMetricSource,
+		SchedulerIntervalSeconds:            0,
+		SchedulerIntervalApplicable:         false,
 		PodPollIntervalSeconds:              opts.PollInterval.Seconds(),
 	}
 }
@@ -68,6 +90,9 @@ func MeasurementProtocolFor(opts RunnerOptions, schedulerInterval time.Duration)
 func validateRunnerOptions(opts RunnerOptions) error {
 	if opts.PollInterval <= 0 {
 		return fmt.Errorf("poll interval must be positive, got %s", opts.PollInterval)
+	}
+	if opts.SchedulerMode != SchedulerModeCustomPolicy && opts.SchedulerMode != SchedulerModeExternalReference {
+		return fmt.Errorf("unsupported scheduler mode %q", opts.SchedulerMode)
 	}
 	return nil
 }
@@ -200,6 +225,9 @@ func RunBatch(ctx context.Context, cs kubernetes.Interface, opts RunnerOptions, 
 	if err := validateRunnerOptions(opts); err != nil {
 		return BatchResult{}, err
 	}
+	if opts.SchedulerMode != SchedulerModeCustomPolicy {
+		return BatchResult{}, fmt.Errorf("RunBatch requires scheduler mode %q", SchedulerModeCustomPolicy)
+	}
 	if workloadPath == "" {
 		return BatchResult{}, fmt.Errorf("workload path is required")
 	}
@@ -236,6 +264,7 @@ func RunBatch(ctx context.Context, cs kubernetes.Interface, opts RunnerOptions, 
 
 	batch := BatchResult{
 		PolicyVersion:           PolicyVersion,
+		SchedulerMode:           SchedulerModeCustomPolicy,
 		MeasurementVersion:      MeasurementVersion,
 		MeasurementProtocol:     protocol,
 		Workload:                workloadName(workloadPath),
@@ -271,9 +300,70 @@ func RunBatch(ctx context.Context, cs kubernetes.Interface, opts RunnerOptions, 
 	return batch, nil
 }
 
+func RunExternalReference(
+	ctx context.Context,
+	cs kubernetes.Interface,
+	opts RunnerOptions,
+	workloadPath, runName string,
+) (BatchResult, error) {
+	opts.SchedulerMode = SchedulerModeExternalReference
+	if err := validateRunnerOptions(opts); err != nil {
+		return BatchResult{}, err
+	}
+	if workloadPath == "" {
+		return BatchResult{}, fmt.Errorf("workload path is required")
+	}
+	if runName == "" {
+		return BatchResult{}, fmt.Errorf("external reference run name is required")
+	}
+	if opts.SchedulerName == "" {
+		return BatchResult{}, fmt.Errorf("external scheduler name is required")
+	}
+
+	workloadBase, workload, err := loadResolvedWorkload(ctx, cs, workloadPath)
+	if err != nil {
+		return BatchResult{}, err
+	}
+	samplingProfile, err := buildWorkloadSamplingProfile(workload, opts.PollInterval)
+	if err != nil {
+		return BatchResult{}, err
+	}
+	if err := ensureNamespace(ctx, cs, opts.Namespace); err != nil {
+		return BatchResult{}, err
+	}
+	if err := cleanupManagedPods(ctx, cs, opts.Namespace); err != nil {
+		return BatchResult{}, err
+	}
+
+	protocol := MeasurementProtocolForExternalReference(opts)
+	spec := ExperimentRunSpec{Name: runName}
+	runResult, runErr := executeRun(ctx, cs, opts, workloadPath, workload, spec, protocol, samplingProfile)
+	runResult.Notes = append(runResult.Notes,
+		"external scheduler does not emit the custom high-resolution decision timestamp; decision-latency and decision-to-observation lag fields are unavailable",
+		"Kubernetes PodScheduled condition time is retained as a coarse secondary reference and is not directly comparable to custom scheduler decision latency",
+	)
+	batch := BatchResult{
+		PolicyVersion:           NotApplicablePolicyVersion,
+		SchedulerMode:           SchedulerModeExternalReference,
+		MeasurementVersion:      MeasurementVersion,
+		MeasurementProtocol:     protocol,
+		Workload:                workloadName(workloadPath),
+		WorkloadPath:            workloadPath,
+		WorkloadBase:            &workloadBase,
+		WorkloadSamplingProfile: samplingProfile,
+		ResolvedWorkload:        append([]WorkloadItem(nil), workload...),
+		Results:                 []ComparisonRow{ComparisonRowFromRun(runResult)},
+		Runs:                    []RunResult{runResult},
+	}
+	return batch, runErr
+}
+
 func EvaluateWorkloads(ctx context.Context, cs kubernetes.Interface, opts RunnerOptions, workloadPaths []string, spec ExperimentRunSpec) ([]BatchResult, error) {
 	if err := validateRunnerOptions(opts); err != nil {
 		return nil, err
+	}
+	if opts.SchedulerMode != SchedulerModeCustomPolicy {
+		return nil, fmt.Errorf("EvaluateWorkloads requires scheduler mode %q", SchedulerModeCustomPolicy)
 	}
 	if len(workloadPaths) == 0 {
 		return nil, fmt.Errorf("at least one workload is required")
@@ -324,6 +414,7 @@ func EvaluateWorkloads(ctx context.Context, cs kubernetes.Interface, opts Runner
 
 		batch := BatchResult{
 			PolicyVersion:           PolicyVersion,
+			SchedulerMode:           SchedulerModeCustomPolicy,
 			MeasurementVersion:      MeasurementVersion,
 			MeasurementProtocol:     protocol,
 			Workload:                workloadName(workloadPath),
@@ -443,7 +534,7 @@ func executeRun(
 		if err := waitUntilArrival(runCtx, startedAt, item.ArrivalSeconds); err != nil {
 			return emptyRunResult(opts, spec, workloadPath, startedAt, protocol, samplingProfile), err
 		}
-		if err := createWorkloadPod(runCtx, cs, opts, runID, item, results[item.Name]); err != nil {
+		if err := createWorkloadPod(runCtx, cs, opts, runID, item, results[item.Name], &mu); err != nil {
 			return emptyRunResult(opts, spec, workloadPath, startedAt, protocol, samplingProfile), err
 		}
 	}
@@ -461,8 +552,11 @@ func executeRun(
 	sort.Slice(pods, func(i, j int) bool { return pods[i].Name < pods[j].Name })
 	summary := SummarizePods(pods, int(maxWorkloadOccupiedWorkerNodes.Load()))
 	summary.ResourceSummary = summarizeResourceSamples(resourceSamples)
+	policyVersion, weightsApplicable := policyIdentityForMode(opts.SchedulerMode)
+	weights := weightsForMode(opts.SchedulerMode, spec.Weights)
 	runResult := RunResult{
-		PolicyVersion:                     PolicyVersion,
+		PolicyVersion:                     policyVersion,
+		SchedulerMode:                     opts.SchedulerMode,
 		MeasurementVersion:                MeasurementVersion,
 		MeasurementProtocol:               protocol,
 		Name:                              spec.Name,
@@ -470,7 +564,8 @@ func executeRun(
 		Namespace:                         opts.Namespace,
 		Scheduler:                         opts.SchedulerName,
 		Workload:                          workloadPath,
-		Weights:                           spec.Weights,
+		Weights:                           weights,
+		WeightsApplicable:                 weightsApplicable,
 		StartedAt:                         startedAt,
 		FinishedAt:                        finishedAt,
 		Summary:                           summary,
@@ -487,19 +582,38 @@ func executeRun(
 }
 
 func emptyRunResult(opts RunnerOptions, spec ExperimentRunSpec, workloadPath string, startedAt time.Time, protocol MeasurementProtocol, samplingProfile WorkloadSamplingProfile) RunResult {
+	policyVersion, weightsApplicable := policyIdentityForMode(opts.SchedulerMode)
+	weights := weightsForMode(opts.SchedulerMode, spec.Weights)
 	return RunResult{
-		PolicyVersion:           PolicyVersion,
+		PolicyVersion:           policyVersion,
+		SchedulerMode:           opts.SchedulerMode,
 		MeasurementVersion:      MeasurementVersion,
 		MeasurementProtocol:     protocol,
 		Name:                    spec.Name,
 		Namespace:               opts.Namespace,
 		Scheduler:               opts.SchedulerName,
 		Workload:                workloadPath,
-		Weights:                 spec.Weights,
+		Weights:                 weights,
+		WeightsApplicable:       weightsApplicable,
 		StartedAt:               startedAt,
 		FinishedAt:              time.Now().UTC(),
 		WorkloadSamplingProfile: samplingProfile,
 	}
+}
+
+func policyIdentityForMode(mode SchedulerMode) (string, bool) {
+	if mode == SchedulerModeExternalReference {
+		return NotApplicablePolicyVersion, false
+	}
+	return PolicyVersion, true
+}
+
+func weightsForMode(mode SchedulerMode, weights WeightSet) *WeightSet {
+	if mode == SchedulerModeExternalReference {
+		return nil
+	}
+	copy := weights
+	return &copy
 }
 
 func ensureNamespace(ctx context.Context, cs kubernetes.Interface, name string) error {
@@ -684,6 +798,7 @@ func createWorkloadPod(
 	runID string,
 	item WorkloadItem,
 	result *PodTiming,
+	mu *sync.Mutex,
 ) error {
 	submittedAt := time.Now().UTC()
 	memBytes := item.MemoryMiB * 1024 * 1024
@@ -722,14 +837,18 @@ func createWorkloadPod(
 		},
 	}
 
+	mu.Lock()
 	result.SubmittedAt = &submittedAt
+	mu.Unlock()
 	created, err := cs.CoreV1().Pods(opts.Namespace).Create(ctx, pod, metav1.CreateOptions{})
 	if err != nil {
 		return fmt.Errorf("create pod %s: %w", item.Name, err)
 	}
 
 	createdAt := created.CreationTimestamp.Time.UTC()
+	mu.Lock()
 	result.CreatedAt = &createdAt
+	mu.Unlock()
 	return nil
 }
 

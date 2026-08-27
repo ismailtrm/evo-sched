@@ -55,8 +55,12 @@ func LoadExperiment(path string) (ExperimentSpec, error) {
 
 func ComparisonRowFromRun(run RunResult) ComparisonRow {
 	return ComparisonRow{
+		PolicyVersion:                      run.PolicyVersion,
+		SchedulerMode:                      run.SchedulerMode,
+		SchedulerName:                      run.Scheduler,
 		Name:                               run.Name,
 		Weights:                            run.Weights,
+		WeightsApplicable:                  run.WeightsApplicable,
 		PodCount:                           run.Summary.PodCount,
 		ScheduledCount:                     run.Summary.ScheduledCount,
 		CompletedCount:                     run.Summary.CompletedCount,

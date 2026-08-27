@@ -28,8 +28,10 @@ func SummarizePods(pods []PodTiming, maxWorkloadOccupiedWorkerNodes int) Summary
 			summary.KubernetesScheduledTimestampCount++
 			kubernetesPendingValues = append(kubernetesPendingValues, pod.KubernetesPendingSeconds)
 		}
-		if pod.SchedulerDecisionAt != nil && pod.EvaluatorObservedScheduledAt != nil {
+		if pod.EvaluatorObservedScheduledAt != nil {
 			summary.EvaluatorObservationTimestampCount++
+		}
+		if pod.SchedulerDecisionAt != nil && pod.EvaluatorObservedScheduledAt != nil {
 			observationLags = append(observationLags, pod.EvaluatorObservationLagSeconds)
 		}
 		if pod.FinishedAt != nil {

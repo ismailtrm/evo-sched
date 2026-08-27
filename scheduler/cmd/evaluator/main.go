@@ -16,6 +16,7 @@ import (
 
 type options struct {
 	workloadPath        string
+	schedulerMode       string
 	namespace           string
 	schedulerNamespace  string
 	schedulerDeployment string
@@ -25,6 +26,7 @@ type options struct {
 	csvOutputPath       string
 	weights             string
 	weightsFile         string
+	runName             string
 	pollInterval        time.Duration
 	timeout             time.Duration
 	cleanup             bool
@@ -40,6 +42,7 @@ func main() {
 func parseFlags() options {
 	opts := options{}
 	flag.StringVar(&opts.workloadPath, "workload", "", "Path to workload JSON file")
+	flag.StringVar(&opts.schedulerMode, "scheduler-mode", string(evaluator.SchedulerModeCustomPolicy), "Scheduler execution mode: custom-policy or external-reference")
 	flag.StringVar(&opts.namespace, "namespace", "evo-sched-eval", "Namespace for evaluator-created pods")
 	flag.StringVar(&opts.schedulerNamespace, "scheduler-namespace", "evo-sched", "Namespace of the scheduler deployment")
 	flag.StringVar(&opts.schedulerDeployment, "scheduler-deployment", "evok8s-scheduler", "Name of the scheduler deployment")
@@ -49,6 +52,7 @@ func parseFlags() options {
 	flag.StringVar(&opts.csvOutputPath, "csv-output", "", "Optional CSV output path; defaults next to --output")
 	flag.StringVar(&opts.weights, "weights", "", "Optional single run weights in FreeCPU,FreeMem,Balance,Consolidation order")
 	flag.StringVar(&opts.weightsFile, "weights-file", "", "Optional JSON file describing named experiment runs")
+	flag.StringVar(&opts.runName, "run-name", "", "Run name for external-reference mode; defaults to scheduler name")
 	flag.DurationVar(&opts.pollInterval, "poll-interval", time.Second, "Polling interval for pod state collection")
 	flag.DurationVar(&opts.timeout, "timeout", 0, "Per-run timeout; defaults from workload length")
 	flag.BoolVar(&opts.cleanup, "cleanup", true, "Delete evaluator pods after each run")
@@ -60,8 +64,15 @@ func run(opts options) error {
 	if opts.workloadPath == "" {
 		return fmt.Errorf("--workload is required")
 	}
+	mode, err := parseSchedulerMode(opts.schedulerMode)
+	if err != nil {
+		return err
+	}
 	if opts.weights != "" && opts.weightsFile != "" {
 		return fmt.Errorf("--weights and --weights-file cannot be used together")
+	}
+	if mode == evaluator.SchedulerModeExternalReference && (opts.weights != "" || opts.weightsFile != "") {
+		return fmt.Errorf("--weights and --weights-file are not valid in external-reference mode")
 	}
 
 	clientset, err := evaluator.NewClientset()
@@ -69,17 +80,8 @@ func run(opts options) error {
 		return fmt.Errorf("client init failed: %w", err)
 	}
 
-	currentWeights, err := evaluator.CurrentDeploymentWeights(context.Background(), clientset, opts.schedulerNamespace, opts.schedulerDeployment)
-	if err != nil {
-		return err
-	}
-
-	runSpecs, err := loadRunSpecs(opts, currentWeights)
-	if err != nil {
-		return err
-	}
-
 	runnerOpts := evaluator.DefaultRunnerOptions()
+	runnerOpts.SchedulerMode = mode
 	runnerOpts.Namespace = opts.namespace
 	runnerOpts.SchedulerNamespace = opts.schedulerNamespace
 	runnerOpts.SchedulerDeployment = opts.schedulerDeployment
@@ -89,11 +91,37 @@ func run(opts options) error {
 	runnerOpts.Timeout = opts.timeout
 	runnerOpts.Cleanup = opts.cleanup
 
-	batch, runErr := evaluator.RunBatch(context.Background(), clientset, runnerOpts, opts.workloadPath, runSpecs)
+	var batch evaluator.BatchResult
+	var runErr error
+	if mode == evaluator.SchedulerModeExternalReference {
+		runName := opts.runName
+		if runName == "" {
+			runName = opts.schedulerName
+		}
+		batch, runErr = evaluator.RunExternalReference(context.Background(), clientset, runnerOpts, opts.workloadPath, runName)
+	} else {
+		currentWeights, err := evaluator.CurrentDeploymentWeights(context.Background(), clientset, opts.schedulerNamespace, opts.schedulerDeployment)
+		if err != nil {
+			return err
+		}
+		runSpecs, err := loadRunSpecs(opts, currentWeights)
+		if err != nil {
+			return err
+		}
+		batch, runErr = evaluator.RunBatch(context.Background(), clientset, runnerOpts, opts.workloadPath, runSpecs)
+	}
 	if err := emitOutputs(batch, opts); err != nil {
 		return err
 	}
 	return runErr
+}
+
+func parseSchedulerMode(raw string) (evaluator.SchedulerMode, error) {
+	mode := evaluator.SchedulerMode(raw)
+	if mode != evaluator.SchedulerModeCustomPolicy && mode != evaluator.SchedulerModeExternalReference {
+		return "", fmt.Errorf("unsupported --scheduler-mode %q", raw)
+	}
+	return mode, nil
 }
 
 func loadRunSpecs(opts options, current evaluator.WeightSet) ([]evaluator.ExperimentRunSpec, error) {

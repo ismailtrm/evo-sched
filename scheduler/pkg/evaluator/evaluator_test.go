@@ -2,10 +2,13 @@ package evaluator
 
 import (
 	"context"
+	"encoding/csv"
+	"encoding/json"
 	"math"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -15,7 +18,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apiresource "k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/fake"
+	ktesting "k8s.io/client-go/testing"
 )
 
 func TestLoadWorkloadArray(t *testing.T) {
@@ -225,6 +230,79 @@ func TestValidateRunnerOptionsRejectsNonPositivePollInterval(t *testing.T) {
 	}
 }
 
+func TestRunExternalReferenceSkipsCustomSchedulerDeployment(t *testing.T) {
+	workloadPath := filepath.Join(t.TempDir(), "external-reference.json")
+	content := `[{"name":"pod-a","arrivalSeconds":0,"cpuMilli":100,"memoryMiB":64,"durationSeconds":1}]`
+	if err := os.WriteFile(workloadPath, []byte(content), 0o644); err != nil {
+		t.Fatalf("write workload: %v", err)
+	}
+
+	client := fake.NewSimpleClientset(testWorkerNode("worker-a", "4", "8Gi", true))
+	client.Fake.PrependReactor("create", "pods", func(action ktesting.Action) (bool, runtime.Object, error) {
+		createAction := action.(ktesting.CreateAction)
+		pod := createAction.GetObject().(*corev1.Pod).DeepCopy()
+		now := metav1.Now()
+		pod.Spec.NodeName = "worker-a"
+		pod.Status.Phase = corev1.PodSucceeded
+		pod.Status.Conditions = []corev1.PodCondition{{
+			Type:               corev1.PodScheduled,
+			Status:             corev1.ConditionTrue,
+			LastTransitionTime: now,
+		}}
+		pod.Status.ContainerStatuses = []corev1.ContainerStatus{{
+			Name: "runner",
+			State: corev1.ContainerState{Terminated: &corev1.ContainerStateTerminated{
+				FinishedAt: now,
+			}},
+		}}
+		if err := client.Tracker().Create(corev1.SchemeGroupVersion.WithResource("pods"), pod, pod.Namespace); err != nil {
+			return true, nil, err
+		}
+		return true, pod, nil
+	})
+
+	opts := DefaultRunnerOptions()
+	opts.Namespace = "eval"
+	opts.SchedulerName = "default-scheduler"
+	opts.PollInterval = time.Millisecond
+	opts.Timeout = time.Second
+	opts.Cleanup = false
+
+	batch, err := RunExternalReference(context.Background(), client, opts, workloadPath, "kube-scheduler-default")
+	if err != nil {
+		t.Fatalf("RunExternalReference() error = %v", err)
+	}
+	if batch.PolicyVersion != NotApplicablePolicyVersion || batch.SchedulerMode != SchedulerModeExternalReference {
+		t.Fatalf("unexpected external batch identity: %+v", batch)
+	}
+	if batch.MeasurementProtocol.SchedulerDecisionTimestampAvailable {
+		t.Fatalf("external scheduler must not claim custom decision instrumentation: %+v", batch.MeasurementProtocol)
+	}
+	if batch.MeasurementProtocol.SchedulerIntervalApplicable {
+		t.Fatalf("external scheduler must not claim custom scheduler interval: %+v", batch.MeasurementProtocol)
+	}
+	if len(batch.Results) != 1 {
+		t.Fatalf("result count = %d, want 1", len(batch.Results))
+	}
+	row := batch.Results[0]
+	if row.SchedulerMode != SchedulerModeExternalReference || row.SchedulerName != "default-scheduler" || row.WeightsApplicable || row.Weights != nil {
+		t.Fatalf("unexpected external comparison identity: %+v", row)
+	}
+	encoded, err := json.Marshal(row)
+	if err != nil {
+		t.Fatalf("marshal external row: %v", err)
+	}
+	if strings.Contains(string(encoded), `"weights"`) {
+		t.Fatalf("external row must omit weights: %s", encoded)
+	}
+	if row.ScheduledCount != 1 || row.CompletedCount != 1 || row.UnschedulableCount != 0 {
+		t.Fatalf("unexpected external completion summary: %+v", row)
+	}
+	if row.DecisionTimestampCount != 0 || row.EvaluatorObservationTimestampCount != 1 {
+		t.Fatalf("unexpected external timestamp coverage: %+v", row)
+	}
+}
+
 func TestCurrentWorkloadBaseUsesReadySchedulableWorkerSnapshot(t *testing.T) {
 	client := fake.NewSimpleClientset(
 		testWorkerNode("worker-a", "4", "8Gi", true),
@@ -247,8 +325,12 @@ func TestWriteComparisonCSV(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "result.csv")
 	rows := []ComparisonRow{
 		{
+			PolicyVersion:                      PolicyVersion,
+			SchedulerMode:                      SchedulerModeCustomPolicy,
+			SchedulerName:                      "evok8s-scheduler",
 			Name:                               "baseline",
-			Weights:                            WeightSet{FreeCPU: 0.4, FreeMem: 0.3, Balance: 0.2, Consolidation: 0.1},
+			Weights:                            &WeightSet{FreeCPU: 0.4, FreeMem: 0.3, Balance: 0.2, Consolidation: 0.1},
+			WeightsApplicable:                  true,
 			PodCount:                           4,
 			ScheduledCount:                     4,
 			CompletedCount:                     4,
@@ -287,7 +369,7 @@ func TestWriteComparisonCSV(t *testing.T) {
 		t.Fatalf("read csv: %v", err)
 	}
 	content := string(data)
-	if !strings.Contains(content, "policy_version,measurement_version,scheduler_interval_seconds,pod_poll_interval_seconds,workload_resource_metric_source,run_name,free_cpu,free_mem,balance,consolidation") {
+	if !strings.Contains(content, "policy_version,measurement_version,scheduler_mode,scheduler_name,weights_applicable,custom_decision_timestamp_available,scheduler_interval_applicable,scheduler_interval_seconds,pod_poll_interval_seconds,workload_resource_metric_source,run_name,free_cpu,free_mem,balance,consolidation") {
 		t.Fatalf("missing csv header: %s", content)
 	}
 	if !strings.Contains(content, "mean_workload_dominant_requested_load_variance") {
@@ -296,8 +378,66 @@ func TestWriteComparisonCSV(t *testing.T) {
 	if !strings.Contains(content, "minimum_duration_to_poll_interval_ratio") {
 		t.Fatalf("missing sampling profile header: %s", content)
 	}
-	if !strings.Contains(content, "v2,v2,2.000000,1.000000,"+WorkloadRequestedResourceMetricSource+",baseline,0.4,0.3,0.2,0.1,4,4,4,0,4,4,4,0.750000,1.250000,1.500000,2.000000,0.400000,0.800000,2,0.300000,0.200000,0.040000,0.100000,5,10,5.000000,") {
+	if !strings.Contains(content, "v2,v2,custom-policy,evok8s-scheduler,true,true,true,2.000000,1.000000,"+WorkloadRequestedResourceMetricSource+",baseline,0.4,0.3,0.2,0.1,4,4,4,0,4,4,4,0.750000,1.250000,1.500000,2.000000,0.400000,0.800000,2,0.300000,0.200000,0.040000,0.100000,5,10,5.000000,") {
 		t.Fatalf("missing csv row: %s", content)
+	}
+}
+
+func TestWriteComparisonCSVLeavesExternalReferenceFieldsBlank(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "external.csv")
+	protocol := MeasurementProtocolForExternalReference(DefaultRunnerOptions())
+	rows := []ComparisonRow{{
+		PolicyVersion:                      NotApplicablePolicyVersion,
+		SchedulerMode:                      SchedulerModeExternalReference,
+		SchedulerName:                      "default-scheduler",
+		Name:                               "kube-scheduler-default",
+		WeightsApplicable:                  false,
+		PodCount:                           24,
+		ScheduledCount:                     24,
+		CompletedCount:                     24,
+		DecisionTimestampCount:             0,
+		KubernetesScheduledTimestampCount:  24,
+		EvaluatorObservationTimestampCount: 24,
+		AverageKubernetesPending:           0.25,
+		P95KubernetesPending:               1,
+		MaxWorkloadOccupiedWorkerNodes:     4,
+	}}
+	if err := WriteComparisonCSV(path, protocol, rows); err != nil {
+		t.Fatalf("WriteComparisonCSV() error = %v", err)
+	}
+
+	f, err := os.Open(path)
+	if err != nil {
+		t.Fatalf("open csv: %v", err)
+	}
+	defer f.Close()
+	records, err := csv.NewReader(f).ReadAll()
+	if err != nil {
+		t.Fatalf("read csv: %v", err)
+	}
+	if len(records) != 2 {
+		t.Fatalf("record count = %d, want 2", len(records))
+	}
+	columns := make(map[string]string, len(records[0]))
+	for i, name := range records[0] {
+		columns[name] = records[1][i]
+	}
+	for name, want := range map[string]string{
+		"policy_version":                          NotApplicablePolicyVersion,
+		"scheduler_mode":                          string(SchedulerModeExternalReference),
+		"scheduler_name":                          "default-scheduler",
+		"weights_applicable":                      "false",
+		"custom_decision_timestamp_available":     "false",
+		"scheduler_interval_applicable":           "false",
+		"scheduler_interval_seconds":              "",
+		"free_cpu":                                "",
+		"p95_scheduling_decision_latency_seconds": "",
+		"p95_evaluator_observation_lag_seconds":   "",
+		"p95_kubernetes_pending_seconds":          "1.000000",
+	} {
+		if got := columns[name]; got != want {
+			t.Fatalf("column %s = %q, want %q; columns=%v", name, got, want, columns)
+		}
 	}
 }
 
@@ -578,6 +718,7 @@ func TestCreateWorkloadPodStoresHighResolutionSubmissionTimestamp(t *testing.T) 
 		"run-a",
 		WorkloadItem{Name: "pod-a", CPUMilli: 100, MemoryMiB: 64, DurationSeconds: 1},
 		result,
+		&sync.Mutex{},
 	); err != nil {
 		t.Fatalf("createWorkloadPod() error = %v", err)
 	}

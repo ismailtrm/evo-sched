@@ -9,6 +9,14 @@ import (
 
 const PolicyVersion = policy.Version
 const MeasurementVersion = measurement.Version
+const NotApplicablePolicyVersion = "not-applicable"
+
+type SchedulerMode string
+
+const (
+	SchedulerModeCustomPolicy      SchedulerMode = "custom-policy"
+	SchedulerModeExternalReference SchedulerMode = "external-reference"
+)
 
 type WorkloadItem struct {
 	Name            string  `json:"name"`
@@ -114,19 +122,23 @@ type WorkloadSamplingProfile struct {
 }
 
 type MeasurementProtocol struct {
-	Version                             string  `json:"version"`
-	SubmissionTimestampSource           string  `json:"submissionTimestampSource"`
-	SchedulerDecisionTimestampSource    string  `json:"schedulerDecisionTimestampSource"`
-	KubernetesScheduledTimestampSource  string  `json:"kubernetesScheduledTimestampSource"`
-	EvaluatorObservationTimestampSource string  `json:"evaluatorObservationTimestampSource"`
-	WorkloadOccupancySource             string  `json:"workloadOccupancySource"`
-	WorkloadResourceMetricSource        string  `json:"workloadResourceMetricSource"`
-	SchedulerIntervalSeconds            float64 `json:"schedulerIntervalSeconds"`
-	PodPollIntervalSeconds              float64 `json:"podPollIntervalSeconds"`
+	Version                             string        `json:"version"`
+	SchedulerMode                       SchedulerMode `json:"schedulerMode"`
+	SubmissionTimestampSource           string        `json:"submissionTimestampSource"`
+	SchedulerDecisionTimestampSource    string        `json:"schedulerDecisionTimestampSource"`
+	SchedulerDecisionTimestampAvailable bool          `json:"schedulerDecisionTimestampAvailable"`
+	KubernetesScheduledTimestampSource  string        `json:"kubernetesScheduledTimestampSource"`
+	EvaluatorObservationTimestampSource string        `json:"evaluatorObservationTimestampSource"`
+	WorkloadOccupancySource             string        `json:"workloadOccupancySource"`
+	WorkloadResourceMetricSource        string        `json:"workloadResourceMetricSource"`
+	SchedulerIntervalSeconds            float64       `json:"schedulerIntervalSeconds"`
+	SchedulerIntervalApplicable         bool          `json:"schedulerIntervalApplicable"`
+	PodPollIntervalSeconds              float64       `json:"podPollIntervalSeconds"`
 }
 
 type RunResult struct {
 	PolicyVersion                     string                   `json:"policyVersion"`
+	SchedulerMode                     SchedulerMode            `json:"schedulerMode"`
 	MeasurementVersion                string                   `json:"measurementVersion"`
 	MeasurementProtocol               MeasurementProtocol      `json:"measurementProtocol"`
 	Name                              string                   `json:"name"`
@@ -134,7 +146,8 @@ type RunResult struct {
 	Namespace                         string                   `json:"namespace"`
 	Scheduler                         string                   `json:"schedulerName"`
 	Workload                          string                   `json:"workload"`
-	Weights                           WeightSet                `json:"weights"`
+	Weights                           *WeightSet               `json:"weights,omitempty"`
+	WeightsApplicable                 bool                     `json:"weightsApplicable"`
 	StartedAt                         time.Time                `json:"startedAt"`
 	FinishedAt                        time.Time                `json:"finishedAt"`
 	Summary                           Summary                  `json:"summary"`
@@ -146,22 +159,26 @@ type RunResult struct {
 }
 
 type ComparisonRow struct {
-	Name                               string    `json:"name"`
-	Weights                            WeightSet `json:"weights"`
-	PodCount                           int       `json:"podCount"`
-	ScheduledCount                     int       `json:"scheduledCount"`
-	CompletedCount                     int       `json:"completedCount"`
-	UnschedulableCount                 int       `json:"unschedulableCount"`
-	DecisionTimestampCount             int       `json:"decisionTimestampCount"`
-	KubernetesScheduledTimestampCount  int       `json:"kubernetesScheduledTimestampCount"`
-	EvaluatorObservationTimestampCount int       `json:"evaluatorObservationTimestampCount"`
-	AverageSchedulingDecisionLatency   float64   `json:"averageSchedulingDecisionLatencySeconds"`
-	P95SchedulingDecisionLatency       float64   `json:"p95SchedulingDecisionLatencySeconds"`
-	AverageKubernetesPending           float64   `json:"averageKubernetesPendingSeconds"`
-	P95KubernetesPending               float64   `json:"p95KubernetesPendingSeconds"`
-	AverageEvaluatorObservationLag     float64   `json:"averageEvaluatorObservationLagSeconds"`
-	P95EvaluatorObservationLag         float64   `json:"p95EvaluatorObservationLagSeconds"`
-	MaxWorkloadOccupiedWorkerNodes     int       `json:"maxWorkloadOccupiedWorkerNodes"`
+	PolicyVersion                      string        `json:"policyVersion"`
+	SchedulerMode                      SchedulerMode `json:"schedulerMode"`
+	SchedulerName                      string        `json:"schedulerName"`
+	Name                               string        `json:"name"`
+	Weights                            *WeightSet    `json:"weights,omitempty"`
+	WeightsApplicable                  bool          `json:"weightsApplicable"`
+	PodCount                           int           `json:"podCount"`
+	ScheduledCount                     int           `json:"scheduledCount"`
+	CompletedCount                     int           `json:"completedCount"`
+	UnschedulableCount                 int           `json:"unschedulableCount"`
+	DecisionTimestampCount             int           `json:"decisionTimestampCount"`
+	KubernetesScheduledTimestampCount  int           `json:"kubernetesScheduledTimestampCount"`
+	EvaluatorObservationTimestampCount int           `json:"evaluatorObservationTimestampCount"`
+	AverageSchedulingDecisionLatency   float64       `json:"averageSchedulingDecisionLatencySeconds"`
+	P95SchedulingDecisionLatency       float64       `json:"p95SchedulingDecisionLatencySeconds"`
+	AverageKubernetesPending           float64       `json:"averageKubernetesPendingSeconds"`
+	P95KubernetesPending               float64       `json:"p95KubernetesPendingSeconds"`
+	AverageEvaluatorObservationLag     float64       `json:"averageEvaluatorObservationLagSeconds"`
+	P95EvaluatorObservationLag         float64       `json:"p95EvaluatorObservationLagSeconds"`
+	MaxWorkloadOccupiedWorkerNodes     int           `json:"maxWorkloadOccupiedWorkerNodes"`
 	ResourceSummary
 	WorkloadSamplingProfile
 	Notes []string `json:"notes,omitempty"`
@@ -169,6 +186,7 @@ type ComparisonRow struct {
 
 type BatchResult struct {
 	PolicyVersion           string                  `json:"policyVersion"`
+	SchedulerMode           SchedulerMode           `json:"schedulerMode"`
 	MeasurementVersion      string                  `json:"measurementVersion"`
 	MeasurementProtocol     MeasurementProtocol     `json:"measurementProtocol"`
 	Workload                string                  `json:"workload"`
