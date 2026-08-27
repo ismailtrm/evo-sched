@@ -2180,6 +2180,96 @@ Historical dört-Pod `uniform-small` burada yalnızca orchestration debug input'
 scheduler davranışı veya baseline performansı hakkında kanıt değildir. Official
 Gate 4 koşuları `--repetitions 3` ve 24-Pod V2 train workload'larıyla yapılacaktır.
 
+### 3.54. Gate 4 official tekrarlı baseline protokolünü tamamladık
+
+Üç custom V2 baseline ve default kube-scheduler dış referansı, üç V2 train
+workload üzerinde üçer tekrar çalıştırıldı. Deney, clean ve annotated
+`278ab9bc1aebd341b6a37854cef7c52d3e7d35da`
+(`protocol-v2-baselines-2026-08-27`) SHA'sından başlatıldı.
+
+Kanıt zinciri:
+
+- raw results commit: `244f405 results: record official v2 baselines`
+- reusable summary tool commit: `577773f feat: add repeated baseline summarizer`
+- derived analysis commit: `f1902df results: summarize official v2 baselines`
+- artifact directory:
+  [`results/2026-08-28-v2-official-baselines`](./results/2026-08-28-v2-official-baselines)
+- run manifest: `manifest.json`
+- analysis provenance: `analysis-manifest.json`
+- machine-readable summary: `summary.json` ve `summary.csv`
+
+Official protokol:
+
+- cluster: `kind-evo-sched`, dört Ready worker, Kubernetes `v1.35.0`
+- worker başına allocatable: `16000m` CPU ve `33253150720` byte memory
+- workload'lar: `cpu-tight-train`, `mem-tight-train`, `fragmenting-mix-train`
+- custom policy'ler: balanced, spread-heavy, consolidation-heavy
+- her workload-policy çifti için üç tekrar
+- custom batch sırası repetition-outer/policy-inner round-robin
+- custom scheduler interval: bütün custom run'larda `250ms`
+- evaluator poll interval: bütün run'larda `250ms`
+- per-run timeout: `90s`
+- default kube-scheduler image: `registry.k8s.io/kube-scheduler:v1.35.0`
+- static Pod config checksum'u canlı manifest ile eşleşti; explicit `--config`
+  verilmediği için Kubernetes dahili default profile/plugin seti kullanıldı
+
+Acceptance sonucu:
+
+- altı batch output'u, `36` result row ve `36` raw run üretildi
+- toplam `864/864` Pod schedule edildi ve tamamlandı
+- toplam `unschedulable=0`
+- `27` custom run'ın tamamında `24/24` high-resolution decision timestamp vardı
+- `9` external run'da decision timestamp'in bulunmaması beklenen protokol
+  davranışıydı; Kubernetes scheduled ve evaluator observation coverage tamdı
+- bütün input checksum'ları ve instantiate edilen mutlak Pod request'leri raw JSON
+  ve manifestte saklandı
+- preflight ve postflight geçti; canonical weights ile `2s` interval restore edildi
+- evaluator namespace boş bırakıldı ve beş kind container'ı silinmeden durduruldu
+
+Üç workload üzerindeki dokuz tekrar satırından türetilen aggregate özet:
+
+| Policy | Mean p95 decision (s) | Sample SD | Mean max occupied workers | Mean load variance |
+|---|---:|---:|---:|---:|
+| `evok8s-v2-balanced` | 1.287 | 0.176 | 3.667 | 0.043685 |
+| `evok8s-v2-spread-heavy` | 1.208 | 0.037 | 4.000 | 0.007338 |
+| `evok8s-v2-consolidation-heavy` | 1.255 | 0.162 | 3.000 | 0.119646 |
+| `kube-scheduler-default` | N/A | N/A | 4.000 | 0.003265 |
+
+Bu aggregate sample SD, dokuz satırda workload'lar arası ve workload içi değişimi
+birlikte taşır. Workload-regime belirsizliği yorumlanırken `summary.json` içindeki
+üç tekrarlı workload-level satırlar kullanılmalıdır.
+
+Ana gözlemler:
+
+- spread-heavy aggregate custom decision p95'inde en düşük ortalamayı üretti
+- consolidation-heavy her üç workload ve her tekrarda üç worker'da kaldı;
+  spread-heavy ve default kube-scheduler dört worker kullandı
+- consolidation-heavy, spread-heavy'ye göre ortalama occupied worker sayısını
+  yüzde `25` düşürürken aggregate mean p95 decision latency yaklaşık yüzde `3.9`
+  yükseldi
+- balanced aggregate objective noktasında consolidation-heavy tarafından domine
+  edildi; custom baseline Pareto uçları spread-heavy ve consolidation-heavy oldu
+- `fragmenting-mix` altında spread-heavy load variance'ı yaklaşık `0.005` düzeyine
+  indirirken dört worker kullandı; balanced ve consolidation-heavy yaklaşık
+  `0.104-0.109` variance ile üç worker'da kaldı
+- default kube-scheduler bütün workload'larda dört worker kullandı ve düşük load
+  variance üretti; high-resolution decision annotation olmadığı için custom
+  decision p95 ile doğrudan latency kıyasına alınmadı
+
+Fragmenting-mix custom run'larında bazı generated Pod metadata adları 63 karakteri
+aştığı için Kubernetes hostname/DNS-label uyarısı verdi. API Pod'ları kabul etti,
+tam completion ve timestamp coverage sağlandı; uyarı ölçümü geçersiz kılmadı ve
+official manifestte kaydedildi.
+
+Gate 4 kararı:
+
+- official custom baseline ve default kube-scheduler external-reference protokolü
+  tamamlandı
+- kube-scheduler `MostAllocated` ayrı bir opsiyonel packing referansı olarak
+  kalacak; Gate 5 optimizer başlangıcını bloklamayacak
+- sıradaki araştırma kapısı V2 objective'lerle official multi-seed optimization ve
+  finalist doğrulamasıdır
+
 ## 4. Şu Anki Durum
 
 Şu anda proje durumu şöyledir:
@@ -2208,7 +2298,7 @@ Gate 4 koşuları `--repetitions 3` ve 24-Pod V2 train workload'larıyla yapıla
 - `seed=42` altında iki baskın Pareto rejimi gözlenmiş durumda
 - `seed=42` ve mevcut resource-pressure matrix'i artık `v1 pilot` kanıtı olarak sınıflandırılmış durumda
 - Policy-space redundancy ve measurement-resolution riskleri kayıt altına alınmış durumda
-- `seed=123` ve `seed=999`, Gate 3-5 official protokol çıkış koşullarına kadar ertelenmiş durumda
+- `seed=123` ve `seed=999` historical V1 protokolünde çalıştırılmadı; sıradaki koşular Gate 5 V2 official multi-seed protokolü olacak
 - Official deneyler için clean Git SHA, manifest ve preflight hard gate'i kabul edilmiş durumda
 - Hibrit branch ve atomik kanıt commit düzeni kabul edilmiş durumda
 - Paper kaynakları Git ile izleniyor; build ürünleri ignore ediliyor
@@ -2227,8 +2317,8 @@ Gate 4 koşuları `--repetitions 3` ve 24-Pod V2 train workload'larıyla yapıla
 - Gate 1 kod doğrulamaları race detector ve `go vet` ile geçmiştir
 - Gate 1 live integration smoke testi temiz commit üzerinden geçmiştir
 - Gate 1 tamamlanmıştır
-- Official optimizer koşuları Gate 3-5 protokol çıkış koşullarına kadar blokludur
-- `evo-sched` kind container'ları son Gate 4 debug postflight sonrasında silinmeden durdurulmuştur
+- Gate 4 official baseline protokolü tamamlanmıştır; official optimizer koşuları için sıradaki hard gate yeni clean SHA/tag ve Gate 5 preflight'tır
+- `evo-sched` kind container'ları Gate 4 official postflight sonrasında silinmeden durdurulmuştur
 - Scheduler experiment preflight skill'i V2 contract, canonical weights ve exact worker-count kontrolüyle güncellenmiştir
 - Güncellenen preflight helper'ın gerçek-cluster acceptance testi geçmiştir
 - Measurement `v2` timestamp semantiği source audit ile tanımlanmıştır
@@ -2249,7 +2339,9 @@ Gate 4 koşuları `--repetitions 3` ve 24-Pod V2 train workload'larıyla yapıla
 - Üç V2 baseline x üç train workload pilot acceptance matrix'i dokuz kombinasyonda tam completion ve policy separation ile tamamlanmıştır
 - Default kube-scheduler için deployment patch yapmayan external-reference evaluator yolu ve live debug smoke tamamlanmıştır
 - Evaluator custom ve external baseline'ları tek komutta round-robin tekrarlayıp tek output'ta birleştirebilmektedir
-- V2 train/holdout workload'ları için henüz tekrarlı official baseline veya optimizer sonucu üretilmemiştir; sıradaki iş Gate 4 tekrarlı baseline protokolüdür
+- Üç V2 train workload üzerinde üç custom policy ve default kube-scheduler için üç tekrarlı official baseline protokolü tamamlanmıştır
+- Official baseline artifactleri, manifestleri ve mean/sample-SD/worst-case özetleri commitlenmiştir
+- Sıradaki iş Gate 5 için clean optimizer protocol SHA/tag oluşturup `42`, `123`, `999` seed'lerini sequential çalıştırmaktır
 
 Başka bir ifadeyle:
 
@@ -2351,7 +2443,7 @@ Sonuç:
 - [x] Polling adequacy ratio ve resource metric source provenance'ını output contract'a ekle
 - [x] Tek V2 baseline ile 24-Pod debug live smoke çalıştır
 - [x] Üç V2 baseline x üç train workload pilot acceptance matrix'ini çalıştır
-- [ ] Workload checksum ve instantiate edilen mutlak resource request'lerini official manifestte sakla
+- [x] Workload checksum ve instantiate edilen mutlak resource request'lerini official manifestte sakla
 
 Çıkış koşulu:
 
@@ -2372,13 +2464,19 @@ Sonuç:
 - [x] Placement ve consolidation metriklerini ortak karşılaştırma zemini olarak önceliklendir
 - [x] Default kube-scheduler external-reference debug smoke'unu clean commit üzerinden çalıştır
 - [x] Custom ve external baseline'lar için tek komutlu repetition desteği ve live debug smoke ekle
-- [ ] Üç V2 train workload üzerinde tekrarlı official default kube-scheduler baseline'ı çalıştır
-- [ ] Üç custom V2 baseline'ı aynı repetition ve manifest protokolüyle official çalıştır
+- [x] Üç V2 train workload üzerinde tekrarlı official default kube-scheduler baseline'ı çalıştır
+- [x] Üç custom V2 baseline'ı aynı repetition ve manifest protokolüyle official çalıştır
 - [ ] Uygunsa kube-scheduler `NodeResourcesFit` / `MostAllocated` packing referansını ayrıca ölç
 
 Çıkış koşulu:
 
 - Her baseline aynı workload, cluster ve raporlama protokolü altında izlenebilir olmalı
+
+Sonuç:
+
+- Gate 4 çıkış koşulu tamamlandı
+- `MostAllocated` karşılaştırması opsiyonel genişletme olarak ertelendi
+- Gate 5 official optimization ve doğrulama artık sıradaki aktif kapıdır
 
 ### Gate 5 - Official optimization ve doğrulama
 
