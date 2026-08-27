@@ -1943,6 +1943,88 @@ scheduler Pod kaldığı doğrulandı ve beş kind container tekrar durduruldu. 
 acceptance matrix maddesi bu nedenle hâlâ tamamlanmış sayılmamaktadır; pilot yeni
 fix commit'i üzerinden baştan çalıştırılacaktır.
 
+### 3.51. Gate 3 V2 baseline acceptance pilotunu tamamladık
+
+Rollout overlap düzeltmesinden sonra üç V2 baseline x üç train workload matrisi
+clean `aa5e3d9f984bee6eff537b3b57329321544c4d4c` SHA'sından yeniden çalıştırıldı.
+Bu koşu workload feasibility, measurement completeness, support metric provenance
+ve policy separation kabulü içindir; tek tekrarlı olduğu için final baseline veya
+paper sonucu değildir.
+
+Artifact sırası korunmuştur:
+
+- results commit: `3ba119a results: record v2 gate3 baseline pilot`
+- artifact directory:
+  [`results/2026-08-27-v2-gate3-baseline-pilot`](./results/2026-08-27-v2-gate3-baseline-pilot)
+- execution Git SHA: `aa5e3d9f984bee6eff537b3b57329321544c4d4c`
+- execution tree: clean
+- class: `pilot`
+- `paperEvidenceEligible: false`
+
+Her workload ayrı batch olarak şu ortak protokolle çalıştırıldı:
+
+```bash
+KUBECONFIG=/home/ismail/.kube/config go run ./cmd/evaluator \
+  --workload ../workloads/v2/<workload>.json \
+  --weights-file ../experiments/weights-v2.json \
+  --poll-interval 250ms \
+  --timeout 90s \
+  --output /tmp/<output>.json
+```
+
+Canlı deployment'ın `Recreate` kullandığı ve exact-one-replica convergence sağladığı
+koşu öncesinde doğrulandı. Her batch arasında evaluator'ın scheduler weight'lerini
+canonical `0.25/0.25/0.25/0.25` değerlerine restore ettiği ve namespace'in boş
+kaldığı preflight ile kontrol edildi. Son batch sonrasında scheduler interval
+`2s`ye restore edildi, final postflight geçti ve beş kind container durduruldu.
+
+Dokuz kombinasyonun tamamında:
+
+- `24/24` Pod schedule edildi ve tamamlandı
+- `unschedulableCount = 0`
+- decision, Kubernetes scheduled ve evaluator observation timestamp count'ları
+  `24/24` oldu
+- minimum duration/poll ratio `40x` olarak korundu
+- requested-resource source ve raw per-worker sample'lar output'ta yer aldı
+
+Tek-run pilot özeti:
+
+| Workload | Policy | p95 decision (s) | Max occupied workers | Mean dominant-load variance |
+| --- | --- | ---: | ---: | ---: |
+| `cpu-tight-train` | balanced | 1.220 | 4 | 0.0116 |
+| `cpu-tight-train` | spread-heavy | 1.144 | 4 | 0.0035 |
+| `cpu-tight-train` | consolidation-heavy | 1.225 | 3 | 0.1263 |
+| `mem-tight-train` | balanced | 1.175 | 4 | 0.0111 |
+| `mem-tight-train` | spread-heavy | 1.348 | 4 | 0.0043 |
+| `mem-tight-train` | consolidation-heavy | 1.159 | 3 | 0.1267 |
+| `fragmenting-mix-train` | balanced | 1.645 | 3 | 0.1066 |
+| `fragmenting-mix-train` | spread-heavy | 1.216 | 4 | 0.0076 |
+| `fragmenting-mix-train` | consolidation-heavy | 1.221 | 3 | 0.1053 |
+
+Bu pilotun kabul açısından gösterdiği davranış:
+
+- CPU ve memory tight workload'larda consolidation-heavy 3 worker, balanced ve
+  spread-heavy 4 worker kullandı
+- fragmenting-mix'te spread-heavy 4 worker ve düşük load variance üretirken
+  balanced ile consolidation-heavy 3 worker kullandı
+- spread-heavy'nin düşük variance, consolidation-heavy'nin yüksek variance
+  üretmesi policy feature'larının placement karakterini değiştirdiğini gösterdi
+- fragmenting-mix'te spread-heavy ile consolidation-heavy p95 değerleri yakınken
+  occupied-worker sayısı ayrıştı
+
+Bu maddeler yalnızca acceptance sinyalidir. Tek tekrar içindeki p95 sıralaması
+stokastik jitter'dan ayrıştırılamaz; örneğin mem-tight altında consolidation-heavy
+hem daha az worker hem daha düşük p95 üretmiş olsa da bu sonuç dominance claim'i
+olarak kullanılmayacaktır. Aynı şekilde requested utilization ve dominant-load
+variance gerçek donanım utilization'ı değil, Pod request'lerinden türetilen destek
+metrikleridir. CPU-memory imbalance da doğrudan fragmentation ölçümü değildir.
+
+Gate 3 kabul koşulu tamamlanmıştır: 24-Pod workload'lar feasibility kaybı olmadan
+ölçülebilmiş, objective ve destek metrikleri eksiksiz üretilmiş ve farklı policy
+karakterleri occupied-worker/variance eksenlerinde görünür olmuştur. Sıradaki iş
+Gate 4 baseline protokolünü tamamlamak, özellikle default kube-scheduler dış
+referansını aynı workload ve artifact sözleşmesine bağlamaktır.
+
 ## 4. Şu Anki Durum
 
 Şu anda proje durumu şöyledir:
@@ -2009,7 +2091,8 @@ fix commit'i üzerinden baştan çalıştırılacaktır.
 - Gate 3 requested-resource support metric kodu ve V2 pressure workload suite'i commitlenmiştir
 - V2 `cpu-tight-train` debug live smoke'u `24/24` completion, 123 source-tagged resource sample ve temiz postflight ile tamamlanmıştır
 - İlk V2 baseline pilotu scheduler rollout overlap yarışı nedeniyle geçersiz sayılmış; deployment `Recreate` ve strict rollout convergence ile düzeltilmiştir
-- V2 train/holdout workload'ları için henüz comparative matrix veya official sonuç üretilmemiştir; sıradaki iş pilot acceptance matrix'tir
+- Üç V2 baseline x üç train workload pilot acceptance matrix'i dokuz kombinasyonda tam completion ve policy separation ile tamamlanmıştır
+- V2 train/holdout workload'ları için henüz tekrarlı official baseline veya optimizer sonucu üretilmemiştir; sıradaki iş Gate 4 baseline protokolüdür
 
 Başka bir ifadeyle:
 
@@ -2110,12 +2193,19 @@ Sonuç:
 - [x] Requested utilization, dominant-load variance ve CPU-memory imbalance destek metriklerini ekle
 - [x] Polling adequacy ratio ve resource metric source provenance'ını output contract'a ekle
 - [x] Tek V2 baseline ile 24-Pod debug live smoke çalıştır
-- [ ] Üç V2 baseline x üç train workload pilot acceptance matrix'ini çalıştır
+- [x] Üç V2 baseline x üç train workload pilot acceptance matrix'ini çalıştır
 - [ ] Workload checksum ve instantiate edilen mutlak resource request'lerini official manifestte sakla
 
 Çıkış koşulu:
 
 - Policy farkları yalnızca birkaç Pod veya tek cadence tick'ine bağlı olmadan ölçülebilmeli
+
+Sonuç:
+
+- Gate 3 acceptance tamamlandı
+- pilot manifest workload checksum ve mutlak request'leri taşır; aynı provenance
+  official tekrarlı koşul manifestlerinde de zorunlu tutulacaktır
+- tek-run pilot değerleri final paper claim'i değildir
 
 ### Gate 4 - Baseline protokolü
 
