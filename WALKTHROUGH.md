@@ -1307,6 +1307,56 @@ Uygulama hard gate'i:
 - deterministic tie-break korunmalı
 - eski `v1` artifact'ler ve deney tanımları değiştirilmemeli
 
+### 3.42. Policy space `v2`yi scheduler, evaluator ve optimizer boyunca uyguladık
+
+Seçilen `v2` tasarımı tek bir score fonksiyonu değişikliği olarak bırakılmadı.
+Scheduler'ın uyguladığı policy ile evaluator'ın patch ettiği, optimizer'ın ürettiği ve artifact'lerin raporladığı policy'nin aynı contract olması için ortak bir tip oluşturuldu.
+
+Uygulama zinciri:
+
+- `6c569d4 test: preserve v1 policy audit fixture`: Eski `v1` formülü production tiplerinden ayrılmış, self-contained historical regression fixture olarak korunmuştur.
+- `0ef5093 feat: add canonical v2 scheduler scoring`: Scheduler score'u yeni dört feature'a geçirilmiş; managed Pod sayımı resource-usage sayımından ayrılmış; feature independence, resource fit ve tie-break davranışları test edilmiştir.
+- `2cf6178 refactor: centralize v2 policy weights`: Ortak `pkg/policy.WeightSet` ve `policy.Version = "v2"` tanımlanmış; geçerli vector'lar L1 normalize edilmiş; negatif, `NaN`, sonsuz ve all-zero vector'lar reddedilmiştir.
+- `aadd682 feat: integrate canonical v2 policy evaluation`: Evaluator ve optimizer ortak contract'a geçirilmiş; deployment patch, versioned input/output, candidate normalization, offspring repair ve exact cache key uygulanmıştır.
+
+`aadd682` içindeki güvenlik ayrıntıları:
+
+- Scheduler deployment patch'i yeni `WEIGHT_BALANCE` ve `WEIGHT_CONSOLIDATION` env alanlarını kullanmaktadır.
+- JSON experiment input'u `policyVersion: "v2"` istemekte ve bilinmeyen/legacy alanları sessizce kabul etmemektedir.
+- JSON ve CSV output'larına `policyVersion`/`policy_version` provenance alanı eklenmiştir.
+- Optimizer adayları evaluation öncesinde canonical normalize edilmektedir.
+- Mutation sonrası oluşabilecek all-zero offspring, ebeveynlerin canonical ortalamasıyla deterministik olarak onarılmaktadır.
+- Cache key artık altı ondalığa yuvarlanmış metin yerine dört `float64` değerinin exact bit pattern'ini kullanmaktadır; birbirinden farklı yakın adaylar aynı evaluation cache kaydına çökmez.
+
+Yeni baseline contract'ı [experiments/weights-v2.json](./experiments/weights-v2.json) içinde sürümlü olarak tanımlandı:
+
+- `evok8s-v2-balanced = (0.25, 0.25, 0.25, 0.25)`
+- `evok8s-v2-spread-heavy = (0.35, 0.35, 0.25, 0.05)`
+- `evok8s-v2-consolidation-heavy = (0.10, 0.10, 0.20, 0.60)`
+
+Eski [experiments/weights-smoke.json](./experiments/weights-smoke.json) değiştirilmedi.
+Bu dosya ve mevcut `results/` içeriği `v1 pilot` kanıtı olarak kalmaktadır; yeni evaluator bunları `v2` input'u gibi yorumlamak yerine açık hata vermektedir.
+
+Kod-seviyesi doğrulama:
+
+```text
+go test -count=1 -short -race ./...
+go vet ./...
+git diff --check
+jq -e '.policyVersion == "v2" and (.runs | length == 3) and all(.runs[]; ((.weights.freeCPU + .weights.freeMem + .weights.balance + .weights.consolidation) - 1 | fabs) < 1e-12)' experiments/weights-v2.json
+```
+
+Sonuç:
+
+- bütün Go paketleri önbelleksiz race testinden geçti
+- `go vet ./...` sıfır bulgu ile tamamlandı
+- `weights-v2.json` için policy version, run count ve weight toplamı `jq` ile doğrulandı
+- v1 raw result, paper ve historical experiment dosyaları bu implementasyon commit'ine dahil edilmedi
+
+Bu adımda kind cluster yeniden başlatılmadı ve deney koşturulmadı.
+Dolayısıyla bunlar official sonuç değil, Gate 1'in kod ve contract implementasyonudur.
+Gate 1'in kalan operasyonel çıkış koşulu, temiz commit üzerinden yapılacak hafif bir `debug` sınıfı live smoke testidir.
+
 ## 4. Şu Anki Durum
 
 Şu anda proje durumu şöyledir:
@@ -1347,7 +1397,13 @@ Uygulama hard gate'i:
 - Gate 1'in scale-invariance ve Packing-dependency tanı testleri tamamlanmış durumda
 - Gate 1 için canonical weight normalization kararı verilmiş durumda
 - Gate 1 `v2` feature seti `FreeCPU`, `FreeMem`, `Balance`, `Consolidation` olarak seçilmiş durumda
-- Gate 1'in sıradaki işi test-first `v2` scoring ve weight contract implementasyonudur
+- Gate 1 test-first `v2` scheduler scoring implementasyonu tamamlanmış durumda
+- Scheduler, evaluator ve optimizer ortak, sürümlü ve canonical `v2` weight contract'ını kullanıyor
+- `v2` experiment input'u legacy alanları reddediyor; JSON ve CSV output'ları policy version taşıyor
+- `v2` için üç yeni baseline [experiments/weights-v2.json](./experiments/weights-v2.json) içinde tanımlanmış durumda
+- Gate 1 kod doğrulamaları race detector ve `go vet` ile geçmiştir
+- Gate 1'in kalan işi temiz commit üzerinden debug sınıfı live integration smoke testidir
+- Official optimizer koşuları Gate 2-5 protokol çıkış koşullarına kadar blokludur
 
 Başka bir ifadeyle:
 
@@ -1388,22 +1444,30 @@ Durum:
 - bağımlılığın heterojen kapasitelere genellenmediğini gösteren sınır testi tamamlandı
 - weight normalization tasarımı nonnegative L1 simplex olarak seçildi
 - bağımsız operasyonel feature'lar `Balance` ve `Consolidation` olarak seçildi
-- test-first scheduler, evaluator ve optimizer implementasyonu bekliyor
+- test-first scheduler, evaluator ve optimizer implementasyonu tamamlandı
+- policy input/output contract'ı `policyVersion: "v2"` ile sürümlendi
+- scale-equivalent vector'lar evaluation öncesinde canonical normalize ediliyor
+- dört feature'ın representative node kararlarını bağımsız değiştirdiği test edildi
+- legacy `v1` input'ların sessiz migration'ı engellendi
+- debug sınıfı live integration smoke testi bekliyor
 
-- Önce mevcut score için scale invariance ve ranking-equivalence testleri ekle
-- `Packing` bağımlılığını cebirsel ve ampirik olarak doğrula
-- Weight normalization ile temsil ölçeğini sabitle
-- `Packing` yerine bağımsız bir operasyonel sinyal seç veya mevcut bağımlılığı açıkça modelden çıkar
-- Her feature'ın en az bir temsilci durumda node sıralamasını bağımsız değiştirdiğini test et
-- Tie-breaking ve weight sınırlarını test et
+- [x] Mevcut score için scale invariance ve ranking-equivalence testleri ekle
+- [x] `Packing` bağımlılığını cebirsel ve ampirik olarak doğrula
+- [x] Weight normalization ile temsil ölçeğini sabitle
+- [x] `Packing` yerine bağımsız operasyonel sinyaller seç
+- [x] Her feature'ın en az bir temsilci durumda node sıralamasını bağımsız değiştirdiğini test et
+- [x] Tie-breaking ve weight sınırlarını test et
+- [ ] Temiz commit üzerinden debug sınıfı live integration smoke testi yap
 
-Karar noktası:
+Karar:
 
-- yeni sinyal fragmentation, dominant-resource residual, post-placement imbalance veya new-node activation davranışlarından hangisini en doğru temsil edecek?
+- post-placement CPU-memory balance ile scheduler-managed workload consolidation iki ayrı feature olarak kullanılacak
+- dominant-resource residual ve daha gelişmiş fragmentation sinyalleri bu sürümün dışında tutulacak
 
 Çıkış koşulu:
 
 - optimizer'ın aradığı parametrelerin efektif policy farklılığı ürettiği testlerle gösterilmeli
+- temiz commit üzerinden scheduler patch, rollout, workload replay ve default weight restoration akışı smoke testte geçmeli
 
 ### Gate 2 - Measurement `v2`
 
