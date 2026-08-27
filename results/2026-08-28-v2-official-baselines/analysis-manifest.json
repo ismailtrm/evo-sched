@@ -1,0 +1,53 @@
+{
+  "schemaVersion": "v1",
+  "analysisName": "official-v2-repeated-baseline-summary",
+  "status": "completed",
+  "sourceResultsCommit": "244f4058397fd16002e59a2a5a24741a658d844d",
+  "summarizerCommit": "577773f0643d23586a76213204c7cc7c11852220",
+  "command": "go run ./cmd/baseline-summary --inputs ../results/2026-08-28-v2-official-baselines/cpu-tight-custom.json,../results/2026-08-28-v2-official-baselines/cpu-tight-default.json,../results/2026-08-28-v2-official-baselines/mem-tight-custom.json,../results/2026-08-28-v2-official-baselines/mem-tight-default.json,../results/2026-08-28-v2-official-baselines/fragmenting-mix-custom.json,../results/2026-08-28-v2-official-baselines/fragmenting-mix-default.json --output ../results/2026-08-28-v2-official-baselines/summary.json",
+  "workingDirectory": "/home/ismail/evo-sched/scheduler",
+  "statistics": {
+    "repetitionsPerWorkloadPolicy": 3,
+    "dispersion": "sample standard deviation with denominator n-1",
+    "worstCaseDecisionLatency": "maximum repeated-run p95 scheduling decision latency",
+    "worstCaseOccupiedWorkers": "maximum repeated-run max workload-occupied worker count"
+  },
+  "acceptance": {
+    "sourceResultRows": 36,
+    "workloadPolicyGroups": 12,
+    "aggregatePolicyGroups": 4,
+    "unschedulableTotal": 0,
+    "externalDecisionLatencySerializedAsUnavailable": true
+  },
+  "outputs": [
+    {
+      "path": "summary.json",
+      "sha256": "b2662b07ea2e8b74fc60923f7b52c18322213397aca68ec53b48858faf182d85"
+    },
+    {
+      "path": "summary.csv",
+      "sha256": "28fc11e47ba860abfe86dc9aaee36c60fdf5a5a1ff92bfc70bbc98c582d118e7"
+    }
+  ],
+  "interpretationBoundaries": [
+    "Custom policy decision-latency aggregates are based on high-resolution scheduler decision annotations.",
+    "Default kube-scheduler has no comparable high-resolution decision timestamp and therefore has no decision-latency aggregate in these outputs.",
+    "Common placement comparisons use completion, unschedulable count, maximum workload-occupied workers, dominant requested-load variance, and CPU-memory imbalance.",
+    "The aggregate sample standard deviation pools nine workload-level repetitions and therefore combines between-workload and within-workload variation; workload-level rows should be used for per-regime uncertainty."
+  ],
+  "keyObservedValues": {
+    "customAggregateP95DecisionLatencyMeanSeconds": {
+      "evok8s-v2-balanced": 1.287138,
+      "evok8s-v2-spread-heavy": 1.208286,
+      "evok8s-v2-consolidation-heavy": 1.255116
+    },
+    "customAggregateMaxOccupiedWorkersMean": {
+      "evok8s-v2-balanced": 3.666667,
+      "evok8s-v2-spread-heavy": 4.0,
+      "evok8s-v2-consolidation-heavy": 3.0
+    },
+    "externalAggregateMaxOccupiedWorkersMean": {
+      "kube-scheduler-default": 4.0
+    }
+  }
+}
