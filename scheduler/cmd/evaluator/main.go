@@ -27,6 +27,7 @@ type options struct {
 	weights             string
 	weightsFile         string
 	runName             string
+	repetitions         int
 	pollInterval        time.Duration
 	timeout             time.Duration
 	cleanup             bool
@@ -53,6 +54,7 @@ func parseFlags() options {
 	flag.StringVar(&opts.weights, "weights", "", "Optional single run weights in FreeCPU,FreeMem,Balance,Consolidation order")
 	flag.StringVar(&opts.weightsFile, "weights-file", "", "Optional JSON file describing named experiment runs")
 	flag.StringVar(&opts.runName, "run-name", "", "Run name for external-reference mode; defaults to scheduler name")
+	flag.IntVar(&opts.repetitions, "repetitions", 1, "Number of repeated runs; policy batches use round-robin repetition order")
 	flag.DurationVar(&opts.pollInterval, "poll-interval", time.Second, "Polling interval for pod state collection")
 	flag.DurationVar(&opts.timeout, "timeout", 0, "Per-run timeout; defaults from workload length")
 	flag.BoolVar(&opts.cleanup, "cleanup", true, "Delete evaluator pods after each run")
@@ -73,6 +75,9 @@ func run(opts options) error {
 	}
 	if mode == evaluator.SchedulerModeExternalReference && (opts.weights != "" || opts.weightsFile != "") {
 		return fmt.Errorf("--weights and --weights-file are not valid in external-reference mode")
+	}
+	if opts.repetitions < 1 {
+		return fmt.Errorf("--repetitions must be at least 1")
 	}
 
 	clientset, err := evaluator.NewClientset()
@@ -98,7 +103,25 @@ func run(opts options) error {
 		if runName == "" {
 			runName = opts.schedulerName
 		}
-		batch, runErr = evaluator.RunExternalReference(context.Background(), clientset, runnerOpts, opts.workloadPath, runName)
+		runNames, err := repeatRunNames(runName, opts.repetitions)
+		if err != nil {
+			return err
+		}
+		for i, name := range runNames {
+			next, err := evaluator.RunExternalReference(context.Background(), clientset, runnerOpts, opts.workloadPath, name)
+			if i == 0 {
+				batch = next
+			} else {
+				batch, runErr = mergeBatchResults(batch, next)
+				if runErr != nil {
+					break
+				}
+			}
+			if err != nil {
+				runErr = err
+				break
+			}
+		}
 	} else {
 		currentWeights, err := evaluator.CurrentDeploymentWeights(context.Background(), clientset, opts.schedulerNamespace, opts.schedulerDeployment)
 		if err != nil {
@@ -108,12 +131,60 @@ func run(opts options) error {
 		if err != nil {
 			return err
 		}
+		runSpecs, err = expandRunSpecs(runSpecs, opts.repetitions)
+		if err != nil {
+			return err
+		}
 		batch, runErr = evaluator.RunBatch(context.Background(), clientset, runnerOpts, opts.workloadPath, runSpecs)
 	}
 	if err := emitOutputs(batch, opts); err != nil {
 		return err
 	}
 	return runErr
+}
+
+func expandRunSpecs(specs []evaluator.ExperimentRunSpec, repetitions int) ([]evaluator.ExperimentRunSpec, error) {
+	if repetitions < 1 {
+		return nil, fmt.Errorf("repetitions must be at least 1")
+	}
+	if repetitions == 1 {
+		return append([]evaluator.ExperimentRunSpec(nil), specs...), nil
+	}
+	expanded := make([]evaluator.ExperimentRunSpec, 0, len(specs)*repetitions)
+	for repetition := 1; repetition <= repetitions; repetition++ {
+		for _, spec := range specs {
+			spec.Name = fmt.Sprintf("%s-r%02d", spec.Name, repetition)
+			expanded = append(expanded, spec)
+		}
+	}
+	return expanded, nil
+}
+
+func repeatRunNames(base string, repetitions int) ([]string, error) {
+	if repetitions < 1 {
+		return nil, fmt.Errorf("repetitions must be at least 1")
+	}
+	if repetitions == 1 {
+		return []string{base}, nil
+	}
+	names := make([]string, repetitions)
+	for repetition := 1; repetition <= repetitions; repetition++ {
+		names[repetition-1] = fmt.Sprintf("%s-r%02d", base, repetition)
+	}
+	return names, nil
+}
+
+func mergeBatchResults(base, next evaluator.BatchResult) (evaluator.BatchResult, error) {
+	if base.PolicyVersion != next.PolicyVersion ||
+		base.SchedulerMode != next.SchedulerMode ||
+		base.MeasurementVersion != next.MeasurementVersion ||
+		base.Workload != next.Workload ||
+		base.WorkloadPath != next.WorkloadPath {
+		return base, fmt.Errorf("cannot merge incompatible evaluator batches")
+	}
+	base.Results = append(base.Results, next.Results...)
+	base.Runs = append(base.Runs, next.Runs...)
+	return base, nil
 }
 
 func parseSchedulerMode(raw string) (evaluator.SchedulerMode, error) {
