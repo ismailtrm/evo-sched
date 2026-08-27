@@ -634,10 +634,17 @@ func deploymentReady(deploy *appsv1.Deployment) bool {
 	if deploy.Spec.Replicas != nil {
 		replicas = *deploy.Spec.Replicas
 	}
+	terminatingReplicas := int32(0)
+	if deploy.Status.TerminatingReplicas != nil {
+		terminatingReplicas = *deploy.Status.TerminatingReplicas
+	}
 	return deploy.Status.ObservedGeneration >= deploy.Generation &&
+		deploy.Status.Replicas == replicas &&
 		deploy.Status.UpdatedReplicas == replicas &&
 		deploy.Status.ReadyReplicas == replicas &&
-		deploy.Status.AvailableReplicas == replicas
+		deploy.Status.AvailableReplicas == replicas &&
+		deploy.Status.UnavailableReplicas == 0 &&
+		terminatingReplicas == 0
 }
 
 func estimatedTimeout(workload []WorkloadItem) time.Duration {

@@ -599,6 +599,64 @@ func TestCreateWorkloadPodStoresHighResolutionSubmissionTimestamp(t *testing.T) 
 	}
 }
 
+func TestDeploymentReadyRequiresExactReplicaSetConvergence(t *testing.T) {
+	replicas := int32(1)
+	terminating := int32(1)
+	tests := []struct {
+		name   string
+		status appsv1.DeploymentStatus
+		want   bool
+	}{
+		{
+			name: "exactly one ready replica",
+			status: appsv1.DeploymentStatus{
+				ObservedGeneration: 2,
+				Replicas:           1,
+				UpdatedReplicas:    1,
+				ReadyReplicas:      1,
+				AvailableReplicas:  1,
+			},
+			want: true,
+		},
+		{
+			name: "old replica still exists",
+			status: appsv1.DeploymentStatus{
+				ObservedGeneration: 2,
+				Replicas:           2,
+				UpdatedReplicas:    1,
+				ReadyReplicas:      1,
+				AvailableReplicas:  1,
+			},
+			want: false,
+		},
+		{
+			name: "old replica is terminating",
+			status: appsv1.DeploymentStatus{
+				ObservedGeneration:  2,
+				Replicas:            1,
+				UpdatedReplicas:     1,
+				ReadyReplicas:       1,
+				AvailableReplicas:   1,
+				TerminatingReplicas: &terminating,
+			},
+			want: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			deploy := &appsv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{Generation: 2},
+				Spec:       appsv1.DeploymentSpec{Replicas: &replicas},
+				Status:     tt.status,
+			}
+			if got := deploymentReady(deploy); got != tt.want {
+				t.Fatalf("deploymentReady() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 func ptrTime(t time.Time) *time.Time {
 	return &t
 }
