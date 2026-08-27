@@ -1,6 +1,12 @@
 package evaluator
 
-import "time"
+import (
+	"time"
+
+	"evok8s-scheduler/pkg/policy"
+)
+
+const PolicyVersion = policy.Version
 
 type WorkloadItem struct {
 	Name            string  `json:"name"`
@@ -18,12 +24,7 @@ type WorkloadBase struct {
 	WorkerMemoryMiB int64 `json:"workerMemoryMiB"`
 }
 
-type WeightSet struct {
-	FreeCPU    float64 `json:"freeCPU"`
-	FreeMem    float64 `json:"freeMem"`
-	PodPenalty float64 `json:"podPenalty"`
-	Packing    float64 `json:"packing"`
-}
+type WeightSet = policy.WeightSet
 
 type ExperimentRunSpec struct {
 	Name    string    `json:"name"`
@@ -31,7 +32,8 @@ type ExperimentRunSpec struct {
 }
 
 type ExperimentSpec struct {
-	Runs []ExperimentRunSpec `json:"runs"`
+	PolicyVersion string              `json:"policyVersion"`
+	Runs          []ExperimentRunSpec `json:"runs"`
 }
 
 type PodTiming struct {
@@ -57,18 +59,19 @@ type Summary struct {
 }
 
 type RunResult struct {
-	Name        string      `json:"name"`
-	RunID       string      `json:"runId"`
-	Namespace   string      `json:"namespace"`
-	Scheduler   string      `json:"schedulerName"`
-	Workload    string      `json:"workload"`
-	Weights     WeightSet   `json:"weights"`
-	StartedAt   time.Time   `json:"startedAt"`
-	FinishedAt  time.Time   `json:"finishedAt"`
-	Summary     Summary     `json:"summary"`
-	Pods        []PodTiming `json:"pods"`
-	ActiveNodes map[int]int `json:"activeNodesBySample"`
-	Notes       []string    `json:"notes,omitempty"`
+	PolicyVersion string      `json:"policyVersion"`
+	Name          string      `json:"name"`
+	RunID         string      `json:"runId"`
+	Namespace     string      `json:"namespace"`
+	Scheduler     string      `json:"schedulerName"`
+	Workload      string      `json:"workload"`
+	Weights       WeightSet   `json:"weights"`
+	StartedAt     time.Time   `json:"startedAt"`
+	FinishedAt    time.Time   `json:"finishedAt"`
+	Summary       Summary     `json:"summary"`
+	Pods          []PodTiming `json:"pods"`
+	ActiveNodes   map[int]int `json:"activeNodesBySample"`
+	Notes         []string    `json:"notes,omitempty"`
 }
 
 type ComparisonRow struct {
@@ -84,6 +87,7 @@ type ComparisonRow struct {
 }
 
 type BatchResult struct {
+	PolicyVersion    string          `json:"policyVersion"`
 	Workload         string          `json:"workload"`
 	WorkloadPath     string          `json:"workloadPath"`
 	WorkloadBase     *WorkloadBase   `json:"workloadBase,omitempty"`

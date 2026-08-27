@@ -13,6 +13,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"evok8s-scheduler/pkg/policy"
+
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -74,12 +76,30 @@ func CurrentDeploymentWeights(ctx context.Context, cs kubernetes.Interface, name
 		return WeightSet{}, fmt.Errorf("scheduler deployment has no containers")
 	}
 
-	return WeightSet{
-		FreeCPU:    envFloat64(deploy.Spec.Template.Spec.Containers[0].Env, "WEIGHT_FREE_CPU", 1.0),
-		FreeMem:    envFloat64(deploy.Spec.Template.Spec.Containers[0].Env, "WEIGHT_FREE_MEM", 1.0),
-		PodPenalty: envFloat64(deploy.Spec.Template.Spec.Containers[0].Env, "WEIGHT_POD_PENALTY", 0.5),
-		Packing:    envFloat64(deploy.Spec.Template.Spec.Containers[0].Env, "WEIGHT_PACKING", 0.2),
-	}, nil
+	env := deploy.Spec.Template.Spec.Containers[0].Env
+	freeCPU, err := envFloat64(env, "WEIGHT_FREE_CPU", 1.0)
+	if err != nil {
+		return WeightSet{}, err
+	}
+	freeMem, err := envFloat64(env, "WEIGHT_FREE_MEM", 1.0)
+	if err != nil {
+		return WeightSet{}, err
+	}
+	balance, err := envFloat64(env, "WEIGHT_BALANCE", 1.0)
+	if err != nil {
+		return WeightSet{}, err
+	}
+	consolidation, err := envFloat64(env, "WEIGHT_CONSOLIDATION", 1.0)
+	if err != nil {
+		return WeightSet{}, err
+	}
+
+	return policy.Normalize(WeightSet{
+		FreeCPU:       freeCPU,
+		FreeMem:       freeMem,
+		Balance:       balance,
+		Consolidation: consolidation,
+	})
 }
 
 func CurrentWorkloadBase(ctx context.Context, cs kubernetes.Interface) (WorkloadBase, error) {
@@ -142,6 +162,7 @@ func RunBatch(ctx context.Context, cs kubernetes.Interface, opts RunnerOptions, 
 	}()
 
 	batch := BatchResult{
+		PolicyVersion:    PolicyVersion,
 		Workload:         workloadName(workloadPath),
 		WorkloadPath:     workloadPath,
 		WorkloadBase:     &workloadBase,
@@ -151,6 +172,11 @@ func RunBatch(ctx context.Context, cs kubernetes.Interface, opts RunnerOptions, 
 	}
 
 	for _, spec := range runSpecs {
+		normalized, err := policy.Normalize(spec.Weights)
+		if err != nil {
+			return batch, fmt.Errorf("experiment run %q weights: %w", spec.Name, err)
+		}
+		spec.Weights = normalized
 		if err := cleanupManagedPods(ctx, cs, opts.Namespace); err != nil {
 			return batch, err
 		}
@@ -173,6 +199,11 @@ func EvaluateWorkloads(ctx context.Context, cs kubernetes.Interface, opts Runner
 	if len(workloadPaths) == 0 {
 		return nil, fmt.Errorf("at least one workload is required")
 	}
+	normalized, err := policy.Normalize(spec.Weights)
+	if err != nil {
+		return nil, fmt.Errorf("experiment run %q weights: %w", spec.Name, err)
+	}
+	spec.Weights = normalized
 	if err := ensureNamespace(ctx, cs, opts.Namespace); err != nil {
 		return nil, err
 	}
@@ -204,6 +235,7 @@ func EvaluateWorkloads(ctx context.Context, cs kubernetes.Interface, opts Runner
 		}
 
 		batch := BatchResult{
+			PolicyVersion:    PolicyVersion,
 			Workload:         workloadName(workloadPath),
 			WorkloadPath:     workloadPath,
 			WorkloadBase:     &workloadBase,
@@ -327,17 +359,18 @@ func executeRun(
 	pods := flattenResults(results)
 	sort.Slice(pods, func(i, j int) bool { return pods[i].Name < pods[j].Name })
 	runResult := RunResult{
-		Name:        spec.Name,
-		RunID:       runID,
-		Namespace:   opts.Namespace,
-		Scheduler:   opts.SchedulerName,
-		Workload:    workloadPath,
-		Weights:     spec.Weights,
-		StartedAt:   startedAt,
-		FinishedAt:  finishedAt,
-		Summary:     SummarizePods(pods, int(maxActiveNodes.Load())),
-		Pods:        pods,
-		ActiveNodes: activeSamples,
+		PolicyVersion: PolicyVersion,
+		Name:          spec.Name,
+		RunID:         runID,
+		Namespace:     opts.Namespace,
+		Scheduler:     opts.SchedulerName,
+		Workload:      workloadPath,
+		Weights:       spec.Weights,
+		StartedAt:     startedAt,
+		FinishedAt:    finishedAt,
+		Summary:       SummarizePods(pods, int(maxActiveNodes.Load())),
+		Pods:          pods,
+		ActiveNodes:   activeSamples,
 	}
 	if monitorErr != nil {
 		runResult.Notes = append(runResult.Notes, monitorErr.Error())
@@ -348,13 +381,14 @@ func executeRun(
 
 func emptyRunResult(opts RunnerOptions, spec ExperimentRunSpec, workloadPath string, startedAt time.Time) RunResult {
 	return RunResult{
-		Name:       spec.Name,
-		Namespace:  opts.Namespace,
-		Scheduler:  opts.SchedulerName,
-		Workload:   workloadPath,
-		Weights:    spec.Weights,
-		StartedAt:  startedAt,
-		FinishedAt: time.Now().UTC(),
+		PolicyVersion: PolicyVersion,
+		Name:          spec.Name,
+		Namespace:     opts.Namespace,
+		Scheduler:     opts.SchedulerName,
+		Workload:      workloadPath,
+		Weights:       spec.Weights,
+		StartedAt:     startedAt,
+		FinishedAt:    time.Now().UTC(),
 	}
 }
 
@@ -403,6 +437,12 @@ func cleanupPodsBySelector(ctx context.Context, cs kubernetes.Interface, namespa
 }
 
 func applyWeights(ctx context.Context, cs kubernetes.Interface, namespace, name string, weights WeightSet) error {
+	normalized, err := policy.Normalize(weights)
+	if err != nil {
+		return fmt.Errorf("normalize scheduler weights: %w", err)
+	}
+	weights = normalized
+
 	var lastErr error
 	for attempt := 0; attempt < 5; attempt++ {
 		deploy, err := cs.AppsV1().Deployments(namespace).Get(ctx, name, metav1.GetOptions{})
@@ -416,8 +456,8 @@ func applyWeights(ctx context.Context, cs kubernetes.Interface, namespace, name 
 		env := deploy.Spec.Template.Spec.Containers[0].Env
 		env = upsertEnv(env, "WEIGHT_FREE_CPU", fmt.Sprintf("%g", weights.FreeCPU))
 		env = upsertEnv(env, "WEIGHT_FREE_MEM", fmt.Sprintf("%g", weights.FreeMem))
-		env = upsertEnv(env, "WEIGHT_POD_PENALTY", fmt.Sprintf("%g", weights.PodPenalty))
-		env = upsertEnv(env, "WEIGHT_PACKING", fmt.Sprintf("%g", weights.Packing))
+		env = upsertEnv(env, "WEIGHT_BALANCE", fmt.Sprintf("%g", weights.Balance))
+		env = upsertEnv(env, "WEIGHT_CONSOLIDATION", fmt.Sprintf("%g", weights.Consolidation))
 		deploy.Spec.Template.Spec.Containers[0].Env = env
 
 		if _, err := cs.AppsV1().Deployments(namespace).Update(ctx, deploy, metav1.UpdateOptions{}); err != nil {
@@ -445,18 +485,18 @@ func upsertEnv(env []corev1.EnvVar, name, value string) []corev1.EnvVar {
 	return append(env, corev1.EnvVar{Name: name, Value: value})
 }
 
-func envFloat64(env []corev1.EnvVar, name string, def float64) float64 {
+func envFloat64(env []corev1.EnvVar, name string, def float64) (float64, error) {
 	for _, item := range env {
 		if item.Name != name {
 			continue
 		}
 		v, err := strconv.ParseFloat(item.Value, 64)
 		if err != nil {
-			return def
+			return 0, fmt.Errorf("parse deployment env %s=%q: %w", name, item.Value, err)
 		}
-		return v
+		return v, nil
 	}
-	return def
+	return def, nil
 }
 
 func waitForRollout(ctx context.Context, cs kubernetes.Interface, namespace, name string) error {

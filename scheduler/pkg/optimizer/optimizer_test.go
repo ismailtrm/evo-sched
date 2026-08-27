@@ -39,14 +39,51 @@ func TestParetoFront(t *testing.T) {
 
 func TestMutateClampsWeights(t *testing.T) {
 	rng := rand.New(rand.NewSource(42))
-	weights := evaluator.WeightSet{FreeCPU: 2, FreeMem: 2, PodPenalty: 0, Packing: 0}
+	weights := evaluator.WeightSet{FreeCPU: 0.5, FreeMem: 0.5, Balance: 0, Consolidation: 0}
 	got := mutate(weights, rng, 1.0, 10.0, 0.0, 2.0)
 
-	values := []float64{got.FreeCPU, got.FreeMem, got.PodPenalty, got.Packing}
+	values := []float64{got.FreeCPU, got.FreeMem, got.Balance, got.Consolidation}
 	for _, value := range values {
 		if value < 0 || value > 2 {
 			t.Fatalf("weight out of bounds: %+v", got)
 		}
+	}
+}
+
+func TestEvaluateCandidateCanonicalizesWeights(t *testing.T) {
+	var evaluated evaluator.WeightSet
+	evaluate := func(weights evaluator.WeightSet) (EvaluationData, error) {
+		evaluated = weights
+		return EvaluationData{}, nil
+	}
+
+	candidate, err := evaluateCandidate(
+		"scaled",
+		"test",
+		0,
+		evaluator.WeightSet{FreeCPU: 2, FreeMem: 1, Balance: 1},
+		evaluate,
+	)
+	if err != nil {
+		t.Fatalf("evaluateCandidate() error = %v", err)
+	}
+	want := evaluator.WeightSet{FreeCPU: 0.5, FreeMem: 0.25, Balance: 0.25}
+	if candidate.Weights != want || evaluated != want {
+		t.Fatalf("candidate=%+v evaluated=%+v want=%+v", candidate.Weights, evaluated, want)
+	}
+}
+
+func TestCanonicalizeOffspringRepairsAllZeroChild(t *testing.T) {
+	parentA := evaluator.WeightSet{FreeCPU: 1}
+	parentB := evaluator.WeightSet{Consolidation: 1}
+
+	got, err := canonicalizeOffspring(evaluator.WeightSet{}, parentA, parentB)
+	if err != nil {
+		t.Fatalf("canonicalizeOffspring() error = %v", err)
+	}
+	want := evaluator.WeightSet{FreeCPU: 0.5, Consolidation: 0.5}
+	if got != want {
+		t.Fatalf("canonicalizeOffspring() = %+v, want %+v", got, want)
 	}
 }
 
@@ -66,7 +103,7 @@ func TestRunKeepsPopulationSize(t *testing.T) {
 		return EvaluationData{
 			Objectives: Objectives{
 				AverageP95Pending:     math.Round((weights.FreeCPU+weights.FreeMem)*1000) / 1000,
-				AverageMaxActiveNodes: math.Round((weights.PodPenalty+weights.Packing)*1000) / 1000,
+				AverageMaxActiveNodes: math.Round((weights.Balance+weights.Consolidation)*1000) / 1000,
 			},
 		}, nil
 	}

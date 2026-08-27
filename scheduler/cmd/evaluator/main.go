@@ -47,7 +47,7 @@ func parseFlags() options {
 	flag.StringVar(&opts.image, "image", "busybox:1.36.1", "Container image for evaluator-created pods")
 	flag.StringVar(&opts.outputPath, "output", "", "Optional output JSON path")
 	flag.StringVar(&opts.csvOutputPath, "csv-output", "", "Optional CSV output path; defaults next to --output")
-	flag.StringVar(&opts.weights, "weights", "", "Optional single run weights in FreeCPU,FreeMem,PodPenalty,Packing order")
+	flag.StringVar(&opts.weights, "weights", "", "Optional single run weights in FreeCPU,FreeMem,Balance,Consolidation order")
 	flag.StringVar(&opts.weightsFile, "weights-file", "", "Optional JSON file describing named experiment runs")
 	flag.DurationVar(&opts.pollInterval, "poll-interval", time.Second, "Polling interval for pod state collection")
 	flag.DurationVar(&opts.timeout, "timeout", 0, "Per-run timeout; defaults from workload length")

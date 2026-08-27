@@ -1,0 +1,32 @@
+{
+  "policyVersion": "v2",
+  "runs": [
+    {
+      "name": "evok8s-v2-balanced",
+      "weights": {
+        "freeCPU": 0.25,
+        "freeMem": 0.25,
+        "balance": 0.25,
+        "consolidation": 0.25
+      }
+    },
+    {
+      "name": "evok8s-v2-spread-heavy",
+      "weights": {
+        "freeCPU": 0.35,
+        "freeMem": 0.35,
+        "balance": 0.25,
+        "consolidation": 0.05
+      }
+    },
+    {
+      "name": "evok8s-v2-consolidation-heavy",
+      "weights": {
+        "freeCPU": 0.1,
+        "freeMem": 0.1,
+        "balance": 0.2,
+        "consolidation": 0.6
+      }
+    }
+  ]
+}

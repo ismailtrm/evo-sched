@@ -6,6 +6,8 @@ import (
 	"os"
 	"strconv"
 	"strings"
+
+	"evok8s-scheduler/pkg/policy"
 )
 
 func WriteCandidatesCSV(path string, candidates []Candidate) error {
@@ -17,14 +19,15 @@ func WriteCandidatesCSV(path string, candidates []Candidate) error {
 
 	w := csv.NewWriter(f)
 	if err := w.Write([]string{
+		"policy_version",
 		"candidate_id",
 		"name",
 		"source",
 		"generation",
 		"free_cpu",
 		"free_mem",
-		"pod_penalty",
-		"packing",
+		"balance",
+		"consolidation",
 		"avg_p95_pending",
 		"avg_max_active_nodes",
 		"rank",
@@ -37,14 +40,15 @@ func WriteCandidatesCSV(path string, candidates []Candidate) error {
 
 	for _, candidate := range candidates {
 		record := []string{
+			policy.Version,
 			candidate.ID,
 			candidate.Name,
 			candidate.Source,
 			strconv.Itoa(candidate.Generation),
 			strconv.FormatFloat(candidate.Weights.FreeCPU, 'g', -1, 64),
 			strconv.FormatFloat(candidate.Weights.FreeMem, 'g', -1, 64),
-			strconv.FormatFloat(candidate.Weights.PodPenalty, 'g', -1, 64),
-			strconv.FormatFloat(candidate.Weights.Packing, 'g', -1, 64),
+			strconv.FormatFloat(candidate.Weights.Balance, 'g', -1, 64),
+			strconv.FormatFloat(candidate.Weights.Consolidation, 'g', -1, 64),
 			strconv.FormatFloat(candidate.Objectives.AverageP95Pending, 'f', 6, 64),
 			strconv.FormatFloat(candidate.Objectives.AverageMaxActiveNodes, 'f', 6, 64),
 			strconv.Itoa(candidate.Rank),

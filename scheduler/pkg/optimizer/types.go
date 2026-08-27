@@ -52,6 +52,7 @@ type Candidate struct {
 }
 
 type Result struct {
+	PolicyVersion       string      `json:"policyVersion"`
 	StartedAt           time.Time   `json:"startedAt"`
 	FinishedAt          time.Time   `json:"finishedAt"`
 	Config              Config      `json:"config"`

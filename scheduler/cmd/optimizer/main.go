@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"math"
 	"os"
 	"path/filepath"
 	"strings"
@@ -67,8 +68,8 @@ func parseFlags() options {
 	flag.IntVar(&opts.generations, "generations", 5, "Number of generations")
 	flag.Float64Var(&opts.mutationRate, "mutation-rate", 0.8, "Per-gene mutation probability")
 	flag.Float64Var(&opts.mutationSigma, "mutation-sigma", 0.25, "Gaussian mutation sigma")
-	flag.Float64Var(&opts.minWeight, "min-weight", 0.0, "Lower clamp for weight values")
-	flag.Float64Var(&opts.maxWeight, "max-weight", 2.0, "Upper clamp for weight values")
+	flag.Float64Var(&opts.minWeight, "min-weight", 0.0, "Lower raw-gene clamp before L1 normalization")
+	flag.Float64Var(&opts.maxWeight, "max-weight", 2.0, "Upper raw-gene clamp before L1 normalization")
 	flag.Int64Var(&opts.seed, "seed", defaultSeed, "Random seed")
 	flag.Parse()
 	return opts
@@ -215,7 +216,13 @@ func splitPaths(raw string) []string {
 }
 
 func weightKey(weights evaluator.WeightSet) string {
-	return fmt.Sprintf("%.6f|%.6f|%.6f|%.6f", weights.FreeCPU, weights.FreeMem, weights.PodPenalty, weights.Packing)
+	return fmt.Sprintf(
+		"%016x|%016x|%016x|%016x",
+		math.Float64bits(weights.FreeCPU),
+		math.Float64bits(weights.FreeMem),
+		math.Float64bits(weights.Balance),
+		math.Float64bits(weights.Consolidation),
+	)
 }
 
 func emitOutputs(result optimizer.Result, opts options) error {

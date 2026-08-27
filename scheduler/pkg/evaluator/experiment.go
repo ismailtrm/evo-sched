@@ -1,9 +1,13 @@
 package evaluator
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
+
+	"evok8s-scheduler/pkg/policy"
 )
 
 func LoadExperiment(path string) (ExperimentSpec, error) {
@@ -13,8 +17,16 @@ func LoadExperiment(path string) (ExperimentSpec, error) {
 	}
 
 	var spec ExperimentSpec
-	if err := json.Unmarshal(data, &spec); err != nil {
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&spec); err != nil {
 		return ExperimentSpec{}, fmt.Errorf("parse experiment: %w", err)
+	}
+	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+		return ExperimentSpec{}, fmt.Errorf("parse experiment: unexpected trailing JSON content")
+	}
+	if spec.PolicyVersion != PolicyVersion {
+		return ExperimentSpec{}, fmt.Errorf("experiment policyVersion must be %q, got %q", PolicyVersion, spec.PolicyVersion)
 	}
 	if len(spec.Runs) == 0 {
 		return ExperimentSpec{}, fmt.Errorf("experiment has no runs")
@@ -22,7 +34,7 @@ func LoadExperiment(path string) (ExperimentSpec, error) {
 
 	seen := make(map[string]struct{}, len(spec.Runs))
 	for i := range spec.Runs {
-		run := spec.Runs[i]
+		run := &spec.Runs[i]
 		if run.Name == "" {
 			return ExperimentSpec{}, fmt.Errorf("experiment run %d has empty name", i)
 		}
@@ -30,6 +42,12 @@ func LoadExperiment(path string) (ExperimentSpec, error) {
 			return ExperimentSpec{}, fmt.Errorf("duplicate experiment run name %q", run.Name)
 		}
 		seen[run.Name] = struct{}{}
+
+		normalized, err := policy.Normalize(run.Weights)
+		if err != nil {
+			return ExperimentSpec{}, fmt.Errorf("experiment run %q weights: %w", run.Name, err)
+		}
+		run.Weights = normalized
 	}
 
 	return spec, nil

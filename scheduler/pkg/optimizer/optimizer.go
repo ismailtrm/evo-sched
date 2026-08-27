@@ -2,11 +2,13 @@ package optimizer
 
 import (
 	"fmt"
+	"math"
 	"math/rand"
 	"sort"
 	"time"
 
 	"evok8s-scheduler/pkg/evaluator"
+	"evok8s-scheduler/pkg/policy"
 )
 
 const crowdingInfinity = 1e9
@@ -18,8 +20,9 @@ func Run(cfg Config, baselines []evaluator.ExperimentRunSpec, evaluate EvaluateF
 
 	rng := rand.New(rand.NewSource(cfg.Seed))
 	result := Result{
-		StartedAt: time.Now().UTC(),
-		Config:    cfg,
+		PolicyVersion: policy.Version,
+		StartedAt:     time.Now().UTC(),
+		Config:        cfg,
 	}
 
 	for _, baseline := range baselines {
@@ -50,6 +53,10 @@ func Run(cfg Config, baselines []evaluator.ExperimentRunSpec, evaluate EvaluateF
 			parentB := tournamentSelect(population, rng)
 			childWeights := crossover(parentA.Weights, parentB.Weights, rng)
 			childWeights = mutate(childWeights, rng, cfg.MutationRate, cfg.MutationSigma, cfg.MinWeight, cfg.MaxWeight)
+			childWeights, err := canonicalizeOffspring(childWeights, parentA.Weights, parentB.Weights)
+			if err != nil {
+				return result, err
+			}
 
 			name := fmt.Sprintf("gen-%02d-%03d", gen, i+1)
 			candidate, err := evaluateCandidate(name, "offspring", gen, childWeights, evaluate)
@@ -84,11 +91,17 @@ func validateConfig(cfg Config) error {
 	if cfg.Generations < 0 {
 		return fmt.Errorf("generations must be zero or positive")
 	}
-	if cfg.MutationRate < 0 || cfg.MutationRate > 1 {
+	if math.IsNaN(cfg.MutationRate) || math.IsInf(cfg.MutationRate, 0) || cfg.MutationRate < 0 || cfg.MutationRate > 1 {
 		return fmt.Errorf("mutation rate must be between 0 and 1")
 	}
-	if cfg.MutationSigma < 0 {
+	if math.IsNaN(cfg.MutationSigma) || math.IsInf(cfg.MutationSigma, 0) || cfg.MutationSigma < 0 {
 		return fmt.Errorf("mutation sigma must be non-negative")
+	}
+	if math.IsNaN(cfg.MinWeight) || math.IsInf(cfg.MinWeight, 0) || cfg.MinWeight < 0 {
+		return fmt.Errorf("min weight must be non-negative")
+	}
+	if math.IsNaN(cfg.MaxWeight) || math.IsInf(cfg.MaxWeight, 0) || cfg.MaxWeight <= 0 {
+		return fmt.Errorf("max weight must be positive")
 	}
 	if cfg.MaxWeight < cfg.MinWeight {
 		return fmt.Errorf("max weight must be >= min weight")
@@ -100,7 +113,11 @@ func validateConfig(cfg Config) error {
 }
 
 func evaluateCandidate(name, source string, generation int, weights evaluator.WeightSet, evaluate EvaluateFunc) (Candidate, error) {
-	data, err := evaluate(weights)
+	normalized, err := policy.Normalize(weights)
+	if err != nil {
+		return Candidate{}, fmt.Errorf("normalize candidate %s weights: %w", name, err)
+	}
+	data, err := evaluate(normalized)
 	if err != nil {
 		return Candidate{}, err
 	}
@@ -109,7 +126,7 @@ func evaluateCandidate(name, source string, generation int, weights evaluator.We
 		Name:       name,
 		Source:     source,
 		Generation: generation,
-		Weights:    weights,
+		Weights:    normalized,
 		Objectives: data.Objectives,
 		Workloads:  append([]WorkloadMetrics(nil), data.Workloads...),
 		Notes:      append([]string(nil), data.Notes...),
@@ -119,10 +136,10 @@ func evaluateCandidate(name, source string, generation int, weights evaluator.We
 func randomWeights(rng *rand.Rand, minWeight, maxWeight float64) evaluator.WeightSet {
 	if minWeight == maxWeight {
 		return evaluator.WeightSet{
-			FreeCPU:    minWeight,
-			FreeMem:    minWeight,
-			PodPenalty: minWeight,
-			Packing:    minWeight,
+			FreeCPU:       minWeight,
+			FreeMem:       minWeight,
+			Balance:       minWeight,
+			Consolidation: minWeight,
 		}
 	}
 
@@ -130,10 +147,10 @@ func randomWeights(rng *rand.Rand, minWeight, maxWeight float64) evaluator.Weigh
 		return minWeight + rng.Float64()*(maxWeight-minWeight)
 	}
 	return evaluator.WeightSet{
-		FreeCPU:    sample(),
-		FreeMem:    sample(),
-		PodPenalty: sample(),
-		Packing:    sample(),
+		FreeCPU:       sample(),
+		FreeMem:       sample(),
+		Balance:       sample(),
+		Consolidation: sample(),
 	}
 }
 
@@ -145,10 +162,10 @@ func crossover(a, b evaluator.WeightSet, rng *rand.Rand) evaluator.WeightSet {
 		return y
 	}
 	return evaluator.WeightSet{
-		FreeCPU:    pick(a.FreeCPU, b.FreeCPU),
-		FreeMem:    pick(a.FreeMem, b.FreeMem),
-		PodPenalty: pick(a.PodPenalty, b.PodPenalty),
-		Packing:    pick(a.Packing, b.Packing),
+		FreeCPU:       pick(a.FreeCPU, b.FreeCPU),
+		FreeMem:       pick(a.FreeMem, b.FreeMem),
+		Balance:       pick(a.Balance, b.Balance),
+		Consolidation: pick(a.Consolidation, b.Consolidation),
 	}
 }
 
@@ -161,12 +178,30 @@ func mutate(weights evaluator.WeightSet, rng *rand.Rand, rate, sigma, minWeight,
 		out.FreeMem = clampWeight(out.FreeMem+rng.NormFloat64()*sigma, minWeight, maxWeight)
 	}
 	if rng.Float64() < rate {
-		out.PodPenalty = clampWeight(out.PodPenalty+rng.NormFloat64()*sigma, minWeight, maxWeight)
+		out.Balance = clampWeight(out.Balance+rng.NormFloat64()*sigma, minWeight, maxWeight)
 	}
 	if rng.Float64() < rate {
-		out.Packing = clampWeight(out.Packing+rng.NormFloat64()*sigma, minWeight, maxWeight)
+		out.Consolidation = clampWeight(out.Consolidation+rng.NormFloat64()*sigma, minWeight, maxWeight)
 	}
 	return out
+}
+
+func canonicalizeOffspring(weights, parentA, parentB evaluator.WeightSet) (evaluator.WeightSet, error) {
+	normalized, err := policy.Normalize(weights)
+	if err == nil {
+		return normalized, nil
+	}
+
+	fallback, fallbackErr := policy.Normalize(evaluator.WeightSet{
+		FreeCPU:       parentA.FreeCPU + parentB.FreeCPU,
+		FreeMem:       parentA.FreeMem + parentB.FreeMem,
+		Balance:       parentA.Balance + parentB.Balance,
+		Consolidation: parentA.Consolidation + parentB.Consolidation,
+	})
+	if fallbackErr != nil {
+		return evaluator.WeightSet{}, fmt.Errorf("repair offspring from parents: %w", fallbackErr)
+	}
+	return fallback, nil
 }
 
 func clampWeight(value, minWeight, maxWeight float64) float64 {

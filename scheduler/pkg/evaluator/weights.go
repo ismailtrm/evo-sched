@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+
+	"evok8s-scheduler/pkg/policy"
 )
 
 func ParseWeightSet(raw string) (WeightSet, error) {
@@ -21,10 +23,10 @@ func ParseWeightSet(raw string) (WeightSet, error) {
 		vals = append(vals, v)
 	}
 
-	return WeightSet{
-		FreeCPU:    vals[0],
-		FreeMem:    vals[1],
-		PodPenalty: vals[2],
-		Packing:    vals[3],
-	}, nil
+	return policy.Normalize(WeightSet{
+		FreeCPU:       vals[0],
+		FreeMem:       vals[1],
+		Balance:       vals[2],
+		Consolidation: vals[3],
+	})
 }

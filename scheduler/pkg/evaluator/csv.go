@@ -17,11 +17,12 @@ func WriteComparisonCSV(path string, rows []ComparisonRow) error {
 
 	w := csv.NewWriter(f)
 	if err := w.Write([]string{
+		"policy_version",
 		"run_name",
 		"free_cpu",
 		"free_mem",
-		"pod_penalty",
-		"packing",
+		"balance",
+		"consolidation",
 		"scheduled_count",
 		"completed_count",
 		"unschedulable_count",
@@ -35,11 +36,12 @@ func WriteComparisonCSV(path string, rows []ComparisonRow) error {
 
 	for _, row := range rows {
 		record := []string{
+			PolicyVersion,
 			row.Name,
 			strconv.FormatFloat(row.Weights.FreeCPU, 'g', -1, 64),
 			strconv.FormatFloat(row.Weights.FreeMem, 'g', -1, 64),
-			strconv.FormatFloat(row.Weights.PodPenalty, 'g', -1, 64),
-			strconv.FormatFloat(row.Weights.Packing, 'g', -1, 64),
+			strconv.FormatFloat(row.Weights.Balance, 'g', -1, 64),
+			strconv.FormatFloat(row.Weights.Consolidation, 'g', -1, 64),
 			strconv.Itoa(row.ScheduledCount),
 			strconv.Itoa(row.CompletedCount),
 			strconv.Itoa(row.UnschedulableCount),
