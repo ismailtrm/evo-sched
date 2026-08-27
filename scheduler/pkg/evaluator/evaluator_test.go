@@ -211,6 +211,16 @@ func TestMeasurementProtocolForRecordsSourcesAndIntervals(t *testing.T) {
 	}
 }
 
+func TestValidateRunnerOptionsRejectsNonPositivePollInterval(t *testing.T) {
+	for _, interval := range []time.Duration{0, -time.Millisecond} {
+		opts := DefaultRunnerOptions()
+		opts.PollInterval = interval
+		if err := validateRunnerOptions(opts); err == nil {
+			t.Fatalf("validateRunnerOptions() error = nil for interval %s", interval)
+		}
+	}
+}
+
 func TestCurrentWorkloadBaseUsesReadySchedulableWorkerSnapshot(t *testing.T) {
 	client := fake.NewSimpleClientset(
 		testWorkerNode("worker-a", "4", "8Gi", true),

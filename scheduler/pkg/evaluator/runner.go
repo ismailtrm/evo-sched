@@ -64,6 +64,13 @@ func MeasurementProtocolFor(opts RunnerOptions, schedulerInterval time.Duration)
 	}
 }
 
+func validateRunnerOptions(opts RunnerOptions) error {
+	if opts.PollInterval <= 0 {
+		return fmt.Errorf("poll interval must be positive, got %s", opts.PollInterval)
+	}
+	return nil
+}
+
 func NewClientset() (*kubernetes.Clientset, error) {
 	cfg, err := rest.InClusterConfig()
 	if err == nil {
@@ -189,6 +196,9 @@ func currentWorkerNodes(ctx context.Context, cs kubernetes.Interface) ([]corev1.
 }
 
 func RunBatch(ctx context.Context, cs kubernetes.Interface, opts RunnerOptions, workloadPath string, runSpecs []ExperimentRunSpec) (BatchResult, error) {
+	if err := validateRunnerOptions(opts); err != nil {
+		return BatchResult{}, err
+	}
 	if workloadPath == "" {
 		return BatchResult{}, fmt.Errorf("workload path is required")
 	}
@@ -256,6 +266,9 @@ func RunBatch(ctx context.Context, cs kubernetes.Interface, opts RunnerOptions, 
 }
 
 func EvaluateWorkloads(ctx context.Context, cs kubernetes.Interface, opts RunnerOptions, workloadPaths []string, spec ExperimentRunSpec) ([]BatchResult, error) {
+	if err := validateRunnerOptions(opts); err != nil {
+		return nil, err
+	}
 	if len(workloadPaths) == 0 {
 		return nil, fmt.Errorf("at least one workload is required")
 	}
