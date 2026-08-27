@@ -1483,6 +1483,69 @@ Doğrulama:
 Skill repo dışında olduğu için bu değişiklik doğrudan proje Git geçmişine girmez; bu bölüm değişikliğin durable project kaydıdır.
 Cluster smoke sonrasında durdurulduğu için güncellenmiş helper'ın gerçek-cluster acceptance testi Gate 2 başlangıç preflight'ında yapılacaktır.
 
+### 3.45. Measurement `v2` timestamp semantiğini düzelttik
+
+Önceki risk değerlendirmesinde evaluator'ın `1s` polling interval'inin doğrudan pending ölçümünü kuantize ettiği varsayılmıştı.
+Kod ve Kubernetes `v1.35` source audit'i bu açıklamanın eksik olduğunu gösterdi:
+
+- evaluator mevcut `ScheduledAt` değerini Pod'u gördüğü local polling anından değil, `PodScheduled=True` condition içindeki `LastTransitionTime` alanından alıyordu
+- Kubernetes binding storage, başarılı binding sırasında `PodScheduled=True` condition'ını oluşturuyor
+- aynı binding path'i Binding metadata annotation'larını Pod'a atomik olarak kopyalıyor
+- `PodCondition.LastTransitionTime` tipi `metav1.Time`dır
+- `metav1.Time` JSON ve unstructured gösterimde `RFC3339` kullanır ve second-level precision taşır
+- Gate 1 smoke çıktısındaki `createdAt` ve `scheduledAt` değerlerinin tamamı da tam saniyeye çökmüştür
+
+Kaynaklar:
+
+- Kubernetes `v1.35` Binding storage ve annotation merge davranışı:
+  <https://github.com/kubernetes/kubernetes/blob/release-1.35/pkg/registry/core/pod/storage/storage.go>
+- Kubernetes API `PodCondition.LastTransitionTime` tipi:
+  <https://github.com/kubernetes/api/blob/v0.35.0/core/v1/types.go>
+- `metav1.Time` RFC3339 serialization davranışı:
+  <https://github.com/kubernetes/apimachinery/blob/v0.35.0/pkg/apis/meta/v1/time.go>
+
+Düzeltilmiş risk ayrımı:
+
+- Scheduler'ın sabit `2s` loop cadence'i gerçek scheduling latency'ye doğrudan eklenebilir.
+- Kubernetes `CreationTimestamp` ve `PodScheduled.LastTransitionTime` çiftinin second-level precision'ı kısa latency farklarını kuantize eder.
+- Evaluator polling interval'i bu condition timestamp'ini üretmez; fakat scheduler kararının evaluator tarafından ne zaman görüldüğünü ve occupancy sample sıklığını etkiler.
+- Dolayısıyla cadence, Kubernetes timestamp precision ve evaluator observation lag ayrı ölçülmelidir.
+
+Measurement `v2` kararı:
+
+- Evaluator, API create isteğinden hemen önce high-resolution `submitted-at` annotation'ı ekleyecek.
+- Scheduler, node seçimi tamamlanıp bind isteği başlamadan hemen önce high-resolution `decision-at` timestamp'i üretecek.
+- `decision-at`, Binding metadata üzerinden aynı bind işlemi içinde Pod annotation'ına kopyalanacak; ek Pod patch yetkisi gerekmeyecek.
+- Primary custom-policy latency `decision-at - submitted-at` olarak hesaplanacak.
+- Kubernetes-native coarse pending metriği `PodScheduled.LastTransitionTime - CreationTimestamp` olarak ayrı tutulacak.
+- Evaluator observation lag, Pod'un bound halinin ilk görüldüğü local zaman ile scheduler decision timestamp'i arasından ayrı hesaplanacak.
+- Her output measurement protocol version ve timestamp source semantiğini taşıyacak.
+- Scheduler loop interval `SCHEDULER_INTERVAL` ile configurable olacak; default davranış geriye uyumlu olarak `2s` kalacak.
+
+Resource objective adı da gerçek semantiğe çekilecek:
+
+- `maxActiveNodes` ifadesi node power state veya cluster autoscaler activity iddiası taşımaktadır
+- mevcut ölçüm yalnızca evaluator workload'una ait non-terminal Pod'ları barındıran benzersiz worker node sayısıdır
+- Measurement `v2` output ve optimizer objective adı `maxWorkloadOccupiedWorkerNodes` olacaktır
+
+Default kube-scheduler karşılaştırma sınırı:
+
+- Custom scheduler `decision-at` annotation'ını üretebilir; default kube-scheduler üretmez.
+- Bu nedenle high-resolution decision latency doğrudan iki scheduler arasında adil ortak metrik olarak sunulmayacaktır.
+- Default kube-scheduler karşılaştırmasında ortak Kubernetes-native coarse pending ve workload-occupied worker metriği raporlanacak.
+- Custom policy search içinde primary objective high-resolution decision latency olabilir; paper iki protokolü aynı sayıymış gibi birleştirmeyecektir.
+
+Test-first çıkış koşulları:
+
+- timestamp format/parse round-trip nanosaniye bilgisini korumalı
+- Binding action doğru decision ve policy annotation'larını taşımalı
+- evaluator submit annotation'ı API creation timestamp'inden bağımsız high-resolution kaynak olmalı
+- timing extraction üç timestamp kaynağını birbirine karıştırmamalı
+- summary, decision annotation eksikliğini saymalı ve optimizer sessiz fallback yapmamalı
+- scheduler interval invalid, zero veya negative value'ları reddetmeli
+- JSON ve CSV measurement version ile açık metric adları taşımalı
+- historical `v1` result artifact'leri değiştirilmemeli
+
 ## 4. Şu Anki Durum
 
 Şu anda proje durumu şöyledir:
@@ -1535,6 +1598,9 @@ Cluster smoke sonrasında durdurulduğu için güncellenmiş helper'ın gerçek-
 - `evo-sched` kind container'ları smoke sonrasında silinmeden durdurulmuştur
 - Scheduler experiment preflight skill'i V2 contract, canonical weights ve exact worker-count kontrolüyle güncellenmiştir
 - Güncellenen preflight helper'ın gerçek-cluster acceptance testi Gate 2 açılışında yapılacaktır
+- Measurement `v2` timestamp semantiği source audit ile tanımlanmıştır
+- Evaluator polling'in pending timestamp kaynağı olmadığı; cadence, second-level Kubernetes time ve observation lag'in ayrı riskler olduğu netleştirilmiştir
+- Gate 2'nin sıradaki işi measurement contract testleri ve high-resolution scheduler decision instrumentation implementasyonudur
 
 Başka bir ifadeyle:
 
@@ -1608,12 +1674,13 @@ Sonuç:
 
 ### Gate 2 - Measurement `v2`
 
-- Scheduler'ın `2s` cadence etkisini tiny-control deneyle ölç
-- Polling interval'i configurable yap veya event/watch tabanlı scheduling akışını değerlendir
-- Scheduling karar anını mümkün olduğunca scheduler kaynağında yüksek çözünürlükle kaydet
-- Evaluator gözlem gecikmesi ile scheduler karar gecikmesini ayır
-- Pending metriğinin semantiğini ve timestamp kaynağını manifestte kaydet
-- `maxActiveNodes` adını gerçek anlamına uygun biçimde `max workload-occupied worker nodes` olarak netleştir
+- [ ] Scheduler loop interval'ini `SCHEDULER_INTERVAL` ile configurable yap
+- [ ] Evaluator submission ve scheduler decision anlarını high-resolution annotation olarak kaydet
+- [ ] Kubernetes condition zamanı, scheduler decision zamanı ve evaluator observation zamanını ayır
+- [ ] Measurement protocol version ve timestamp source metadata'sını output'a ekle
+- [ ] `maxActiveNodes` adını `maxWorkloadOccupiedWorkerNodes` olarak düzelt
+- [ ] Scheduler'ın `2s` cadence etkisini tiny-control deneyle ölç
+- [ ] Gerekirse event/watch tabanlı monitoring'i polling'e karşı değerlendir
 
 Çıkış koşulu:
 
