@@ -1,0 +1,144 @@
+{
+  "schemaVersion": "v1",
+  "policyVersion": "not-applicable",
+  "measurementVersion": "v2",
+  "runName": "v2-kube-scheduler-debug-smoke",
+  "class": "debug",
+  "status": "completed",
+  "paperEvidenceEligible": false,
+  "purpose": "Live acceptance of the external-reference evaluator path against the kind cluster's built-in default kube-scheduler. This is not an official baseline comparison.",
+  "startedAt": "2026-08-27T14:47:16.814626774Z",
+  "finishedAt": "2026-08-27T14:47:45.569488735Z",
+  "workingDirectory": "/home/ismail/evo-sched/scheduler",
+  "git": {
+    "sha": "0e5d6b55fa6dc380392675902db9f1dcff50af0e",
+    "branch": "research/policy-space-v2",
+    "dirtyAtStart": false
+  },
+  "command": "KUBECONFIG=/home/ismail/.kube/config go run ./cmd/evaluator --workload ../workloads/v2/cpu-tight-train.json --scheduler-mode external-reference --scheduler-name default-scheduler --run-name kube-scheduler-default --poll-interval 250ms --timeout 90s --output /tmp/evo-v2-kube-scheduler-debug.json",
+  "inputs": [
+    {
+      "path": "workloads/v2/cpu-tight-train.json",
+      "sha256": "4f5f37555465b179c48b5e9a3bc1c738cddf03309c0823c9c55f51ec99374096"
+    },
+    {
+      "path": "deploy.yaml",
+      "sha256": "3de13f7b422236a72f0d1cce608957e469d8124f0ab5ad2b26d6d2af80dbf91c"
+    },
+    {
+      "path": "kind-config-4workers.yaml",
+      "sha256": "d26c091ff873418387e8c45148283a71235a2190efe1d8f021fc566de0bd664f"
+    },
+    {
+      "path": "kube-scheduler-static-pod.yaml",
+      "sha256": "3552f6d9c1ff8a8265bc143d51a0ddafdd5cd1fcd49ae5cf33f39b962066e5b8",
+      "source": "evo-sched-control-plane:/etc/kubernetes/manifests/kube-scheduler.yaml"
+    }
+  ],
+  "cluster": {
+    "context": "kind-evo-sched",
+    "workerCount": 4,
+    "workerAllocatableBase": {
+      "cpuMilli": 16000,
+      "memoryMiB": 31712
+    },
+    "nodeImage": "kindest/node:v1.35.0",
+    "nodeImageId": "sha256:4613778f3cfcd10e615029370f5786704559103cf27bef934597ba562b269661",
+    "kubernetesServerVersion": "v1.35.0",
+    "kubectlClientVersion": "v1.35.0",
+    "goVersion": "go1.27.0-X:nodwarf5"
+  },
+  "scheduler": {
+    "mode": "external-reference",
+    "name": "default-scheduler",
+    "component": "kube-scheduler",
+    "namespace": "kube-system",
+    "pod": "kube-scheduler-evo-sched-control-plane",
+    "readyBeforeRun": true,
+    "imageFromStaticManifest": "registry.k8s.io/kube-scheduler:v1.35.0",
+    "reportedRuntimeImage": "registry.k8s.io/kube-scheduler-amd64:v1.35.0",
+    "imageId": "sha256:550794e3b12ac21ec7fd940bdfb45f7c8dae3c52acd8c70e580b882de20c3dcc",
+    "explicitConfigArgument": false,
+    "configurationSource": "kube-scheduler internal default profile and plugin configuration",
+    "weightsApplicable": false,
+    "customSchedulerDeploymentPatched": false
+  },
+  "measurement": {
+    "schedulerMode": "external-reference",
+    "submissionTimestampSource": "evaluator-client-before-create",
+    "schedulerDecisionTimestampSource": "unavailable-external-scheduler",
+    "schedulerDecisionTimestampAvailable": false,
+    "kubernetesScheduledTimestampSource": "pod-condition-last-transition-time",
+    "evaluatorObservationTimestampSource": "evaluator-list-response",
+    "workloadOccupancySource": "non-terminal-evaluator-pods-on-run-start-worker-snapshot",
+    "workloadResourceMetricSource": "non-terminal-bound-evaluator-pod-requests-over-run-start-worker-allocatable",
+    "schedulerIntervalApplicable": false,
+    "podPollIntervalSeconds": 0.25,
+    "minimumPodDurationSeconds": 10,
+    "minimumDurationToPollIntervalRatio": 40
+  },
+  "workload": {
+    "path": "workloads/v2/cpu-tight-train.json",
+    "podCount": 24,
+    "arrivalBurstsSeconds": [0, 16],
+    "resolvedRequests": [
+      {"count": 24, "cpuMilli": 3520, "memoryMiB": 1903}
+    ],
+    "durationSeconds": 10
+  },
+  "summary": {
+    "scheduledCount": 24,
+    "completedCount": 24,
+    "unschedulableCount": 0,
+    "decisionTimestampCount": 0,
+    "kubernetesScheduledTimestampCount": 24,
+    "evaluatorObservationTimestampCount": 24,
+    "maxWorkloadOccupiedWorkerNodes": 4,
+    "meanWorkloadCPURequestedUtilization": 0.5675221238938039,
+    "meanWorkloadMemoryRequestedUtilization": 0.15479820107841366,
+    "meanWorkloadDominantRequestedLoadVariance": 0.0013920353982300887,
+    "meanWorkloadCPUToMemoryImbalance": 0.4127239228153926
+  },
+  "preflight": {
+    "passed": true,
+    "workersReady": 4,
+    "defaultSchedulerReady": true,
+    "customSchedulerRolloutReady": true,
+    "customSchedulerCanonicalWeights": [0.25, 0.25, 0.25, 0.25],
+    "customSchedulerInterval": "2s",
+    "evaluatorNamespaceEmpty": true
+  },
+  "postflight": {
+    "passed": true,
+    "customSchedulerRolloutReady": true,
+    "customSchedulerCanonicalWeights": [0.25, 0.25, 0.25, 0.25],
+    "customSchedulerInterval": "2s",
+    "evaluatorNamespaceEmpty": true,
+    "kindContainersStopped": true
+  },
+  "outputs": [
+    {
+      "path": "result.json",
+      "sha256": "11c79ab8baff5234d3bea0ecdfc5362531f8974b9ce1b447d39cd7eeedbc8cad"
+    },
+    {
+      "path": "result.csv",
+      "sha256": "80444c523e38e13d0b70fe5a174903ecc6b51a2ccec57b10ecbdb27484c1c344"
+    },
+    {
+      "path": "kube-scheduler-static-pod.yaml",
+      "sha256": "3552f6d9c1ff8a8265bc143d51a0ddafdd5cd1fcd49ae5cf33f39b962066e5b8"
+    }
+  ],
+  "references": [
+    "https://kubernetes.io/docs/reference/scheduling/config/",
+    "https://kubernetes.io/docs/concepts/scheduling-eviction/scheduling-framework/"
+  ],
+  "notes": [
+    "The static Pod manifest does not pass --config, so this run uses kube-scheduler's internal default profile and plugin configuration.",
+    "The runtime scheduler configuration was not introspected beyond the static Pod arguments; exact default plugin behavior is version-dependent and should be described against Kubernetes v1.35 documentation/source.",
+    "Custom high-resolution decision timestamps are unavailable for the external scheduler. Zero-valued JSON decision fields are not measurements; CSV leaves those fields blank and marks instrumentation unavailable.",
+    "PodScheduled condition pending values were zero at second-level resolution and must not be compared directly with custom scheduler high-resolution decision latency.",
+    "This smoke validates the execution and provenance path only; official default-scheduler baselines require repeated runs across all V2 workloads."
+  ]
+}
