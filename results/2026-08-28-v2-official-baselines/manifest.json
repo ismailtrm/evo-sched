@@ -1,0 +1,172 @@
+{
+  "schemaVersion": "v1",
+  "protocolVersion": "v2-official-baselines",
+  "policyVersion": "v2",
+  "measurementVersion": "v2",
+  "runName": "v2-official-baselines",
+  "class": "official",
+  "status": "completed",
+  "paperEvidenceEligible": true,
+  "purpose": "Three-repeat custom V2 policy baselines and default kube-scheduler external reference across the three V2 training workloads.",
+  "startedAt": "2026-08-27T23:19:57.261158679Z",
+  "finishedAt": "2026-08-27T23:41:42.143464472Z",
+  "workingDirectory": "/home/ismail/evo-sched/scheduler",
+  "git": {
+    "sha": "278ab9bc1aebd341b6a37854cef7c52d3e7d35da",
+    "branch": "research/policy-space-v2",
+    "tag": "protocol-v2-baselines-2026-08-27",
+    "dirtyAtStart": false
+  },
+  "commands": [
+    "go run ./cmd/evaluator --workload ../workloads/v2/cpu-tight-train.json --weights-file ../experiments/weights-v2.json --repetitions 3 --poll-interval 250ms --timeout 90s --output /tmp/evo-v2-official-cpu-custom.json",
+    "go run ./cmd/evaluator --workload ../workloads/v2/cpu-tight-train.json --scheduler-mode external-reference --scheduler-name default-scheduler --run-name kube-scheduler-default --repetitions 3 --poll-interval 250ms --timeout 90s --output /tmp/evo-v2-official-cpu-default.json",
+    "go run ./cmd/evaluator --workload ../workloads/v2/mem-tight-train.json --weights-file ../experiments/weights-v2.json --repetitions 3 --poll-interval 250ms --timeout 90s --output /tmp/evo-v2-official-mem-custom.json",
+    "go run ./cmd/evaluator --workload ../workloads/v2/mem-tight-train.json --scheduler-mode external-reference --scheduler-name default-scheduler --run-name kube-scheduler-default --repetitions 3 --poll-interval 250ms --timeout 90s --output /tmp/evo-v2-official-mem-default.json",
+    "go run ./cmd/evaluator --workload ../workloads/v2/fragmenting-mix-train.json --weights-file ../experiments/weights-v2.json --repetitions 3 --poll-interval 250ms --timeout 90s --output /tmp/evo-v2-official-fragment-custom.json",
+    "go run ./cmd/evaluator --workload ../workloads/v2/fragmenting-mix-train.json --scheduler-mode external-reference --scheduler-name default-scheduler --run-name kube-scheduler-default --repetitions 3 --poll-interval 250ms --timeout 90s --output /tmp/evo-v2-official-fragment-default.json"
+  ],
+  "inputs": [
+    {
+      "path": "workloads/v2/cpu-tight-train.json",
+      "sha256": "4f5f37555465b179c48b5e9a3bc1c738cddf03309c0823c9c55f51ec99374096"
+    },
+    {
+      "path": "workloads/v2/mem-tight-train.json",
+      "sha256": "9fbf91b4fe156c7100ed4363f674a3bddaaf56c572c1f23ba50e2fbb78f1c7b4"
+    },
+    {
+      "path": "workloads/v2/fragmenting-mix-train.json",
+      "sha256": "8dca751f14582c2fa56fa6f83d4bc58bb1d66a19e550716076715e9227143872"
+    },
+    {
+      "path": "experiments/weights-v2.json",
+      "sha256": "fe690c528b277d4a41496f5f702e25a554d7406f04accf17e832f75566d8d782"
+    },
+    {
+      "path": "kind-config-4workers.yaml",
+      "sha256": "d26c091ff873418387e8c45148283a71235a2190efe1d8f021fc566de0bd664f"
+    },
+    {
+      "path": "deploy.yaml",
+      "sha256": "3de13f7b422236a72f0d1cce608957e469d8124f0ab5ad2b26d6d2af80dbf91c"
+    },
+    {
+      "path": "kube-scheduler-static-pod.yaml",
+      "sha256": "3552f6d9c1ff8a8265bc143d51a0ddafdd5cd1fcd49ae5cf33f39b962066e5b8",
+      "note": "Checksum matched the running control-plane static Pod manifest after all runs. The manifest does not pass an explicit --config file, so Kubernetes internal defaults are used."
+    }
+  ],
+  "cluster": {
+    "context": "kind-evo-sched",
+    "createdAt": "2026-08-27T04:09:42.225396132Z",
+    "workerCount": 4,
+    "workersReadyAtPreflight": 4,
+    "workerAllocatable": {
+      "cpuMilliPerWorker": 16000,
+      "memoryBytesPerWorker": 33253150720
+    },
+    "nodeImage": "kindest/node:v1.35.0",
+    "nodeImageId": "sha256:4613778f3cfcd10e615029370f5786704559103cf27bef934597ba562b269661",
+    "kubernetesClientVersion": "v1.35.0",
+    "kubernetesServerVersion": "v1.35.0",
+    "kindCliVersion": "unavailable-on-path",
+    "goVersion": "go1.27.0-X:nodwarf5 linux/amd64",
+    "dockerClientVersion": "29.7.2",
+    "dockerServerVersion": "29.7.2"
+  },
+  "customScheduler": {
+    "name": "evok8s-scheduler",
+    "image": "evok8s-scheduler:0.1.0",
+    "dockerImageId": "sha256:e502784e7071c53e7ffc586a41ed68d24825836b25d318b4a662553e37ac4375",
+    "runtimeImageId": "sha256:1c442eae9853d18d6ed327d426536a126c2e7de1fb94b7188d896117c1e42c79",
+    "deploymentStrategy": "Recreate",
+    "schedulerIntervalBefore": "2s",
+    "schedulerIntervalDuring": "250ms",
+    "schedulerIntervalAfter": "2s",
+    "restoredCanonicalWeights": [0.25, 0.25, 0.25, 0.25]
+  },
+  "externalScheduler": {
+    "name": "default-scheduler",
+    "image": "registry.k8s.io/kube-scheduler:v1.35.0",
+    "runtimeImageId": "sha256:550794e3b12ac21ec7fd940bdfb45f7c8dae3c52acd8c70e580b882de20c3dcc",
+    "weightsApplicable": false,
+    "customSchedulerDeploymentPatched": false,
+    "highResolutionDecisionTimestampAvailable": false
+  },
+  "executionProtocol": {
+    "workloads": [
+      "cpu-tight-train",
+      "mem-tight-train",
+      "fragmenting-mix-train"
+    ],
+    "customPolicies": [
+      "evok8s-v2-balanced",
+      "evok8s-v2-spread-heavy",
+      "evok8s-v2-consolidation-heavy"
+    ],
+    "externalReferences": [
+      "kube-scheduler-default"
+    ],
+    "repetitionsPerPolicyWorkload": 3,
+    "customExecutionOrder": "round-robin-by-repetition",
+    "podPollIntervalMilliseconds": 250,
+    "customSchedulerIntervalMilliseconds": 250,
+    "perRunTimeoutSeconds": 90,
+    "resolvedAbsoluteRequestsStoredInRawJson": true
+  },
+  "acceptance": {
+    "resultFiles": 6,
+    "csvFiles": 6,
+    "totalResultRows": 36,
+    "totalRawRuns": 36,
+    "totalPods": 864,
+    "scheduledPods": 864,
+    "completedPods": 864,
+    "unschedulablePods": 0,
+    "customRunsWithCompleteDecisionTimestamps": 27,
+    "externalRunsWithExpectedUnavailableDecisionTimestamps": 9,
+    "runsWithCompleteKubernetesScheduledTimestamps": 36,
+    "runsWithCompleteEvaluatorObservationTimestamps": 36,
+    "protocolViolations": []
+  },
+  "preflight": {
+    "passed": true,
+    "context": "kind-evo-sched",
+    "workersReady": 4,
+    "customSchedulerRolloutReady": true,
+    "customSchedulerPolicyVersion": "v2",
+    "customSchedulerCanonicalWeights": [0.25, 0.25, 0.25, 0.25],
+    "customSchedulerInterval": "2s",
+    "defaultSchedulerReady": true,
+    "evaluatorNamespaceEmpty": true
+  },
+  "postflight": {
+    "passed": true,
+    "workersReady": 4,
+    "customSchedulerRolloutReady": true,
+    "customSchedulerPolicyVersion": "v2",
+    "customSchedulerCanonicalWeights": [0.25, 0.25, 0.25, 0.25],
+    "customSchedulerInterval": "2s",
+    "evaluatorNamespaceEmpty": true
+  },
+  "outputs": [
+    {"path": "cpu-tight-custom.json", "sha256": "d29b3f59fe842ca396eb74c01a32feb4132a4b733a664688a31525c89eb6c62d"},
+    {"path": "cpu-tight-custom.csv", "sha256": "d24c5dd0f84102f03922558b24bb330d573d648336004e9b29b1e8205e48e656"},
+    {"path": "cpu-tight-default.json", "sha256": "e7ef4e6ea3fa976788472bb0f31b22e871f27cd20599cfe540081d78a2e16ff5"},
+    {"path": "cpu-tight-default.csv", "sha256": "f92ff2e1e82fc5c86ba478aa87d8b7ca3786edd70683ff968b8373d37378f8bf"},
+    {"path": "mem-tight-custom.json", "sha256": "c49aca1be89b27184f4e875bf77e74ab79e14d2dd882fb984a8178eb95d3a8cd"},
+    {"path": "mem-tight-custom.csv", "sha256": "0f9bd9197ad03d466a7bf1c87f818a86ba5ed58a262378a0bedc128ebc598b54"},
+    {"path": "mem-tight-default.json", "sha256": "6d0bb95610d9b8a5a2f6471a7d83cd461a27a61a999b620e2d394542aee0626d"},
+    {"path": "mem-tight-default.csv", "sha256": "359d6b7ba4b0ff880d01981fcde4c29553bd5cf0d1c7f32d725ae8c8243675b7"},
+    {"path": "fragmenting-mix-custom.json", "sha256": "a8de80a99329e25e3d5140c307b46a772a975dacd6d7e8ee48aa16398224fca0"},
+    {"path": "fragmenting-mix-custom.csv", "sha256": "d12277cbb2fefee51f2398347803307436c0fc9a62c210a05704cb213910d92e"},
+    {"path": "fragmenting-mix-default.json", "sha256": "dad2a3d3fd7aeefa58955242d9fad2630473a7c852272837f3d5cf06aff5d772"},
+    {"path": "fragmenting-mix-default.csv", "sha256": "d07ad8a7517222fc0513a6269e55b49726efab002693bda11514c4d99858c18e"},
+    {"path": "kube-scheduler-static-pod.yaml", "sha256": "3552f6d9c1ff8a8265bc143d51a0ddafdd5cd1fcd49ae5cf33f39b962066e5b8"}
+  ],
+  "warnings": [
+    "Fragmenting-mix generated Pod metadata names longer than 63 characters for some custom-policy runs. Kubernetes accepted the names but emitted a hostname DNS-label warning; all Pods completed and all required timestamps were present.",
+    "Default kube-scheduler does not expose the custom scheduler's high-resolution decision annotation. Its coarse PodScheduled pending values are retained only as a secondary reference and must not be directly compared with custom scheduling decision latency.",
+    "kind CLI was not available on PATH during provenance capture; the node image and Kubernetes client/server versions are recorded directly."
+  ]
+}
