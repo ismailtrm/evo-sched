@@ -2127,6 +2127,59 @@ Gate 4 kararı:
 - official baseline için üç V2 train workload üzerinde tekrarlı koşular ve exact
   kube-scheduler image/config provenance zorunlu olacak
 
+### 3.53. Tek komutlu tekrarlı baseline execution'ı ekledik
+
+Official baseline'larda manuel komut tekrarı ve isim/provenance hatasını azaltmak
+için evaluator CLI'ya `--repetitions` eklendi:
+
+- commit: `4b14948 feat: add repeated baseline evaluation`
+- `--repetitions 1` mevcut run isimlerini ve davranışı korur
+- daha büyük değerlerde run isimleri `<name>-rNN` biçimindedir
+- custom policy batch'leri repetition-outer, policy-inner round-robin sırada
+  genişletilir; örneğin önce üç policy'nin `r01`, sonra `r02` koşuları gelir
+- external-reference tekrarları ayrı raw run olarak çalıştırılır ve tek batch
+  JSON/CSV output'unda birleştirilir
+- uyumsuz workload, policy version veya scheduler mode batch'lerinin merge edilmesi
+  reddedilir
+- hata durumunda tamamlanmış kısmi run'lar output'a yazılabilir
+
+Yeni orchestration full race testleri ve `go vet` altında doğrulandı. Ardından
+clean `4b149481b4ec31943ce934b44437ff5fac1f5251` SHA'sından düşük maliyetli
+iki-tekrarlı external-reference debug smoke yapıldı:
+
+- results commit: `07518cd results: record repeated evaluator smoke`
+- artifact directory:
+  [`results/2026-08-27-v2-repetition-debug-smoke`](./results/2026-08-27-v2-repetition-debug-smoke)
+- class: `debug`
+- `paperEvidenceEligible: false`
+
+Komut:
+
+```bash
+go run ./cmd/evaluator \
+  --workload ../workloads/uniform-small.json \
+  --scheduler-mode external-reference \
+  --scheduler-name default-scheduler \
+  --run-name kube-scheduler-repeat-smoke \
+  --repetitions 2 \
+  --poll-interval 250ms \
+  --timeout 60s \
+  --output /tmp/evo-v2-repetition-debug.json
+```
+
+Acceptance sonucu:
+
+- output iki comparison row ve iki raw run içerdi
+- isimler `kube-scheduler-repeat-smoke-r01/r02` olarak üretildi
+- CSV tek header ve iki data row içerdi
+- iki run da `4/4` completion, sıfır unschedulable ve tam Kubernetes/observer
+  timestamp coverage üretti
+- custom deployment değişmeden kaldı, postflight geçti ve kind durduruldu
+
+Historical dört-Pod `uniform-small` burada yalnızca orchestration debug input'udur;
+scheduler davranışı veya baseline performansı hakkında kanıt değildir. Official
+Gate 4 koşuları `--repetitions 3` ve 24-Pod V2 train workload'larıyla yapılacaktır.
+
 ## 4. Şu Anki Durum
 
 Şu anda proje durumu şöyledir:
@@ -2195,6 +2248,7 @@ Gate 4 kararı:
 - İlk V2 baseline pilotu scheduler rollout overlap yarışı nedeniyle geçersiz sayılmış; deployment `Recreate` ve strict rollout convergence ile düzeltilmiştir
 - Üç V2 baseline x üç train workload pilot acceptance matrix'i dokuz kombinasyonda tam completion ve policy separation ile tamamlanmıştır
 - Default kube-scheduler için deployment patch yapmayan external-reference evaluator yolu ve live debug smoke tamamlanmıştır
+- Evaluator custom ve external baseline'ları tek komutta round-robin tekrarlayıp tek output'ta birleştirebilmektedir
 - V2 train/holdout workload'ları için henüz tekrarlı official baseline veya optimizer sonucu üretilmemiştir; sıradaki iş Gate 4 tekrarlı baseline protokolüdür
 
 Başka bir ifadeyle:
@@ -2317,6 +2371,7 @@ Sonuç:
 - [x] Event-driven kube-scheduler ile polling custom scheduler arasındaki ham latency karşılaştırmasının sınırını açıkla
 - [x] Placement ve consolidation metriklerini ortak karşılaştırma zemini olarak önceliklendir
 - [x] Default kube-scheduler external-reference debug smoke'unu clean commit üzerinden çalıştır
+- [x] Custom ve external baseline'lar için tek komutlu repetition desteği ve live debug smoke ekle
 - [ ] Üç V2 train workload üzerinde tekrarlı official default kube-scheduler baseline'ı çalıştır
 - [ ] Üç custom V2 baseline'ı aynı repetition ve manifest protokolüyle official çalıştır
 - [ ] Uygunsa kube-scheduler `NodeResourcesFit` / `MostAllocated` packing referansını ayrıca ölç
