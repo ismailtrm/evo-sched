@@ -1,0 +1,173 @@
+{
+  "schemaVersion": "v1",
+  "policyVersion": "v2",
+  "measurementVersion": "v2",
+  "runName": "v2-gate3-baseline-pilot",
+  "class": "pilot",
+  "status": "completed",
+  "paperEvidenceEligible": false,
+  "purpose": "Acceptance matrix for the V2 workload and support-metric contract before official repeated baseline and optimizer experiments.",
+  "startedAt": "2026-08-27T14:24:52.7232509Z",
+  "finishedAt": "2026-08-27T14:30:50.914294144Z",
+  "workingDirectory": "/home/ismail/evo-sched/scheduler",
+  "git": {
+    "sha": "aa5e3d9f984bee6eff537b3b57329321544c4d4c",
+    "branch": "research/policy-space-v2",
+    "dirtyAtStart": false
+  },
+  "commands": [
+    "KUBECONFIG=/home/ismail/.kube/config go run ./cmd/evaluator --workload ../workloads/v2/cpu-tight-train.json --weights-file ../experiments/weights-v2.json --poll-interval 250ms --timeout 90s --output /tmp/evo-v2-gate3-pilot-cpu.json",
+    "KUBECONFIG=/home/ismail/.kube/config go run ./cmd/evaluator --workload ../workloads/v2/mem-tight-train.json --weights-file ../experiments/weights-v2.json --poll-interval 250ms --timeout 90s --output /tmp/evo-v2-gate3-pilot-mem.json",
+    "KUBECONFIG=/home/ismail/.kube/config go run ./cmd/evaluator --workload ../workloads/v2/fragmenting-mix-train.json --weights-file ../experiments/weights-v2.json --poll-interval 250ms --timeout 90s --output /tmp/evo-v2-gate3-pilot-fragmenting.json"
+  ],
+  "inputs": [
+    {
+      "path": "workloads/v2/cpu-tight-train.json",
+      "sha256": "4f5f37555465b179c48b5e9a3bc1c738cddf03309c0823c9c55f51ec99374096"
+    },
+    {
+      "path": "workloads/v2/mem-tight-train.json",
+      "sha256": "9fbf91b4fe156c7100ed4363f674a3bddaaf56c572c1f23ba50e2fbb78f1c7b4"
+    },
+    {
+      "path": "workloads/v2/fragmenting-mix-train.json",
+      "sha256": "8dca751f14582c2fa56fa6f83d4bc58bb1d66a19e550716076715e9227143872"
+    },
+    {
+      "path": "experiments/weights-v2.json",
+      "sha256": "fe690c528b277d4a41496f5f702e25a554d7406f04accf17e832f75566d8d782"
+    },
+    {
+      "path": "deploy.yaml",
+      "sha256": "3de13f7b422236a72f0d1cce608957e469d8124f0ab5ad2b26d6d2af80dbf91c"
+    },
+    {
+      "path": "kind-config-4workers.yaml",
+      "sha256": "d26c091ff873418387e8c45148283a71235a2190efe1d8f021fc566de0bd664f"
+    }
+  ],
+  "cluster": {
+    "context": "kind-evo-sched",
+    "workerCount": 4,
+    "workerAllocatableBase": {
+      "cpuMilli": 16000,
+      "memoryMiB": 31712
+    },
+    "nodeImage": "kindest/node:v1.35.0",
+    "nodeImageId": "sha256:4613778f3cfcd10e615029370f5786704559103cf27bef934597ba562b269661",
+    "kubernetesServerVersion": "v1.35.0",
+    "kubectlClientVersion": "v1.35.0",
+    "goVersion": "go1.27.0-X:nodwarf5"
+  },
+  "scheduler": {
+    "name": "evok8s-scheduler",
+    "namespace": "evo-sched",
+    "deployment": "evok8s-scheduler",
+    "image": "evok8s-scheduler:0.1.0",
+    "imageId": "sha256:e502784e7071c53e7ffc586a41ed68d24825836b25d318b4a662553e37ac4375",
+    "rolloutStrategy": "Recreate",
+    "rolloutReadyContract": "exact total, updated, ready, and available replicas; zero unavailable and terminating replicas",
+    "weightsBeforeRun": {
+      "freeCPU": 0.25,
+      "freeMem": 0.25,
+      "balance": 0.25,
+      "consolidation": 0.25
+    },
+    "intervalBeforeRun": "2s",
+    "intervalDuringRun": "250ms",
+    "intervalAfterRun": "2s"
+  },
+  "measurement": {
+    "submissionTimestampSource": "evaluator-client-before-create",
+    "schedulerDecisionTimestampSource": "scheduler-before-bind-request",
+    "kubernetesScheduledTimestampSource": "pod-condition-last-transition-time",
+    "evaluatorObservationTimestampSource": "evaluator-list-response",
+    "workloadOccupancySource": "non-terminal-evaluator-pods-on-run-start-worker-snapshot",
+    "workloadResourceMetricSource": "non-terminal-bound-evaluator-pod-requests-over-run-start-worker-allocatable",
+    "schedulerIntervalSeconds": 0.25,
+    "podPollIntervalSeconds": 0.25,
+    "minimumPodDurationSeconds": 10,
+    "minimumDurationToPollIntervalRatio": 40
+  },
+  "workloads": [
+    {
+      "name": "cpu-tight-train",
+      "podCount": 24,
+      "arrivalBurstsSeconds": [0, 16],
+      "resolvedRequests": [
+        {"count": 24, "cpuMilli": 3520, "memoryMiB": 1903}
+      ],
+      "durationSeconds": 10
+    },
+    {
+      "name": "mem-tight-train",
+      "podCount": 24,
+      "arrivalBurstsSeconds": [0, 16],
+      "resolvedRequests": [
+        {"count": 24, "cpuMilli": 960, "memoryMiB": 6977}
+      ],
+      "durationSeconds": 10
+    },
+    {
+      "name": "fragmenting-mix-train",
+      "podCount": 24,
+      "arrivalBurstsSeconds": [0, 16],
+      "resolvedRequests": [
+        {"count": 12, "cpuMilli": 5120, "memoryMiB": 2537},
+        {"count": 12, "cpuMilli": 1280, "memoryMiB": 10148}
+      ],
+      "durationSeconds": 10
+    }
+  ],
+  "acceptance": {
+    "combinationCount": 9,
+    "allScheduled": true,
+    "allCompleted": true,
+    "allTimestampCoverageComplete": true,
+    "totalUnschedulableCount": 0,
+    "policySeparationObserved": true,
+    "summary": [
+      {"workload": "cpu-tight-train", "policy": "evok8s-v2-balanced", "p95DecisionSeconds": 1.22032634415, "maxOccupiedWorkers": 4, "dominantLoadVariance": 0.011557051282051284},
+      {"workload": "cpu-tight-train", "policy": "evok8s-v2-spread-heavy", "p95DecisionSeconds": 1.144208889, "maxOccupiedWorkers": 4, "dominantLoadVariance": 0.0034571428571428574},
+      {"workload": "cpu-tight-train", "policy": "evok8s-v2-consolidation-heavy", "p95DecisionSeconds": 1.2254592575, "maxOccupiedWorkers": 3, "dominantLoadVariance": 0.12627435897435868},
+      {"workload": "mem-tight-train", "policy": "evok8s-v2-balanced", "p95DecisionSeconds": 1.1749430782, "maxOccupiedWorkers": 4, "dominantLoadVariance": 0.01108385925005306},
+      {"workload": "mem-tight-train", "policy": "evok8s-v2-spread-heavy", "p95DecisionSeconds": 1.3476248309, "maxOccupiedWorkers": 4, "dominantLoadVariance": 0.004279525427604956},
+      {"workload": "mem-tight-train", "policy": "evok8s-v2-consolidation-heavy", "p95DecisionSeconds": 1.1587594368, "maxOccupiedWorkers": 3, "dominantLoadVariance": 0.12669564668521033},
+      {"workload": "fragmenting-mix-train", "policy": "evok8s-v2-balanced", "p95DecisionSeconds": 1.6453217589499989, "maxOccupiedWorkers": 3, "dominantLoadVariance": 0.10664582009610303},
+      {"workload": "fragmenting-mix-train", "policy": "evok8s-v2-spread-heavy", "p95DecisionSeconds": 1.2159867275, "maxOccupiedWorkers": 4, "dominantLoadVariance": 0.0075592593561587635},
+      {"workload": "fragmenting-mix-train", "policy": "evok8s-v2-consolidation-heavy", "p95DecisionSeconds": 1.2210156965, "maxOccupiedWorkers": 3, "dominantLoadVariance": 0.10530251802592978}
+    ]
+  },
+  "preflight": {
+    "passed": true,
+    "workersReady": 4,
+    "schedulerRolloutReady": true,
+    "rolloutStrategy": "Recreate",
+    "policyVersion": "v2",
+    "canonicalWeights": [0.25, 0.25, 0.25, 0.25],
+    "evaluatorNamespaceEmpty": true
+  },
+  "postflight": {
+    "passed": true,
+    "schedulerIntervalRestored": "2s",
+    "workersReady": 4,
+    "schedulerRolloutReady": true,
+    "canonicalWeights": [0.25, 0.25, 0.25, 0.25],
+    "evaluatorNamespaceEmpty": true,
+    "kindContainersStopped": true
+  },
+  "outputs": [
+    {"path": "cpu-tight.json", "sha256": "7e878d5666d83cfd17be293ddff2241f5c1120d9bfbb8655d1e72253f8707f22"},
+    {"path": "cpu-tight.csv", "sha256": "73e91b68d56bb8df47b1ed6f30ab9cf0b421f0330cf82e19aa5dde1cec555039"},
+    {"path": "mem-tight.json", "sha256": "4fa4f962432a27168250a5d10abe5f56d797c7a2f9ceb4dc36ab63843704c3e6"},
+    {"path": "mem-tight.csv", "sha256": "ee71971a7295b0a277599423c23d8299e9e0a06081db394156c6b02242c20c14"},
+    {"path": "fragmenting-mix.json", "sha256": "8f143b3b05711f37bfce2eae5dfa057b774e6dee12c4dade289f050166b73c95"},
+    {"path": "fragmenting-mix.csv", "sha256": "723c13eecf3d711aaf42e235905b67be938c66c0faed75265c6d32896e0c6bcb"}
+  ],
+  "notes": [
+    "This pilot validates workload feasibility, measurement completeness, support-metric provenance, and policy separation. It is not an official repeated baseline result.",
+    "The interrupted attempt on the preceding clean SHA produced no artifact and is documented separately in WALKTHROUGH.md.",
+    "Requested utilization and dominant-load variance are request-based support metrics, not measured hardware utilization.",
+    "CPU-to-memory imbalance is a placement proxy and must not be described as a direct fragmentation measurement."
+  ]
+}
