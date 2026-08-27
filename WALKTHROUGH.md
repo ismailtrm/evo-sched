@@ -1453,6 +1453,36 @@ Gate 1 sonucu:
 - Gerçek cluster'da patch, rollout, workload replay, versioned output, cleanup ve weight restoration akışı geçmiştir.
 - Gate 1 tamamlanmıştır; sıradaki araştırma gate'i Measurement `v2`dir.
 
+### 3.44. Scheduler experiment preflight skill'ini V2 contract'a güncelledik
+
+Gate 1 smoke sırasında `k8s-scheduler-experiment-ops` helper'ının yalnızca eski `PodPenalty/Packing` alanlarını bildiği ve `kubectl` host `PATH` içinde yoksa kullanılamadığı görüldü.
+Ayrıca evaluator namespace henüz oluşmamışsa `kubectl` NotFound cevabını JSON olarak parse etmeye çalışarak düşebiliyordu.
+
+Repo dışında, `/home/ismail/.codex/skills/k8s-scheduler-experiment-ops` altında tutulan skill şu yeteneklerle güncellendi:
+
+- `--kubectl` ile explicit client binary seçimi
+- `--expect-workers` ile exact worker-count gate'i
+- deployment env alanlarından `v1`, `v2` veya mixed/unknown contract tespiti
+- `FreeCPU`, `FreeMem`, `Balance`, `Consolidation` V2 weight desteği
+- raw weight yerine canonical L1-normalized weight karşılaştırması
+- scheduler name, rollout, weight validity ve policy version kontrolleri
+- eksik evaluator namespace'i boş kabul eden kontrollü NotFound davranışı
+- text ve JSON çıktıda raw/canonical weights, contract version ve ayrı readiness check'leri
+
+Bu sayede deployment'taki raw `1/1/1/1` ile evaluator restoration sonrası `0.25/0.25/0.25/0.25` aynı canonical policy olarak değerlendirilir.
+Eksik veya mixed policy alanları, invalid/all-zero weights, yanlış worker count ve rollout problemi preflight'ı başarısız yapar.
+
+Doğrulama:
+
+- helper `python3 -m py_compile` ile syntax check'ten geçti
+- skill `quick_validate.py` ile geçerli bulundu
+- fake `kubectl` forward testinde dört Ready worker, V2 raw weights ve eksik evaluator namespace için `ready=true` üretildi
+- aynı fixture `expect-workers=3` ile çalıştırıldığında `workerCountMatches=false` ve `ready=false` üretti
+- kurulu skill dosyaları doğrulanan geçici kopyayla byte-for-byte karşılaştırıldı
+
+Skill repo dışında olduğu için bu değişiklik doğrudan proje Git geçmişine girmez; bu bölüm değişikliğin durable project kaydıdır.
+Cluster smoke sonrasında durdurulduğu için güncellenmiş helper'ın gerçek-cluster acceptance testi Gate 2 başlangıç preflight'ında yapılacaktır.
+
 ## 4. Şu Anki Durum
 
 Şu anda proje durumu şöyledir:
@@ -1503,6 +1533,8 @@ Gate 1 sonucu:
 - Sıradaki araştırma işi Gate 2 Measurement `v2`dir
 - Official optimizer koşuları Gate 2-5 protokol çıkış koşullarına kadar blokludur
 - `evo-sched` kind container'ları smoke sonrasında silinmeden durdurulmuştur
+- Scheduler experiment preflight skill'i V2 contract, canonical weights ve exact worker-count kontrolüyle güncellenmiştir
+- Güncellenen preflight helper'ın gerçek-cluster acceptance testi Gate 2 açılışında yapılacaktır
 
 Başka bir ifadeyle:
 
@@ -1572,7 +1604,7 @@ Sonuç:
 
 - Gate 1 çıkış koşulları tamamlandı
 - official deney başlatılmadı
-- Gate 2 başlamadan önce V2 preflight helper güncellenecek
+- V2 preflight helper güncellendi; gerçek-cluster acceptance testi Gate 2 açılışında yapılacak
 
 ### Gate 2 - Measurement `v2`
 
