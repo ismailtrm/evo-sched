@@ -1824,16 +1824,67 @@ go vet ./...
 
 Bu kontroller Gate 3 code commit'i öncesi ve V2 workload testinden sonra geçti.
 
-Sonraki Gate 3 adımı:
+### 3.49. Gate 3 V2 debug live smoke'unu tamamladık
 
-1. Durdurulmuş 4-worker kind cluster'ı başlat.
-2. Clean `3babc6f` commit'i üzerinde V2 preflight çalıştır.
-3. `250ms` scheduler/poll interval ile tek V2 baseline ve tek train workload debug
-   smoke'u çalıştır.
-4. Resource summary, raw sample, source metadata, 24/24 completion ve namespace
-   cleanup'ını doğrula.
-5. Sonuca göre workload fraction'larını değiştirmek gerekirse yeni commit ile
-   değiştir; aksi halde Gate 3 acceptance matrix ve baseline protokolüne geç.
+V2 suite ve support metric akışını gerçek cluster üzerinde ilk kez doğrulamak için
+`debug` sınıfında tek bir acceptance run yapıldı. Ham output ve manifest önce,
+ledger kaydı sonra commitlendi:
+
+- artifact commit: `6dfb835 results: record v2 gate3 debug smoke`
+- artifact directory:
+  [`results/2026-08-27-v2-gate3-debug-smoke`](./results/2026-08-27-v2-gate3-debug-smoke)
+- execution Git SHA: `cd3816c5ed3eced646d8221f9116ad18f4d5bef2`
+- execution tree: clean
+- class: `debug`
+- `paperEvidenceEligible: false`
+
+Koşu öncesi ve sonrası V2 preflight geçti: dört worker Ready, deployment rollout
+healthy, canonical weights `0.25/0.25/0.25/0.25` ve evaluator namespace boştu.
+Scheduler interval debug koşusu için `2s`den `250ms`ye alındı; evaluator poll
+interval de `250ms`di. Run sonunda weights korunmuş, scheduler interval `2s`ye
+restore edilmiş ve namespace tekrar boş doğrulanmıştır. Ardından beş kind container
+resource tasarrufu için tekrar durduruldu.
+
+Koşu komutu:
+
+```bash
+KUBECONFIG=/home/ismail/.kube/config go run ./cmd/evaluator \
+  --workload ../workloads/v2/cpu-tight-train.json \
+  --weights 1,1,1,1 \
+  --poll-interval 250ms \
+  --timeout 90s \
+  --output /tmp/evo-v2-gate3-debug-cpu-tight.json
+```
+
+Canlı acceptance sonucu:
+
+- resolved worker base: `16000m` CPU ve `31712MiB` memory
+- her evaluator Pod request'i: `3520m` CPU ve `1903MiB` memory
+- `24/24` Pod schedule edildi ve tamamlandı
+- `unschedulableCount = 0`
+- decision, Kubernetes scheduled ve evaluator observation timestamp count'ları
+  ayrı ayrı `24`
+- `123` occupancy sample ve `123` requested-resource sample yazıldı
+- resource source, sampling profile ve yeni CSV kolonları JSON/CSV output'ta mevcut
+- minimum duration/poll ratio `40x`
+
+Bu artifact'te balanced policy için `maxWorkloadOccupiedWorkerNodes = 4` görüldü.
+Bu tek policy, tek run ve debug sınıfı koşudan policy karşılaştırması veya baseline
+üstünlüğü çıkarılmayacaktır.
+
+Önemli debug gözlemi:
+
+- scheduler interval `250ms` olmasına rağmen ikinci 12-Pod burstte decision latency
+  tail'i yaklaşık `2.21s`e, summary p95'i `2.10s`e ulaştı
+- bu gözlem burst altında scheduler loop/API interaction'ının tail latency ürettiğini
+  düşündürüyor; scoring policy etkisi olarak yorumlanmıyor
+- Gate 3 acceptance matrix'te her baseline için workload-level timing dağılımı,
+  `maxWorkloadOccupiedWorkerNodes` ve destek metrikleri birlikte incelenecek
+
+Gate 3 debug acceptance tamamlandı. Sıradaki araştırma koşusu clean commit üzerinden
+üç V2 baseline x üç train workload acceptance matrix'i olacak; bu koşu `pilot`
+olarak sınıflanacak ve official optimizer/seed deneyinden önce workload davranışını
+kontrol etmek için kullanılacak.
 
 ## 4. Şu Anki Durum
 
@@ -1899,7 +1950,8 @@ Sonraki Gate 3 adımı:
 - Polling primary decision objective'inden ayrıştırılmış; watch/event implementation'ı koşullu future work olarak bırakılmıştır
 - Gate 2 tamamlanmıştır
 - Gate 3 requested-resource support metric kodu ve V2 pressure workload suite'i commitlenmiştir
-- V2 train/holdout workload'ları için henüz canlı sonuç üretilmemiştir; sıradaki iş debug sınıfı live smoke'tur
+- V2 `cpu-tight-train` debug live smoke'u `24/24` completion, 123 source-tagged resource sample ve temiz postflight ile tamamlanmıştır
+- V2 train/holdout workload'ları için henüz comparative matrix veya official sonuç üretilmemiştir; sıradaki iş pilot acceptance matrix'tir
 
 Başka bir ifadeyle:
 
@@ -1999,7 +2051,8 @@ Sonuç:
 - [x] `unschedulable` değerini safety/feasibility kısıtı olarak koru
 - [x] Requested utilization, dominant-load variance ve CPU-memory imbalance destek metriklerini ekle
 - [x] Polling adequacy ratio ve resource metric source provenance'ını output contract'a ekle
-- [ ] Tek V2 baseline ile 24-Pod debug live smoke çalıştır
+- [x] Tek V2 baseline ile 24-Pod debug live smoke çalıştır
+- [ ] Üç V2 baseline x üç train workload pilot acceptance matrix'ini çalıştır
 - [ ] Workload checksum ve instantiate edilen mutlak resource request'lerini official manifestte sakla
 
 Çıkış koşulu:
