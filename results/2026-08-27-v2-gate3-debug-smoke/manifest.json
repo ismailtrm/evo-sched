@@ -1,0 +1,132 @@
+{
+  "schemaVersion": "v1",
+  "policyVersion": "v2",
+  "measurementVersion": "v2",
+  "runName": "v2-gate3-debug-cpu-tight",
+  "class": "debug",
+  "status": "completed",
+  "paperEvidenceEligible": false,
+  "purpose": "Live acceptance of the V2 24-Pod workload, requested-resource metric, sampling-profile, and cleanup paths. This is not a policy comparison or an official result.",
+  "startedAt": "2026-08-27T10:10:28.142971213Z",
+  "finishedAt": "2026-08-27T10:10:59.39670652Z",
+  "workingDirectory": "/home/ismail/evo-sched/scheduler",
+  "git": {
+    "sha": "cd3816c5ed3eced646d8221f9116ad18f4d5bef2",
+    "branch": "research/policy-space-v2",
+    "dirtyAtStart": false
+  },
+  "command": "KUBECONFIG=/home/ismail/.kube/config go run ./cmd/evaluator --workload ../workloads/v2/cpu-tight-train.json --weights 1,1,1,1 --poll-interval 250ms --timeout 90s --output /tmp/evo-v2-gate3-debug-cpu-tight.json",
+  "inputs": [
+    {
+      "path": "workloads/v2/cpu-tight-train.json",
+      "sha256": "4f5f37555465b179c48b5e9a3bc1c738cddf03309c0823c9c55f51ec99374096"
+    },
+    {
+      "path": "deploy.yaml",
+      "sha256": "233db8b84500ea3c337d7a50bd493cfbb4f9f1316d6f36095e2eb4039e79c6a2"
+    },
+    {
+      "path": "kind-config-4workers.yaml",
+      "sha256": "d26c091ff873418387e8c45148283a71235a2190efe1d8f021fc566de0bd664f"
+    }
+  ],
+  "cluster": {
+    "context": "kind-evo-sched",
+    "workerCount": 4,
+    "workerAllocatableBase": {
+      "cpuMilli": 16000,
+      "memoryMiB": 31712
+    },
+    "nodeImage": "kindest/node:v1.35.0",
+    "kindVersion": null,
+    "kindVersionNote": "The kind CLI was not available on PATH at artifact capture time; the running node image is recorded instead.",
+    "kubernetesServerVersion": "v1.35.0",
+    "kubectlClientVersion": "v1.35.0"
+  },
+  "scheduler": {
+    "name": "evok8s-scheduler",
+    "namespace": "evo-sched",
+    "deployment": "evok8s-scheduler",
+    "image": "evok8s-scheduler:0.1.0",
+    "imageId": "sha256:e502784e7071c53e7ffc586a41ed68d24825836b25d318b4a662553e37ac4375",
+    "weights": {
+      "freeCPU": 0.25,
+      "freeMem": 0.25,
+      "balance": 0.25,
+      "consolidation": 0.25
+    },
+    "intervalBeforeRun": "2s",
+    "intervalDuringRun": "250ms",
+    "intervalAfterRun": "2s"
+  },
+  "measurement": {
+    "submissionTimestampSource": "evaluator-client-before-create",
+    "schedulerDecisionTimestampSource": "scheduler-before-bind-request",
+    "kubernetesScheduledTimestampSource": "pod-condition-last-transition-time",
+    "evaluatorObservationTimestampSource": "evaluator-list-response",
+    "workloadOccupancySource": "non-terminal-evaluator-pods-on-run-start-worker-snapshot",
+    "workloadResourceMetricSource": "non-terminal-bound-evaluator-pod-requests-over-run-start-worker-allocatable",
+    "schedulerIntervalSeconds": 0.25,
+    "podPollIntervalSeconds": 0.25,
+    "minimumPodDurationSeconds": 10,
+    "minimumDurationToPollIntervalRatio": 40
+  },
+  "workload": {
+    "path": "workloads/v2/cpu-tight-train.json",
+    "podCount": 24,
+    "arrivalBurstsSeconds": [0, 16],
+    "resolvedPerPodRequest": {
+      "cpuMilli": 3520,
+      "memoryMiB": 1903
+    },
+    "durationSeconds": 10
+  },
+  "summary": {
+    "scheduledCount": 24,
+    "completedCount": 24,
+    "unschedulableCount": 0,
+    "decisionTimestampCount": 24,
+    "kubernetesScheduledTimestampCount": 24,
+    "evaluatorObservationTimestampCount": 24,
+    "resourceSampleCount": 123,
+    "occupancySampleCount": 123,
+    "averageSchedulingDecisionLatencySeconds": 0.6652078138333334,
+    "p95SchedulingDecisionLatencySeconds": 2.103363331199999,
+    "maxWorkloadOccupiedWorkerNodes": 4,
+    "meanWorkloadCPURequestedUtilization": 0.5947154471544708,
+    "meanWorkloadMemoryRequestedUtilization": 0.1622154934532261,
+    "meanWorkloadDominantRequestedLoadVariance": 0.022134146341463417,
+    "meanWorkloadCPUToMemoryImbalance": 0.4324999537012465
+  },
+  "preflight": {
+    "passed": true,
+    "workersReady": 4,
+    "schedulerRolloutReady": true,
+    "policyVersion": "v2",
+    "canonicalWeights": [0.25, 0.25, 0.25, 0.25],
+    "evaluatorNamespaceEmpty": true
+  },
+  "postflight": {
+    "passed": true,
+    "schedulerIntervalRestored": "2s",
+    "workersReady": 4,
+    "schedulerRolloutReady": true,
+    "canonicalWeights": [0.25, 0.25, 0.25, 0.25],
+    "evaluatorNamespaceEmpty": true
+  },
+  "outputs": [
+    {
+      "path": "result.json",
+      "sha256": "3eb71ccd608b3437f17c26658007082da5811c05d164248049fe0d550c8ad399"
+    },
+    {
+      "path": "result.csv",
+      "sha256": "42cb89bc3f689ad975cf0a8c3ac9c2ed106de986a2f0e2eb1c2f6ce167bab879"
+    }
+  ],
+  "notes": [
+    "This is a single balanced-policy debug acceptance run and must not be used as a baseline or optimizer comparison.",
+    "The maximum occupied-worker value of four is not an experimental claim; no contrasting policy was evaluated in this artifact.",
+    "The second burst contains multi-second tail decision latencies despite a 250ms scheduler interval. This is an implementation/workload interaction to inspect in the later acceptance matrix, not evidence of a policy effect."
+  ]
+}
