@@ -59,6 +59,7 @@ func MeasurementProtocolFor(opts RunnerOptions, schedulerInterval time.Duration)
 		KubernetesScheduledTimestampSource:  "pod-condition-last-transition-time",
 		EvaluatorObservationTimestampSource: "evaluator-list-response",
 		WorkloadOccupancySource:             "non-terminal-evaluator-pods-on-run-start-worker-snapshot",
+		WorkloadResourceMetricSource:        WorkloadRequestedResourceMetricSource,
 		SchedulerIntervalSeconds:            schedulerInterval.Seconds(),
 		PodPollIntervalSeconds:              opts.PollInterval.Seconds(),
 	}
@@ -210,6 +211,10 @@ func RunBatch(ctx context.Context, cs kubernetes.Interface, opts RunnerOptions, 
 	if err != nil {
 		return BatchResult{}, err
 	}
+	samplingProfile, err := buildWorkloadSamplingProfile(workload, opts.PollInterval)
+	if err != nil {
+		return BatchResult{}, err
+	}
 	if err := ensureNamespace(ctx, cs, opts.Namespace); err != nil {
 		return BatchResult{}, err
 	}
@@ -230,15 +235,16 @@ func RunBatch(ctx context.Context, cs kubernetes.Interface, opts RunnerOptions, 
 	}()
 
 	batch := BatchResult{
-		PolicyVersion:       PolicyVersion,
-		MeasurementVersion:  MeasurementVersion,
-		MeasurementProtocol: protocol,
-		Workload:            workloadName(workloadPath),
-		WorkloadPath:        workloadPath,
-		WorkloadBase:        &workloadBase,
-		ResolvedWorkload:    append([]WorkloadItem(nil), workload...),
-		Results:             make([]ComparisonRow, 0, len(runSpecs)),
-		Runs:                make([]RunResult, 0, len(runSpecs)),
+		PolicyVersion:           PolicyVersion,
+		MeasurementVersion:      MeasurementVersion,
+		MeasurementProtocol:     protocol,
+		Workload:                workloadName(workloadPath),
+		WorkloadPath:            workloadPath,
+		WorkloadBase:            &workloadBase,
+		WorkloadSamplingProfile: samplingProfile,
+		ResolvedWorkload:        append([]WorkloadItem(nil), workload...),
+		Results:                 make([]ComparisonRow, 0, len(runSpecs)),
+		Runs:                    make([]RunResult, 0, len(runSpecs)),
 	}
 
 	for _, spec := range runSpecs {
@@ -254,7 +260,7 @@ func RunBatch(ctx context.Context, cs kubernetes.Interface, opts RunnerOptions, 
 			return batch, err
 		}
 
-		runResult, runErr := executeRun(ctx, cs, opts, workloadPath, workload, spec, protocol)
+		runResult, runErr := executeRun(ctx, cs, opts, workloadPath, workload, spec, protocol, samplingProfile)
 		batch.Runs = append(batch.Runs, runResult)
 		batch.Results = append(batch.Results, ComparisonRowFromRun(runResult))
 		if runErr != nil {
@@ -311,24 +317,29 @@ func EvaluateWorkloads(ctx context.Context, cs kubernetes.Interface, opts Runner
 		if err != nil {
 			return results, err
 		}
+		samplingProfile, err := buildWorkloadSamplingProfile(workload, opts.PollInterval)
+		if err != nil {
+			return results, err
+		}
 
 		batch := BatchResult{
-			PolicyVersion:       PolicyVersion,
-			MeasurementVersion:  MeasurementVersion,
-			MeasurementProtocol: protocol,
-			Workload:            workloadName(workloadPath),
-			WorkloadPath:        workloadPath,
-			WorkloadBase:        &workloadBase,
-			ResolvedWorkload:    append([]WorkloadItem(nil), workload...),
-			Results:             make([]ComparisonRow, 0, 1),
-			Runs:                make([]RunResult, 0, 1),
+			PolicyVersion:           PolicyVersion,
+			MeasurementVersion:      MeasurementVersion,
+			MeasurementProtocol:     protocol,
+			Workload:                workloadName(workloadPath),
+			WorkloadPath:            workloadPath,
+			WorkloadBase:            &workloadBase,
+			WorkloadSamplingProfile: samplingProfile,
+			ResolvedWorkload:        append([]WorkloadItem(nil), workload...),
+			Results:                 make([]ComparisonRow, 0, 1),
+			Runs:                    make([]RunResult, 0, 1),
 		}
 
 		if err := cleanupManagedPods(ctx, cs, opts.Namespace); err != nil {
 			return results, err
 		}
 
-		runResult, runErr := executeRun(ctx, cs, opts, workloadPath, workload, spec, protocol)
+		runResult, runErr := executeRun(ctx, cs, opts, workloadPath, workload, spec, protocol, samplingProfile)
 		batch.Runs = append(batch.Runs, runResult)
 		batch.Results = append(batch.Results, ComparisonRowFromRun(runResult))
 		results = append(results, batch)
@@ -380,6 +391,7 @@ func executeRun(
 	workload []WorkloadItem,
 	spec ExperimentRunSpec,
 	protocol MeasurementProtocol,
+	samplingProfile WorkloadSamplingProfile,
 ) (RunResult, error) {
 	timeout := opts.Timeout
 	if timeout <= 0 {
@@ -393,11 +405,7 @@ func executeRun(
 	startedAt := time.Now().UTC()
 	workerNodes, err := currentWorkerNodes(runCtx, cs)
 	if err != nil {
-		return emptyRunResult(opts, spec, workloadPath, startedAt, protocol), err
-	}
-	workerNodeNames := make(map[string]struct{}, len(workerNodes))
-	for _, node := range workerNodes {
-		workerNodeNames[node.Name] = struct{}{}
+		return emptyRunResult(opts, spec, workloadPath, startedAt, protocol, samplingProfile), err
 	}
 
 	selector := runSelector(runID)
@@ -409,6 +417,7 @@ func executeRun(
 	var maxWorkloadOccupiedWorkerNodes atomic.Int64
 	var creatorDone atomic.Bool
 	occupancySamples := make([]NodeOccupancySample, 0)
+	resourceSamples := make([]WorkloadResourceSample, 0)
 	var mu sync.Mutex
 	doneCh := make(chan error, 1)
 
@@ -423,18 +432,19 @@ func executeRun(
 			&mu,
 			&maxWorkloadOccupiedWorkerNodes,
 			&occupancySamples,
+			&resourceSamples,
 			&creatorDone,
 			len(workload),
-			workerNodeNames,
+			workerNodes,
 		)
 	}()
 
 	for _, item := range workload {
 		if err := waitUntilArrival(runCtx, startedAt, item.ArrivalSeconds); err != nil {
-			return emptyRunResult(opts, spec, workloadPath, startedAt, protocol), err
+			return emptyRunResult(opts, spec, workloadPath, startedAt, protocol, samplingProfile), err
 		}
 		if err := createWorkloadPod(runCtx, cs, opts, runID, item, results[item.Name]); err != nil {
-			return emptyRunResult(opts, spec, workloadPath, startedAt, protocol), err
+			return emptyRunResult(opts, spec, workloadPath, startedAt, protocol, samplingProfile), err
 		}
 	}
 	creatorDone.Store(true)
@@ -449,6 +459,8 @@ func executeRun(
 
 	pods := flattenResults(results)
 	sort.Slice(pods, func(i, j int) bool { return pods[i].Name < pods[j].Name })
+	summary := SummarizePods(pods, int(maxWorkloadOccupiedWorkerNodes.Load()))
+	summary.ResourceSummary = summarizeResourceSamples(resourceSamples)
 	runResult := RunResult{
 		PolicyVersion:                     PolicyVersion,
 		MeasurementVersion:                MeasurementVersion,
@@ -461,9 +473,11 @@ func executeRun(
 		Weights:                           spec.Weights,
 		StartedAt:                         startedAt,
 		FinishedAt:                        finishedAt,
-		Summary:                           SummarizePods(pods, int(maxWorkloadOccupiedWorkerNodes.Load())),
+		Summary:                           summary,
 		Pods:                              pods,
 		WorkloadOccupiedWorkerNodeSamples: occupancySamples,
+		WorkloadResourceSamples:           resourceSamples,
+		WorkloadSamplingProfile:           samplingProfile,
 	}
 	if monitorErr != nil {
 		runResult.Notes = append(runResult.Notes, monitorErr.Error())
@@ -472,18 +486,19 @@ func executeRun(
 	return runResult, monitorErr
 }
 
-func emptyRunResult(opts RunnerOptions, spec ExperimentRunSpec, workloadPath string, startedAt time.Time, protocol MeasurementProtocol) RunResult {
+func emptyRunResult(opts RunnerOptions, spec ExperimentRunSpec, workloadPath string, startedAt time.Time, protocol MeasurementProtocol, samplingProfile WorkloadSamplingProfile) RunResult {
 	return RunResult{
-		PolicyVersion:       PolicyVersion,
-		MeasurementVersion:  MeasurementVersion,
-		MeasurementProtocol: protocol,
-		Name:                spec.Name,
-		Namespace:           opts.Namespace,
-		Scheduler:           opts.SchedulerName,
-		Workload:            workloadPath,
-		Weights:             spec.Weights,
-		StartedAt:           startedAt,
-		FinishedAt:          time.Now().UTC(),
+		PolicyVersion:           PolicyVersion,
+		MeasurementVersion:      MeasurementVersion,
+		MeasurementProtocol:     protocol,
+		Name:                    spec.Name,
+		Namespace:               opts.Namespace,
+		Scheduler:               opts.SchedulerName,
+		Workload:                workloadPath,
+		Weights:                 spec.Weights,
+		StartedAt:               startedAt,
+		FinishedAt:              time.Now().UTC(),
+		WorkloadSamplingProfile: samplingProfile,
 	}
 }
 
@@ -720,9 +735,10 @@ func monitorPods(
 	mu *sync.Mutex,
 	maxWorkloadOccupiedWorkerNodes *atomic.Int64,
 	occupancySamples *[]NodeOccupancySample,
+	resourceSamples *[]WorkloadResourceSample,
 	creatorDone *atomic.Bool,
 	expected int,
-	workerNodeNames map[string]struct{},
+	workerNodes []corev1.Node,
 ) error {
 	ticker := time.NewTicker(pollInterval)
 	defer ticker.Stop()
@@ -738,7 +754,6 @@ func monitorPods(
 			}
 
 			observedAt := time.Now().UTC()
-			active := make(map[string]struct{})
 			completed := 0
 			for _, pod := range pods.Items {
 				itemName := pod.Labels["evo-sched/item"]
@@ -752,20 +767,17 @@ func monitorPods(
 				}
 				mu.Unlock()
 
-				if pod.Spec.NodeName != "" {
-					if _, ok := workerNodeNames[pod.Spec.NodeName]; !ok {
-						return fmt.Errorf("evaluator pod %s assigned to node %s outside worker snapshot", pod.Name, pod.Spec.NodeName)
-					}
-					if !isTerminalPhase(pod.Status.Phase) {
-						active[pod.Spec.NodeName] = struct{}{}
-					}
-				}
 				if isTerminalPhase(pod.Status.Phase) {
 					completed++
 				}
 			}
 
-			count := int64(len(active))
+			resourceSample, err := buildWorkloadResourceSample(observedAt, pods.Items, workerNodes)
+			if err != nil {
+				return err
+			}
+
+			count := int64(resourceSample.WorkloadOccupiedWorkerNodes)
 			for {
 				prev := maxWorkloadOccupiedWorkerNodes.Load()
 				if count <= prev || maxWorkloadOccupiedWorkerNodes.CompareAndSwap(prev, count) {
@@ -776,8 +788,9 @@ func monitorPods(
 			mu.Lock()
 			*occupancySamples = append(*occupancySamples, NodeOccupancySample{
 				ObservedAt:                  observedAt,
-				WorkloadOccupiedWorkerNodes: len(active),
+				WorkloadOccupiedWorkerNodes: resourceSample.WorkloadOccupiedWorkerNodes,
 			})
+			*resourceSamples = append(*resourceSamples, resourceSample)
 			mu.Unlock()
 
 			if creatorDone.Load() && len(pods.Items) == expected && completed == expected {

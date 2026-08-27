@@ -70,11 +70,47 @@ type Summary struct {
 	AverageEvaluatorObservationLag     float64 `json:"averageEvaluatorObservationLagSeconds"`
 	P95EvaluatorObservationLag         float64 `json:"p95EvaluatorObservationLagSeconds"`
 	MaxWorkloadOccupiedWorkerNodes     int     `json:"maxWorkloadOccupiedWorkerNodes"`
+	ResourceSummary
 }
 
 type NodeOccupancySample struct {
 	ObservedAt                  time.Time `json:"observedAt"`
 	WorkloadOccupiedWorkerNodes int       `json:"workloadOccupiedWorkerNodes"`
+}
+
+type WorkerResourceSample struct {
+	Name                       string  `json:"name"`
+	AllocCPUMilli              int64   `json:"allocCpuMilli"`
+	AllocMemoryBytes           int64   `json:"allocMemoryBytes"`
+	WorkloadRequestedCPUMilli  int64   `json:"workloadRequestedCpuMilli"`
+	WorkloadRequestedMemBytes  int64   `json:"workloadRequestedMemoryBytes"`
+	WorkloadPodCount           int     `json:"workloadPodCount"`
+	CPURequestedUtilization    float64 `json:"cpuRequestedUtilization"`
+	MemoryRequestedUtilization float64 `json:"memoryRequestedUtilization"`
+	DominantRequestedLoad      float64 `json:"dominantRequestedLoad"`
+}
+
+type WorkloadResourceSample struct {
+	ObservedAt                            time.Time              `json:"observedAt"`
+	WorkloadOccupiedWorkerNodes           int                    `json:"workloadOccupiedWorkerNodes"`
+	WorkloadCPURequestedUtilization       float64                `json:"workloadCpuRequestedUtilization"`
+	WorkloadMemoryRequestedUtilization    float64                `json:"workloadMemoryRequestedUtilization"`
+	WorkloadDominantRequestedLoadVariance float64                `json:"workloadDominantRequestedLoadVariance"`
+	WorkloadCPUToMemoryImbalance          float64                `json:"workloadCpuToMemoryImbalance"`
+	Workers                               []WorkerResourceSample `json:"workers"`
+}
+
+type ResourceSummary struct {
+	MeanWorkloadCPURequestedUtilization       float64 `json:"meanWorkloadCpuRequestedUtilization"`
+	MeanWorkloadMemoryRequestedUtilization    float64 `json:"meanWorkloadMemoryRequestedUtilization"`
+	MeanWorkloadDominantRequestedLoadVariance float64 `json:"meanWorkloadDominantRequestedLoadVariance"`
+	MeanWorkloadCPUToMemoryImbalance          float64 `json:"meanWorkloadCpuToMemoryImbalance"`
+}
+
+type WorkloadSamplingProfile struct {
+	MinimumPodDurationSeconds          int     `json:"minimumPodDurationSeconds"`
+	MaximumPodDurationSeconds          int     `json:"maximumPodDurationSeconds"`
+	MinimumDurationToPollIntervalRatio float64 `json:"minimumDurationToPollIntervalRatio"`
 }
 
 type MeasurementProtocol struct {
@@ -84,26 +120,29 @@ type MeasurementProtocol struct {
 	KubernetesScheduledTimestampSource  string  `json:"kubernetesScheduledTimestampSource"`
 	EvaluatorObservationTimestampSource string  `json:"evaluatorObservationTimestampSource"`
 	WorkloadOccupancySource             string  `json:"workloadOccupancySource"`
+	WorkloadResourceMetricSource        string  `json:"workloadResourceMetricSource"`
 	SchedulerIntervalSeconds            float64 `json:"schedulerIntervalSeconds"`
 	PodPollIntervalSeconds              float64 `json:"podPollIntervalSeconds"`
 }
 
 type RunResult struct {
-	PolicyVersion                     string                `json:"policyVersion"`
-	MeasurementVersion                string                `json:"measurementVersion"`
-	MeasurementProtocol               MeasurementProtocol   `json:"measurementProtocol"`
-	Name                              string                `json:"name"`
-	RunID                             string                `json:"runId"`
-	Namespace                         string                `json:"namespace"`
-	Scheduler                         string                `json:"schedulerName"`
-	Workload                          string                `json:"workload"`
-	Weights                           WeightSet             `json:"weights"`
-	StartedAt                         time.Time             `json:"startedAt"`
-	FinishedAt                        time.Time             `json:"finishedAt"`
-	Summary                           Summary               `json:"summary"`
-	Pods                              []PodTiming           `json:"pods"`
-	WorkloadOccupiedWorkerNodeSamples []NodeOccupancySample `json:"workloadOccupiedWorkerNodeSamples"`
-	Notes                             []string              `json:"notes,omitempty"`
+	PolicyVersion                     string                   `json:"policyVersion"`
+	MeasurementVersion                string                   `json:"measurementVersion"`
+	MeasurementProtocol               MeasurementProtocol      `json:"measurementProtocol"`
+	Name                              string                   `json:"name"`
+	RunID                             string                   `json:"runId"`
+	Namespace                         string                   `json:"namespace"`
+	Scheduler                         string                   `json:"schedulerName"`
+	Workload                          string                   `json:"workload"`
+	Weights                           WeightSet                `json:"weights"`
+	StartedAt                         time.Time                `json:"startedAt"`
+	FinishedAt                        time.Time                `json:"finishedAt"`
+	Summary                           Summary                  `json:"summary"`
+	Pods                              []PodTiming              `json:"pods"`
+	WorkloadOccupiedWorkerNodeSamples []NodeOccupancySample    `json:"workloadOccupiedWorkerNodeSamples"`
+	WorkloadResourceSamples           []WorkloadResourceSample `json:"workloadResourceSamples"`
+	WorkloadSamplingProfile           WorkloadSamplingProfile  `json:"workloadSamplingProfile"`
+	Notes                             []string                 `json:"notes,omitempty"`
 }
 
 type ComparisonRow struct {
@@ -123,17 +162,20 @@ type ComparisonRow struct {
 	AverageEvaluatorObservationLag     float64   `json:"averageEvaluatorObservationLagSeconds"`
 	P95EvaluatorObservationLag         float64   `json:"p95EvaluatorObservationLagSeconds"`
 	MaxWorkloadOccupiedWorkerNodes     int       `json:"maxWorkloadOccupiedWorkerNodes"`
-	Notes                              []string  `json:"notes,omitempty"`
+	ResourceSummary
+	WorkloadSamplingProfile
+	Notes []string `json:"notes,omitempty"`
 }
 
 type BatchResult struct {
-	PolicyVersion       string              `json:"policyVersion"`
-	MeasurementVersion  string              `json:"measurementVersion"`
-	MeasurementProtocol MeasurementProtocol `json:"measurementProtocol"`
-	Workload            string              `json:"workload"`
-	WorkloadPath        string              `json:"workloadPath"`
-	WorkloadBase        *WorkloadBase       `json:"workloadBase,omitempty"`
-	ResolvedWorkload    []WorkloadItem      `json:"resolvedWorkload,omitempty"`
-	Results             []ComparisonRow     `json:"results"`
-	Runs                []RunResult         `json:"runs,omitempty"`
+	PolicyVersion           string                  `json:"policyVersion"`
+	MeasurementVersion      string                  `json:"measurementVersion"`
+	MeasurementProtocol     MeasurementProtocol     `json:"measurementProtocol"`
+	Workload                string                  `json:"workload"`
+	WorkloadPath            string                  `json:"workloadPath"`
+	WorkloadBase            *WorkloadBase           `json:"workloadBase,omitempty"`
+	WorkloadSamplingProfile WorkloadSamplingProfile `json:"workloadSamplingProfile"`
+	ResolvedWorkload        []WorkloadItem          `json:"resolvedWorkload,omitempty"`
+	Results                 []ComparisonRow         `json:"results"`
+	Runs                    []RunResult             `json:"runs,omitempty"`
 }

@@ -197,10 +197,24 @@ func aggregateEvaluationBatches(batches []evaluator.BatchResult) (optimizer.Eval
 		if batch.MeasurementProtocol != protocol {
 			return optimizer.EvaluationData{}, fmt.Errorf("workload %s uses a different measurement protocol", batch.Workload)
 		}
+		if batch.MeasurementProtocol.WorkloadResourceMetricSource == "" {
+			return optimizer.EvaluationData{}, fmt.Errorf("workload %s has no workload resource metric source", batch.Workload)
+		}
+		if batch.WorkloadSamplingProfile.MinimumDurationToPollIntervalRatio < evaluator.MinimumDurationToPollIntervalRatio {
+			return optimizer.EvaluationData{}, fmt.Errorf(
+				"workload %s is undersampled: minimum duration to poll interval ratio=%0.3f, require at least %0.1f",
+				batch.Workload,
+				batch.WorkloadSamplingProfile.MinimumDurationToPollIntervalRatio,
+				evaluator.MinimumDurationToPollIntervalRatio,
+			)
+		}
 		if len(batch.Results) != 1 {
 			return optimizer.EvaluationData{}, fmt.Errorf("workload %s returned %d results, want 1", batch.WorkloadPath, len(batch.Results))
 		}
 		row := batch.Results[0]
+		if row.WorkloadSamplingProfile != batch.WorkloadSamplingProfile {
+			return optimizer.EvaluationData{}, fmt.Errorf("workload %s sampling profile does not match its result row", batch.Workload)
+		}
 		if row.PodCount <= 0 {
 			return optimizer.EvaluationData{}, fmt.Errorf("workload %s has no pods", batch.Workload)
 		}
@@ -284,6 +298,8 @@ func aggregateEvaluationBatches(batches []evaluator.BatchResult) (optimizer.Eval
 			DecisionTimestampCount:             row.DecisionTimestampCount,
 			KubernetesScheduledTimestampCount:  row.KubernetesScheduledTimestampCount,
 			EvaluatorObservationTimestampCount: row.EvaluatorObservationTimestampCount,
+			ResourceSummary:                    row.ResourceSummary,
+			WorkloadSamplingProfile:            batch.WorkloadSamplingProfile,
 		})
 		totalP95DecisionLatency += row.P95SchedulingDecisionLatency
 		totalMaxOccupiedWorkers += float64(row.MaxWorkloadOccupiedWorkerNodes)

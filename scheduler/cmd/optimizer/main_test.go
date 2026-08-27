@@ -32,6 +32,12 @@ func TestAggregateEvaluationBatches(t *testing.T) {
 	if len(data.Workloads) != 1 || data.Workloads[0].PodCount != 4 {
 		t.Fatalf("unexpected workload metrics: %+v", data.Workloads)
 	}
+	if got, want := data.Workloads[0].MeanWorkloadDominantRequestedLoadVariance, 0.04; got != want {
+		t.Fatalf("mean workload load variance = %v, want %v", got, want)
+	}
+	if got, want := data.Workloads[0].MinimumDurationToPollIntervalRatio, 5.0; got != want {
+		t.Fatalf("duration to poll ratio = %v, want %v", got, want)
+	}
 }
 
 func TestAggregateEvaluationBatchesRejectsInvalidMeasurementEvidence(t *testing.T) {
@@ -53,6 +59,27 @@ func TestAggregateEvaluationBatchesRejectsInvalidMeasurementEvidence(t *testing.
 				batch.MeasurementProtocol.PodPollIntervalSeconds = 0
 			},
 			want: "invalid intervals",
+		},
+		{
+			name: "missing resource metric source",
+			mutate: func(batch *evaluator.BatchResult) {
+				batch.MeasurementProtocol.WorkloadResourceMetricSource = ""
+			},
+			want: "no workload resource metric source",
+		},
+		{
+			name: "undersampled workload",
+			mutate: func(batch *evaluator.BatchResult) {
+				batch.WorkloadSamplingProfile.MinimumDurationToPollIntervalRatio = 1
+			},
+			want: "undersampled",
+		},
+		{
+			name: "sampling profile mismatch",
+			mutate: func(batch *evaluator.BatchResult) {
+				batch.Results[0].MinimumDurationToPollIntervalRatio = 4
+			},
+			want: "sampling profile does not match",
 		},
 		{
 			name: "unschedulable pod",
@@ -140,13 +167,19 @@ func validEvaluationBatch() evaluator.BatchResult {
 	return evaluator.BatchResult{
 		MeasurementVersion: evaluator.MeasurementVersion,
 		MeasurementProtocol: evaluator.MeasurementProtocol{
-			Version:                  evaluator.MeasurementVersion,
-			SchedulerIntervalSeconds: 2,
-			PodPollIntervalSeconds:   1,
+			Version:                      evaluator.MeasurementVersion,
+			WorkloadResourceMetricSource: evaluator.WorkloadRequestedResourceMetricSource,
+			SchedulerIntervalSeconds:     2,
+			PodPollIntervalSeconds:       1,
 		},
 		Workload:     "cpu-tight",
 		WorkloadPath: "../workloads/cpu-tight.json",
 		WorkloadBase: &evaluator.WorkloadBase{WorkerCount: 4},
+		WorkloadSamplingProfile: evaluator.WorkloadSamplingProfile{
+			MinimumPodDurationSeconds:          5,
+			MaximumPodDurationSeconds:          10,
+			MinimumDurationToPollIntervalRatio: 5,
+		},
 		Results: []evaluator.ComparisonRow{{
 			PodCount:                           4,
 			ScheduledCount:                     4,
@@ -159,6 +192,17 @@ func validEvaluationBatch() evaluator.BatchResult {
 			AverageKubernetesPending:           1.0,
 			P95KubernetesPending:               1.0,
 			MaxWorkloadOccupiedWorkerNodes:     2,
+			ResourceSummary: evaluator.ResourceSummary{
+				MeanWorkloadCPURequestedUtilization:       0.3,
+				MeanWorkloadMemoryRequestedUtilization:    0.2,
+				MeanWorkloadDominantRequestedLoadVariance: 0.04,
+				MeanWorkloadCPUToMemoryImbalance:          0.1,
+			},
+			WorkloadSamplingProfile: evaluator.WorkloadSamplingProfile{
+				MinimumPodDurationSeconds:          5,
+				MaximumPodDurationSeconds:          10,
+				MinimumDurationToPollIntervalRatio: 5,
+			},
 		}},
 	}
 }

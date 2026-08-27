@@ -2,6 +2,7 @@ package evaluator
 
 import (
 	"context"
+	"math"
 	"os"
 	"path/filepath"
 	"strings"
@@ -206,8 +207,11 @@ func TestMeasurementProtocolForRecordsSourcesAndIntervals(t *testing.T) {
 	if got.SchedulerIntervalSeconds != 0.5 || got.PodPollIntervalSeconds != 0.25 {
 		t.Fatalf("unexpected measurement intervals: %+v", got)
 	}
-	if got.SchedulerDecisionTimestampSource == "" || got.WorkloadOccupancySource == "" {
+	if got.SchedulerDecisionTimestampSource == "" || got.WorkloadOccupancySource == "" || got.WorkloadResourceMetricSource == "" {
 		t.Fatalf("measurement sources must be explicit: %+v", got)
+	}
+	if got.WorkloadResourceMetricSource != WorkloadRequestedResourceMetricSource {
+		t.Fatalf("workload resource source = %q, want %q", got.WorkloadResourceMetricSource, WorkloadRequestedResourceMetricSource)
 	}
 }
 
@@ -259,6 +263,17 @@ func TestWriteComparisonCSV(t *testing.T) {
 			AverageEvaluatorObservationLag:     0.4,
 			P95EvaluatorObservationLag:         0.8,
 			MaxWorkloadOccupiedWorkerNodes:     2,
+			ResourceSummary: ResourceSummary{
+				MeanWorkloadCPURequestedUtilization:       0.3,
+				MeanWorkloadMemoryRequestedUtilization:    0.2,
+				MeanWorkloadDominantRequestedLoadVariance: 0.04,
+				MeanWorkloadCPUToMemoryImbalance:          0.1,
+			},
+			WorkloadSamplingProfile: WorkloadSamplingProfile{
+				MinimumPodDurationSeconds:          5,
+				MaximumPodDurationSeconds:          10,
+				MinimumDurationToPollIntervalRatio: 5,
+			},
 		},
 	}
 
@@ -272,11 +287,42 @@ func TestWriteComparisonCSV(t *testing.T) {
 		t.Fatalf("read csv: %v", err)
 	}
 	content := string(data)
-	if !strings.Contains(content, "policy_version,measurement_version,scheduler_interval_seconds,pod_poll_interval_seconds,run_name,free_cpu,free_mem,balance,consolidation") {
+	if !strings.Contains(content, "policy_version,measurement_version,scheduler_interval_seconds,pod_poll_interval_seconds,workload_resource_metric_source,run_name,free_cpu,free_mem,balance,consolidation") {
 		t.Fatalf("missing csv header: %s", content)
 	}
-	if !strings.Contains(content, "v2,v2,2.000000,1.000000,baseline,0.4,0.3,0.2,0.1,4,4,4,0,4,4,4,0.750000,1.250000,1.500000,2.000000,0.400000,0.800000,2,") {
+	if !strings.Contains(content, "mean_workload_dominant_requested_load_variance") {
+		t.Fatalf("missing resource metric header: %s", content)
+	}
+	if !strings.Contains(content, "minimum_duration_to_poll_interval_ratio") {
+		t.Fatalf("missing sampling profile header: %s", content)
+	}
+	if !strings.Contains(content, "v2,v2,2.000000,1.000000,"+WorkloadRequestedResourceMetricSource+",baseline,0.4,0.3,0.2,0.1,4,4,4,0,4,4,4,0.750000,1.250000,1.500000,2.000000,0.400000,0.800000,2,0.300000,0.200000,0.040000,0.100000,5,10,5.000000,") {
 		t.Fatalf("missing csv row: %s", content)
+	}
+}
+
+func TestComparisonRowFromRunCarriesResourceAndSamplingEvidence(t *testing.T) {
+	run := RunResult{
+		Name: "run-a",
+		Summary: Summary{
+			PodCount: 4,
+			ResourceSummary: ResourceSummary{
+				MeanWorkloadCPURequestedUtilization:       0.3,
+				MeanWorkloadDominantRequestedLoadVariance: 0.04,
+			},
+		},
+		WorkloadSamplingProfile: WorkloadSamplingProfile{
+			MinimumPodDurationSeconds:          5,
+			MaximumPodDurationSeconds:          10,
+			MinimumDurationToPollIntervalRatio: 5,
+		},
+	}
+
+	got := ComparisonRowFromRun(run)
+	assertNear(t, got.MeanWorkloadCPURequestedUtilization, 0.3)
+	assertNear(t, got.MeanWorkloadDominantRequestedLoadVariance, 0.04)
+	if got.MinimumPodDurationSeconds != 5 || got.MaximumPodDurationSeconds != 10 {
+		t.Fatalf("unexpected sampling profile: %+v", got.WorkloadSamplingProfile)
 	}
 }
 
@@ -337,6 +383,112 @@ func TestSummarizePods(t *testing.T) {
 	}
 	if got.MaxWorkloadOccupiedWorkerNodes != 2 {
 		t.Fatalf("MaxWorkloadOccupiedWorkerNodes = %d, want 2", got.MaxWorkloadOccupiedWorkerNodes)
+	}
+}
+
+func TestBuildWorkloadResourceSample(t *testing.T) {
+	workers := []corev1.Node{
+		*testWorkerNode("worker-a", "1", "1000", true),
+		*testWorkerNode("worker-b", "1", "1000", true),
+	}
+	pods := []corev1.Pod{
+		testResourcePod("pod-a", "worker-a", "500m", "100", corev1.PodRunning),
+		testResourcePod("pod-b", "worker-b", "100m", "500", corev1.PodPending),
+		testResourcePod("finished", "worker-a", "500m", "500", corev1.PodSucceeded),
+	}
+
+	observedAt := time.Date(2026, time.August, 27, 10, 0, 0, 123, time.UTC)
+	got, err := buildWorkloadResourceSample(observedAt, pods, workers)
+	if err != nil {
+		t.Fatalf("buildWorkloadResourceSample() error = %v", err)
+	}
+	if got.ObservedAt != observedAt || got.WorkloadOccupiedWorkerNodes != 2 {
+		t.Fatalf("unexpected sample identity: %+v", got)
+	}
+	assertNear(t, got.WorkloadCPURequestedUtilization, 0.3)
+	assertNear(t, got.WorkloadMemoryRequestedUtilization, 0.3)
+	assertNear(t, got.WorkloadDominantRequestedLoadVariance, 0)
+	assertNear(t, got.WorkloadCPUToMemoryImbalance, 0.4)
+	if len(got.Workers) != 2 || got.Workers[0].Name != "worker-a" || got.Workers[1].Name != "worker-b" {
+		t.Fatalf("unexpected worker samples: %+v", got.Workers)
+	}
+	assertNear(t, got.Workers[0].CPURequestedUtilization, 0.5)
+	assertNear(t, got.Workers[0].MemoryRequestedUtilization, 0.1)
+	assertNear(t, got.Workers[1].CPURequestedUtilization, 0.1)
+	assertNear(t, got.Workers[1].MemoryRequestedUtilization, 0.5)
+}
+
+func TestBuildWorkloadResourceSampleCapturesPackingVariance(t *testing.T) {
+	workers := []corev1.Node{
+		*testWorkerNode("worker-a", "1", "1000", true),
+		*testWorkerNode("worker-b", "1", "1000", true),
+	}
+	pods := []corev1.Pod{
+		testResourcePod("pod-a", "worker-a", "500m", "100", corev1.PodRunning),
+	}
+
+	got, err := buildWorkloadResourceSample(time.Now(), pods, workers)
+	if err != nil {
+		t.Fatalf("buildWorkloadResourceSample() error = %v", err)
+	}
+	assertNear(t, got.WorkloadCPURequestedUtilization, 0.25)
+	assertNear(t, got.WorkloadMemoryRequestedUtilization, 0.05)
+	assertNear(t, got.WorkloadDominantRequestedLoadVariance, 0.0625)
+	assertNear(t, got.WorkloadCPUToMemoryImbalance, 0.2)
+}
+
+func TestBuildWorkloadResourceSampleRejectsUnknownWorker(t *testing.T) {
+	workers := []corev1.Node{*testWorkerNode("worker-a", "1", "1Gi", true)}
+	pods := []corev1.Pod{testResourcePod("pod-a", "other-node", "100m", "64Mi", corev1.PodRunning)}
+
+	if _, err := buildWorkloadResourceSample(time.Now(), pods, workers); err == nil {
+		t.Fatal("buildWorkloadResourceSample() error = nil, want unknown worker rejection")
+	}
+}
+
+func TestSummarizeResourceSamples(t *testing.T) {
+	samples := []WorkloadResourceSample{
+		{
+			WorkloadCPURequestedUtilization:       0.25,
+			WorkloadMemoryRequestedUtilization:    0.05,
+			WorkloadDominantRequestedLoadVariance: 0.0625,
+			WorkloadCPUToMemoryImbalance:          0.2,
+		},
+		{
+			WorkloadCPURequestedUtilization:       0.3,
+			WorkloadMemoryRequestedUtilization:    0.3,
+			WorkloadDominantRequestedLoadVariance: 0,
+			WorkloadCPUToMemoryImbalance:          0.4,
+		},
+	}
+
+	got := summarizeResourceSamples(samples)
+	assertNear(t, got.MeanWorkloadCPURequestedUtilization, 0.275)
+	assertNear(t, got.MeanWorkloadMemoryRequestedUtilization, 0.175)
+	assertNear(t, got.MeanWorkloadDominantRequestedLoadVariance, 0.03125)
+	assertNear(t, got.MeanWorkloadCPUToMemoryImbalance, 0.3)
+}
+
+func TestBuildWorkloadSamplingProfile(t *testing.T) {
+	workload := []WorkloadItem{
+		{Name: "short", DurationSeconds: 2},
+		{Name: "long", DurationSeconds: 5},
+	}
+
+	got, err := buildWorkloadSamplingProfile(workload, 250*time.Millisecond)
+	if err != nil {
+		t.Fatalf("buildWorkloadSamplingProfile() error = %v", err)
+	}
+	if got.MinimumPodDurationSeconds != 2 || got.MaximumPodDurationSeconds != 5 {
+		t.Fatalf("unexpected duration bounds: %+v", got)
+	}
+	assertNear(t, got.MinimumDurationToPollIntervalRatio, 8)
+}
+
+func TestBuildWorkloadSamplingProfileRejectsUndersampledPods(t *testing.T) {
+	workload := []WorkloadItem{{Name: "too-short", DurationSeconds: 1}}
+	if _, err := buildWorkloadSamplingProfile(workload, 750*time.Millisecond); err == nil {
+		t.Fatal("buildWorkloadSamplingProfile() error = nil, want undersampling rejection")
 	}
 }
 
@@ -481,4 +633,28 @@ func testControlPlaneNode(name string) *corev1.Node {
 	node := testWorkerNode(name, "4", "8Gi", true)
 	node.Labels = map[string]string{"node-role.kubernetes.io/control-plane": ""}
 	return node
+}
+
+func testResourcePod(name, nodeName, cpu, memory string, phase corev1.PodPhase) corev1.Pod {
+	return corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{Name: name},
+		Spec: corev1.PodSpec{
+			NodeName: nodeName,
+			Containers: []corev1.Container{{
+				Name: "workload",
+				Resources: corev1.ResourceRequirements{Requests: corev1.ResourceList{
+					corev1.ResourceCPU:    apiresource.MustParse(cpu),
+					corev1.ResourceMemory: apiresource.MustParse(memory),
+				}},
+			}},
+		},
+		Status: corev1.PodStatus{Phase: phase},
+	}
+}
+
+func assertNear(t *testing.T, got, want float64) {
+	t.Helper()
+	if math.Abs(got-want) > 1e-9 {
+		t.Fatalf("got %v, want %v", got, want)
+	}
 }

@@ -21,6 +21,7 @@ func WriteComparisonCSV(path string, protocol MeasurementProtocol, rows []Compar
 		"measurement_version",
 		"scheduler_interval_seconds",
 		"pod_poll_interval_seconds",
+		"workload_resource_metric_source",
 		"run_name",
 		"free_cpu",
 		"free_mem",
@@ -40,6 +41,13 @@ func WriteComparisonCSV(path string, protocol MeasurementProtocol, rows []Compar
 		"avg_evaluator_observation_lag_seconds",
 		"p95_evaluator_observation_lag_seconds",
 		"max_workload_occupied_worker_nodes",
+		"mean_workload_cpu_requested_utilization",
+		"mean_workload_memory_requested_utilization",
+		"mean_workload_dominant_requested_load_variance",
+		"mean_workload_cpu_to_memory_imbalance",
+		"minimum_pod_duration_seconds",
+		"maximum_pod_duration_seconds",
+		"minimum_duration_to_poll_interval_ratio",
 		"notes",
 	}); err != nil {
 		return fmt.Errorf("write csv header: %w", err)
@@ -51,6 +59,7 @@ func WriteComparisonCSV(path string, protocol MeasurementProtocol, rows []Compar
 			protocol.Version,
 			strconv.FormatFloat(protocol.SchedulerIntervalSeconds, 'f', 6, 64),
 			strconv.FormatFloat(protocol.PodPollIntervalSeconds, 'f', 6, 64),
+			protocol.WorkloadResourceMetricSource,
 			row.Name,
 			strconv.FormatFloat(row.Weights.FreeCPU, 'g', -1, 64),
 			strconv.FormatFloat(row.Weights.FreeMem, 'g', -1, 64),
@@ -70,6 +79,13 @@ func WriteComparisonCSV(path string, protocol MeasurementProtocol, rows []Compar
 			strconv.FormatFloat(row.AverageEvaluatorObservationLag, 'f', 6, 64),
 			strconv.FormatFloat(row.P95EvaluatorObservationLag, 'f', 6, 64),
 			strconv.Itoa(row.MaxWorkloadOccupiedWorkerNodes),
+			strconv.FormatFloat(row.MeanWorkloadCPURequestedUtilization, 'f', 6, 64),
+			strconv.FormatFloat(row.MeanWorkloadMemoryRequestedUtilization, 'f', 6, 64),
+			strconv.FormatFloat(row.MeanWorkloadDominantRequestedLoadVariance, 'f', 6, 64),
+			strconv.FormatFloat(row.MeanWorkloadCPUToMemoryImbalance, 'f', 6, 64),
+			strconv.Itoa(row.MinimumPodDurationSeconds),
+			strconv.Itoa(row.MaximumPodDurationSeconds),
+			strconv.FormatFloat(row.MinimumDurationToPollIntervalRatio, 'f', 6, 64),
 			strings.Join(row.Notes, " | "),
 		}
 		if err := w.Write(record); err != nil {

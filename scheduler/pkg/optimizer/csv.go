@@ -24,6 +24,7 @@ func WriteCandidatesCSV(path string, protocol evaluator.MeasurementProtocol, can
 		"measurement_version",
 		"scheduler_interval_seconds",
 		"pod_poll_interval_seconds",
+		"workload_resource_metric_source",
 		"candidate_id",
 		"name",
 		"source",
@@ -48,6 +49,7 @@ func WriteCandidatesCSV(path string, protocol evaluator.MeasurementProtocol, can
 			protocol.Version,
 			strconv.FormatFloat(protocol.SchedulerIntervalSeconds, 'f', 6, 64),
 			strconv.FormatFloat(protocol.PodPollIntervalSeconds, 'f', 6, 64),
+			protocol.WorkloadResourceMetricSource,
 			candidate.ID,
 			candidate.Name,
 			candidate.Source,
@@ -79,10 +81,11 @@ func formatWorkloadMetrics(workloads []WorkloadMetrics) string {
 	parts := make([]string, 0, len(workloads))
 	for _, workload := range workloads {
 		parts = append(parts, fmt.Sprintf(
-			"%s:p95Decision=%0.3f,maxOccupiedWorkers=%d",
+			"%s:p95Decision=%0.3f,maxOccupiedWorkers=%d,meanLoadVariance=%0.4f",
 			workload.Workload,
 			workload.P95SchedulingDecisionLatency,
 			workload.MaxWorkloadOccupiedWorkerNodes,
+			workload.MeanWorkloadDominantRequestedLoadVariance,
 		))
 	}
 	return strings.Join(parts, " | ")

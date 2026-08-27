@@ -126,9 +126,10 @@ func TestRunKeepsPopulationSize(t *testing.T) {
 func TestWriteCandidatesCSVIncludesMeasurementContract(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "candidates.csv")
 	protocol := evaluator.MeasurementProtocol{
-		Version:                  evaluator.MeasurementVersion,
-		SchedulerIntervalSeconds: 0.5,
-		PodPollIntervalSeconds:   0.25,
+		Version:                      evaluator.MeasurementVersion,
+		WorkloadResourceMetricSource: evaluator.WorkloadRequestedResourceMetricSource,
+		SchedulerIntervalSeconds:     0.5,
+		PodPollIntervalSeconds:       0.25,
 	}
 	candidates := []Candidate{{
 		ID:   "candidate-1",
@@ -147,10 +148,10 @@ func TestWriteCandidatesCSVIncludesMeasurementContract(t *testing.T) {
 		t.Fatalf("read candidates CSV: %v", err)
 	}
 	content := string(data)
-	if !strings.Contains(content, "policy_version,measurement_version,scheduler_interval_seconds,pod_poll_interval_seconds") {
+	if !strings.Contains(content, "policy_version,measurement_version,scheduler_interval_seconds,pod_poll_interval_seconds,workload_resource_metric_source") {
 		t.Fatalf("missing measurement contract header: %s", content)
 	}
-	if !strings.Contains(content, "v2,v2,0.500000,0.250000,candidate-1") {
+	if !strings.Contains(content, "v2,v2,0.500000,0.250000,"+evaluator.WorkloadRequestedResourceMetricSource+",candidate-1") {
 		t.Fatalf("missing measurement contract row: %s", content)
 	}
 }

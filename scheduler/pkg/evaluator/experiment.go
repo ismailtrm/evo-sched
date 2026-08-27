@@ -71,6 +71,8 @@ func ComparisonRowFromRun(run RunResult) ComparisonRow {
 		AverageEvaluatorObservationLag:     run.Summary.AverageEvaluatorObservationLag,
 		P95EvaluatorObservationLag:         run.Summary.P95EvaluatorObservationLag,
 		MaxWorkloadOccupiedWorkerNodes:     run.Summary.MaxWorkloadOccupiedWorkerNodes,
+		ResourceSummary:                    run.Summary.ResourceSummary,
+		WorkloadSamplingProfile:            run.WorkloadSamplingProfile,
 		Notes:                              append([]string(nil), run.Notes...),
 	}
 }

@@ -38,6 +38,8 @@ type WorkloadMetrics struct {
 	DecisionTimestampCount             int     `json:"decisionTimestampCount"`
 	KubernetesScheduledTimestampCount  int     `json:"kubernetesScheduledTimestampCount"`
 	EvaluatorObservationTimestampCount int     `json:"evaluatorObservationTimestampCount"`
+	evaluator.ResourceSummary
+	evaluator.WorkloadSamplingProfile
 }
 
 type EvaluationData struct {
