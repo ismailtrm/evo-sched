@@ -1616,6 +1616,111 @@ Kanıt durumu:
 - durmuş kind cluster henüz yeni image ile live acceptance testinden geçirilmedi
 - Gate 2'nin sıradaki işi temiz commit üzerinden live measurement smoke ve tiny-control cadence deneyidir
 
+### 3.47. Gate 2 live acceptance ve cadence pilotunu tamamladık
+
+Live acceptance sınıfı:
+
+- run class: `debug`
+- scheduler/evaluator kaynak SHA: `56b2ba2`
+- scheduler image: `evok8s-scheduler:0.1.0`
+- image ID: `sha256:e502784e7071c53e7ffc586a41ed68d24825836b25d318b4a662553e37ac4375`
+- cluster: `kind-evo-sched`, Kubernetes `v1.35.0`, 4 Ready worker
+
+Operasyon akışı:
+
+1. Durdurulmuş beş kind container yeniden başlatıldı.
+2. V2 preflight gerçek cluster üzerinde çalıştırıldı.
+3. Yeni scheduler image temiz commit'ten build edilip tüm kind node'larına yüklendi.
+4. Deployment rollout restart ve rollout status ile bloklayıcı doğrulandı.
+5. Scheduler log'u `interval=2s policyVersion=v2 measurementVersion=v2` ve canonical weights gösterdi.
+6. `uniform-small` workload'u üç V2 baseline ile debug smoke olarak çalıştırıldı.
+7. Run sonunda canonical weights restoration ve boş evaluator namespace postflight ile doğrulandı.
+
+Debug smoke komutu:
+
+```bash
+go run ./cmd/evaluator \
+  --workload ../workloads/uniform-small.json \
+  --weights-file ../experiments/weights-v2.json \
+  --timeout 60s \
+  --output /tmp/evo-v2-gate2-measurement-smoke.json
+```
+
+Smoke sonucu:
+
+- üç baseline'ın her birinde `4/4` Pod scheduled ve completed
+- toplam `12/12` decision, Kubernetes scheduled condition ve evaluator observation timestamp'i mevcut
+- unschedulable count `0`
+- JSON `measurementProtocol`, scheduler interval `2s` ve evaluator poll interval `1s` taşıdı
+- CSV açık V2 metric adlarını ve iki interval'i taşıdı
+- occupancy sample'ları gözlem timestamp'iyle üretildi
+
+Önemli timestamp gözlemi:
+
+- high-resolution decision latency aynı run içinde yaklaşık `0.50s` ve `1.50s` arasında alternasyon gösterdi
+- Kubernetes condition timestamp'i tam saniyeye çöktüğü için örneğin `decision-at=...52.957Z` iken `PodScheduled.LastTransitionTime=...52.000Z` görülebildi
+- bu fiziksel sıra tersliği scheduler kararıyla ilgili değildir; second-level timestamp temsilinin kuantizasyon etkisidir
+- dolayısıyla coarse Kubernetes pending kısa custom-policy latency objective'i olarak kullanılamaz
+
+Cadence pilot tasarımı:
+
+- workload commit'i: `b89c671 test: add cadence control workload`
+- raw/summary result commit'i: `34adcd3 results: record v2 cadence pilot`
+- artefact dizini: [results/2026-08-27-measurement-v2-cadence-pilot](./results/2026-08-27-measurement-v2-cadence-pilot)
+- run class: `pilot`; paper evidence eligible değildir
+- iki scheduler interval: `2s` ve `250ms`
+- evaluator poll interval: iki grupta da `250ms`
+- her interval için `3` tekrar
+- her tekrarda `12` tiny Pod; grup başına `36` decision latency gözlemi
+- weights iki grupta da canonical balanced `0.25,0.25,0.25,0.25`
+- tüm Pod'lar scheduled/completed; unschedulable count `0`
+
+Pooled Pod-level sonuç:
+
+| Scheduler interval | Mean decision latency | Median | P95 | Std. dev. |
+|---:|---:|---:|---:|---:|
+| `250ms` | `0.3112s` | `0.3258s` | `0.4663s` | `0.1384s` |
+| `2s` | `1.2790s` | `1.2256s` | `1.9623s` | `0.5243s` |
+
+Cadence etkisi:
+
+- `2s / 250ms` mean decision latency oranı `4.11x`
+- `2s / 250ms` p95 decision latency oranı `4.21x`
+- interval'i `2s`den `250ms`ye indirmek mean'i `%75.67`, p95'i `%76.24` düşürdü
+- her iki grupta max workload-occupied worker count `1`; control workload kaynak tradeoff'u ölçmek için tasarlanmadı
+
+Yorum:
+
+- önceki `0-1-2s` pending bandının önemli bölümü scoring policy'den değil scheduler loop cadence'inden gelmektedir
+- `250ms` grubunun mean latency'si interval'den biraz yüksek kaldığı için kalan gecikmede scheduler işi, API çağrıları ve loop fazı da rol oynar
+- bu pilot policy üstünlüğü göstermez; measurement baseline ve implementation-latency etkisini kalibre eder
+- official optimization'da scheduler interval tüm aday ve baseline'larda sabit tutulmalı ve manifestte kaydedilmelidir
+
+Polling ile watch/event alternatifi kararı:
+
+- primary decision latency evaluator'ın bound Pod'u ne zaman gördüğünden bağımsızdır
+- evaluator polling etkisi ayrı `evaluatorObservationLagSeconds` metriğinde görünürdür
+- occupancy metriği polling'e bağlı kalır ve çok kısa occupancy geçişlerini kaçırabilir
+- mevcut pressure workload süreleri poll interval'den belirgin uzun olduğu için polling ilk official protokol için yeterli kabul edildi
+- Gate 3'te minimum Pod duration / poll interval ilişkisi explicit protocol koşulu olarak kaydedilecek
+- kısa ömürlü workload veya daha hassas occupancy ölçümü gerekirse watch/event monitoring yeniden değerlendirilecek
+- bu nedenle Gate 2'de watch implementasyonu yapılmadı; primary objective'i iyileştirmeden reconnect ve event ordering karmaşıklığı ekleyecekti
+
+Pilot sonrası güvenlik düzeltmesi:
+
+- `9280c51 fix: reject invalid evaluator polling intervals`
+- zero veya negative poll interval artık ticker panic'i yerine run başlamadan validation error üretir
+- race testleri ve `go vet` yeniden geçti
+
+Postflight:
+
+- scheduler interval canonical `2s` değerine restore edildi
+- scheduler weights canonical `0.25,0.25,0.25,0.25` değerine restore edildi
+- 4 worker Ready ve scheduler rollout healthy
+- evaluator namespace boş
+- kind container'ları postflight doğrulamasından sonra silinmeden durduruldu
+- Gate 2 çıkış koşulları tamamlandı
+
 ## 4. Şu Anki Durum
 
 Şu anda proje durumu şöyledir:
@@ -1644,7 +1749,7 @@ Kanıt durumu:
 - `seed=42` altında iki baskın Pareto rejimi gözlenmiş durumda
 - `seed=42` ve mevcut resource-pressure matrix'i artık `v1 pilot` kanıtı olarak sınıflandırılmış durumda
 - Policy-space redundancy ve measurement-resolution riskleri kayıt altına alınmış durumda
-- `seed=123` ve `seed=999`, düzeltilmiş `v2` protokolüne kadar ertelenmiş durumda
+- `seed=123` ve `seed=999`, Gate 3-5 official protokol çıkış koşullarına kadar ertelenmiş durumda
 - Official deneyler için clean Git SHA, manifest ve preflight hard gate'i kabul edilmiş durumda
 - Hibrit branch ve atomik kanıt commit düzeni kabul edilmiş durumda
 - Paper kaynakları Git ile izleniyor; build ürünleri ignore ediliyor
@@ -1663,11 +1768,10 @@ Kanıt durumu:
 - Gate 1 kod doğrulamaları race detector ve `go vet` ile geçmiştir
 - Gate 1 live integration smoke testi temiz commit üzerinden geçmiştir
 - Gate 1 tamamlanmıştır
-- Sıradaki araştırma işi Gate 2 Measurement `v2`dir
-- Official optimizer koşuları Gate 2-5 protokol çıkış koşullarına kadar blokludur
-- `evo-sched` kind container'ları smoke sonrasında silinmeden durdurulmuştur
+- Official optimizer koşuları Gate 3-5 protokol çıkış koşullarına kadar blokludur
+- `evo-sched` kind container'ları Gate 2 postflight sonrasında silinmeden durdurulmuştur
 - Scheduler experiment preflight skill'i V2 contract, canonical weights ve exact worker-count kontrolüyle güncellenmiştir
-- Güncellenen preflight helper'ın gerçek-cluster acceptance testi Gate 2 live measurement smoke öncesinde yapılacaktır
+- Güncellenen preflight helper'ın gerçek-cluster acceptance testi geçmiştir
 - Measurement `v2` timestamp semantiği source audit ile tanımlanmıştır
 - Evaluator polling'in pending timestamp kaynağı olmadığı; cadence, second-level Kubernetes time ve observation lag'in ayrı riskler olduğu netleştirilmiştir
 - Measurement `v2` high-resolution submission/decision instrumentation'ı uygulanmıştır
@@ -1676,7 +1780,11 @@ Kanıt durumu:
 - Eksik, kısmi, unschedulable veya protocol-drift içeren evaluation'lar objective üretmeden reddedilmektedir
 - Scheduler ve evaluator cadence değerleri JSON/CSV provenance'ına eklenmiştir
 - Gate 2 kod doğrulamaları race detector ve `go vet` ile geçmiştir
-- Gate 2'nin sıradaki işi temiz commit üzerinden live measurement smoke ve tiny-control cadence deneyidir
+- Gate 2 live measurement smoke ve üç tekrarlı cadence pilotu tamamlanmıştır
+- `2s` cadence'in `250ms` cadence'e göre mean decision latency'yi `4.11x`, p95'i `4.21x` artırdığı pilotta gözlenmiştir
+- Polling primary decision objective'inden ayrıştırılmış; watch/event implementation'ı koşullu future work olarak bırakılmıştır
+- Gate 2 tamamlanmıştır
+- Sıradaki araştırma işi Gate 3 workload ve metrik seti `v2`dir
 
 Başka bir ifadeyle:
 
@@ -1755,12 +1863,18 @@ Sonuç:
 - [x] Kubernetes condition zamanı, scheduler decision zamanı ve evaluator observation zamanını ayır
 - [x] Measurement protocol version ve timestamp source metadata'sını output'a ekle
 - [x] `maxActiveNodes` adını `maxWorkloadOccupiedWorkerNodes` olarak düzelt
-- [ ] Scheduler'ın `2s` cadence etkisini tiny-control deneyle ölç
-- [ ] Gerekirse event/watch tabanlı monitoring'i polling'e karşı değerlendir
+- [x] Scheduler'ın `2s` cadence etkisini tiny-control deneyle ölç
+- [x] Gerekirse event/watch tabanlı monitoring'i polling'e karşı değerlendir
 
 Çıkış koşulu:
 
 - Aynı policy tekrarlarında ölçüm tabanı, jitter ve timestamp çözünürlüğü raporlanabilir olmalı
+
+Sonuç:
+
+- Gate 2 çıkış koşulları tamamlandı
+- measurement baseline, pooled jitter ve timestamp source ayrımı raporlanabilir durumda
+- event/watch şu an uygulanmayacak; occupancy resolution ihtiyacı değişirse karar yeniden açılacak
 
 ### Gate 3 - Workload ve metrik seti `v2`
 
