@@ -201,6 +201,53 @@ func TestCurrentDeploymentSchedulerIntervalRejectsMissingEnvironment(t *testing.
 	}
 }
 
+func TestApplyDeploymentSchedulerInterval(t *testing.T) {
+	deployment := testSchedulerDeployment([]corev1.EnvVar{
+		{Name: "SCHEDULER_INTERVAL", Value: "250ms"},
+	})
+	deployment.Generation = 1
+	deployment.Status = appsv1.DeploymentStatus{
+		ObservedGeneration: 1,
+		Replicas:           1,
+		UpdatedReplicas:    1,
+		ReadyReplicas:      1,
+		AvailableReplicas:  1,
+	}
+	client := fake.NewSimpleClientset(deployment)
+
+	if err := ApplyDeploymentSchedulerInterval(
+		context.Background(),
+		client,
+		"evo-sched",
+		"evok8s-scheduler",
+		2*time.Second,
+	); err != nil {
+		t.Fatalf("ApplyDeploymentSchedulerInterval() error = %v", err)
+	}
+
+	got, err := CurrentDeploymentSchedulerInterval(context.Background(), client, "evo-sched", "evok8s-scheduler")
+	if err != nil {
+		t.Fatalf("CurrentDeploymentSchedulerInterval() error = %v", err)
+	}
+	if got != 2*time.Second {
+		t.Fatalf("CurrentDeploymentSchedulerInterval() = %v, want 2s", got)
+	}
+}
+
+func TestApplyDeploymentSchedulerIntervalRejectsNonPositiveValue(t *testing.T) {
+	client := fake.NewSimpleClientset(testSchedulerDeployment(nil))
+
+	if err := ApplyDeploymentSchedulerInterval(
+		context.Background(),
+		client,
+		"evo-sched",
+		"evok8s-scheduler",
+		0,
+	); err == nil {
+		t.Fatal("ApplyDeploymentSchedulerInterval() error = nil, want non-positive interval rejection")
+	}
+}
+
 func TestMeasurementProtocolForRecordsSourcesAndIntervals(t *testing.T) {
 	opts := DefaultRunnerOptions()
 	opts.PollInterval = 250 * time.Millisecond

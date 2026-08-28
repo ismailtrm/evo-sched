@@ -709,6 +709,48 @@ func ApplyDeploymentWeights(ctx context.Context, cs kubernetes.Interface, namesp
 	return applyWeights(ctx, cs, namespace, name, weights)
 }
 
+// ApplyDeploymentSchedulerInterval updates the scheduler cadence and waits for rollout convergence.
+func ApplyDeploymentSchedulerInterval(
+	ctx context.Context,
+	cs kubernetes.Interface,
+	namespace string,
+	name string,
+	interval time.Duration,
+) error {
+	if interval <= 0 {
+		return fmt.Errorf("scheduler interval must be positive, got %s", interval)
+	}
+
+	var lastErr error
+	for attempt := 0; attempt < 5; attempt++ {
+		deploy, err := cs.AppsV1().Deployments(namespace).Get(ctx, name, metav1.GetOptions{})
+		if err != nil {
+			return fmt.Errorf("get scheduler deployment for interval update: %w", err)
+		}
+		if len(deploy.Spec.Template.Spec.Containers) == 0 {
+			return fmt.Errorf("scheduler deployment has no containers")
+		}
+
+		deploy.Spec.Template.Spec.Containers[0].Env = upsertEnv(
+			deploy.Spec.Template.Spec.Containers[0].Env,
+			"SCHEDULER_INTERVAL",
+			interval.String(),
+		)
+		if _, err := cs.AppsV1().Deployments(namespace).Update(ctx, deploy, metav1.UpdateOptions{}); err != nil {
+			if apierrors.IsConflict(err) {
+				lastErr = err
+				time.Sleep(time.Duration(attempt+1) * 200 * time.Millisecond)
+				continue
+			}
+			return fmt.Errorf("update scheduler deployment interval: %w", err)
+		}
+
+		return waitForRollout(ctx, cs, namespace, name)
+	}
+
+	return fmt.Errorf("update scheduler deployment interval after retries: %w", lastErr)
+}
+
 func upsertEnv(env []corev1.EnvVar, name, value string) []corev1.EnvVar {
 	for i := range env {
 		if env[i].Name == name {
