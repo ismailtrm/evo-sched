@@ -2577,6 +2577,27 @@ consolidation-heavy olduğundan holdout policy seti mevcut
 `mixed-burst-holdout` üzerinde üç policy x `10` tekrar, toplam `30` execution ve
 `720` Pod olacaktır.
 
+Ön-kayıtlı holdout komutu:
+
+```bash
+go run ./cmd/repeated-validation-runner \
+  --run-name 2026-08-29-v2-official-holdout-baselines \
+  --workloads ../workloads/v2/mixed-burst-holdout.json \
+  --weights-file ../experiments/weights-v2.json \
+  --protocol-tag protocol-v2-holdout-2026-08-29 \
+  --repetitions 10 \
+  --poll-interval 250ms \
+  --timeout 90s \
+  --expect-workers 4 \
+  --expect-scheduler-interval 250ms \
+  --final-scheduler-interval 2s
+```
+
+Bu komut çalıştırılmadan önce clean HEAD/tag ve live preflight yeniden
+doğrulanacaktır. Holdout sonucu train policy seçimini değiştirmek için
+kullanılmayacak; yalnızca seçilmiş baseline tradeoff'unun farklı burst yapısında
+korunup korunmadığını değerlendirecektir.
+
 ## 4. Şu Anki Durum
 
 Şu anda proje durumu şöyledir:
