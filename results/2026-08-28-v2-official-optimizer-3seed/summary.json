@@ -1,0 +1,365 @@
+{
+  "schemaVersion": "v2-multi-seed-summary",
+  "generatedAt": "2026-08-28T07:21:03.912270736Z",
+  "inputs": [
+    "../results/2026-08-28-v2-official-optimizer-3seed/seed-42/result.json",
+    "../results/2026-08-28-v2-official-optimizer-3seed/seed-123/result.json",
+    "../results/2026-08-28-v2-official-optimizer-3seed/seed-999/result.json"
+  ],
+  "seeds": [
+    {
+      "seed": 42,
+      "durationSeconds": 7373.630124606,
+      "baselineCount": 3,
+      "optimizerCandidateCount": 72,
+      "totalSolutionCount": 75,
+      "workloadExecutionCount": 225,
+      "rawCombinedParetoCount": 2,
+      "uniqueCombinedParetoPointCount": 2,
+      "baselinesKept": [],
+      "baselinesDropped": [
+        "evok8s-v2-balanced",
+        "evok8s-v2-consolidation-heavy",
+        "evok8s-v2-spread-heavy"
+      ],
+      "points": [
+        {
+          "averageP95SchedulingDecisionLatencySeconds": 1.2504080729833331,
+          "averageMaxWorkloadOccupiedWorkerNodes": 3.3333333333333335,
+          "novelOptimizerPoint": true,
+          "rediscoveredBaselinePoint": false,
+          "members": [
+            {
+              "seed": 42,
+              "name": "init-009",
+              "source": "initial",
+              "generation": 0,
+              "weights": {
+                "freeCPU": 0.3042625966448377,
+                "freeMem": 0.3399529891457154,
+                "balance": 0.023958349406149184,
+                "consolidation": 0.3318260648032976
+              }
+            }
+          ]
+        },
+        {
+          "averageP95SchedulingDecisionLatencySeconds": 1.2840696523499997,
+          "averageMaxWorkloadOccupiedWorkerNodes": 3,
+          "novelOptimizerPoint": true,
+          "rediscoveredBaselinePoint": false,
+          "members": [
+            {
+              "seed": 42,
+              "name": "gen-03-007",
+              "source": "offspring",
+              "generation": 3,
+              "weights": {
+                "freeCPU": 0.021292848462397672,
+                "freeMem": 0.12176403048499362,
+                "balance": 0.458921910482877,
+                "consolidation": 0.3980212105697318
+              }
+            }
+          ]
+        }
+      ],
+      "pendingBest": {
+        "averageP95SchedulingDecisionLatencySeconds": 1.2504080729833331,
+        "averageMaxWorkloadOccupiedWorkerNodes": 3.3333333333333335,
+        "novelOptimizerPoint": true,
+        "rediscoveredBaselinePoint": false,
+        "members": [
+          {
+            "seed": 42,
+            "name": "init-009",
+            "source": "initial",
+            "generation": 0,
+            "weights": {
+              "freeCPU": 0.3042625966448377,
+              "freeMem": 0.3399529891457154,
+              "balance": 0.023958349406149184,
+              "consolidation": 0.3318260648032976
+            }
+          }
+        ]
+      },
+      "nodeBest": {
+        "averageP95SchedulingDecisionLatencySeconds": 1.2840696523499997,
+        "averageMaxWorkloadOccupiedWorkerNodes": 3,
+        "novelOptimizerPoint": true,
+        "rediscoveredBaselinePoint": false,
+        "members": [
+          {
+            "seed": 42,
+            "name": "gen-03-007",
+            "source": "offspring",
+            "generation": 3,
+            "weights": {
+              "freeCPU": 0.021292848462397672,
+              "freeMem": 0.12176403048499362,
+              "balance": 0.458921910482877,
+              "consolidation": 0.3980212105697318
+            }
+          }
+        ]
+      },
+      "strictInteriorKneeAvailable": false
+    },
+    {
+      "seed": 123,
+      "durationSeconds": 7388.42554682,
+      "baselineCount": 3,
+      "optimizerCandidateCount": 72,
+      "totalSolutionCount": 75,
+      "workloadExecutionCount": 225,
+      "rawCombinedParetoCount": 2,
+      "uniqueCombinedParetoPointCount": 2,
+      "baselinesKept": [],
+      "baselinesDropped": [
+        "evok8s-v2-balanced",
+        "evok8s-v2-consolidation-heavy",
+        "evok8s-v2-spread-heavy"
+      ],
+      "points": [
+        {
+          "averageP95SchedulingDecisionLatencySeconds": 1.2545731087833332,
+          "averageMaxWorkloadOccupiedWorkerNodes": 4,
+          "novelOptimizerPoint": true,
+          "rediscoveredBaselinePoint": false,
+          "members": [
+            {
+              "seed": 123,
+              "name": "gen-01-010",
+              "source": "offspring",
+              "generation": 1,
+              "weights": {
+                "freeCPU": 0.2124810085622907,
+                "freeMem": 0.2280134331514842,
+                "balance": 0.41221229450597974,
+                "consolidation": 0.14729326378024538
+              }
+            }
+          ]
+        },
+        {
+          "averageP95SchedulingDecisionLatencySeconds": 1.2552298503,
+          "averageMaxWorkloadOccupiedWorkerNodes": 3,
+          "novelOptimizerPoint": true,
+          "rediscoveredBaselinePoint": false,
+          "members": [
+            {
+              "seed": 123,
+              "name": "init-010",
+              "source": "initial",
+              "generation": 0,
+              "weights": {
+                "freeCPU": 0.13778523678950313,
+                "freeMem": 0.19993383721395763,
+                "balance": 0.25263801766253186,
+                "consolidation": 0.40964290833400735
+              }
+            }
+          ]
+        }
+      ],
+      "pendingBest": {
+        "averageP95SchedulingDecisionLatencySeconds": 1.2545731087833332,
+        "averageMaxWorkloadOccupiedWorkerNodes": 4,
+        "novelOptimizerPoint": true,
+        "rediscoveredBaselinePoint": false,
+        "members": [
+          {
+            "seed": 123,
+            "name": "gen-01-010",
+            "source": "offspring",
+            "generation": 1,
+            "weights": {
+              "freeCPU": 0.2124810085622907,
+              "freeMem": 0.2280134331514842,
+              "balance": 0.41221229450597974,
+              "consolidation": 0.14729326378024538
+            }
+          }
+        ]
+      },
+      "nodeBest": {
+        "averageP95SchedulingDecisionLatencySeconds": 1.2552298503,
+        "averageMaxWorkloadOccupiedWorkerNodes": 3,
+        "novelOptimizerPoint": true,
+        "rediscoveredBaselinePoint": false,
+        "members": [
+          {
+            "seed": 123,
+            "name": "init-010",
+            "source": "initial",
+            "generation": 0,
+            "weights": {
+              "freeCPU": 0.13778523678950313,
+              "freeMem": 0.19993383721395763,
+              "balance": 0.25263801766253186,
+              "consolidation": 0.40964290833400735
+            }
+          }
+        ]
+      },
+      "strictInteriorKneeAvailable": false
+    },
+    {
+      "seed": 999,
+      "durationSeconds": 7385.228570558,
+      "baselineCount": 3,
+      "optimizerCandidateCount": 72,
+      "totalSolutionCount": 75,
+      "workloadExecutionCount": 225,
+      "rawCombinedParetoCount": 1,
+      "uniqueCombinedParetoPointCount": 1,
+      "baselinesKept": [],
+      "baselinesDropped": [
+        "evok8s-v2-balanced",
+        "evok8s-v2-consolidation-heavy",
+        "evok8s-v2-spread-heavy"
+      ],
+      "points": [
+        {
+          "averageP95SchedulingDecisionLatencySeconds": 1.2356275073166665,
+          "averageMaxWorkloadOccupiedWorkerNodes": 3,
+          "novelOptimizerPoint": true,
+          "rediscoveredBaselinePoint": false,
+          "members": [
+            {
+              "seed": 999,
+              "name": "gen-03-002",
+              "source": "offspring",
+              "generation": 3,
+              "weights": {
+                "freeCPU": 0.03633641334655355,
+                "freeMem": 0.3493076941944843,
+                "balance": 0,
+                "consolidation": 0.6143558924589623
+              }
+            }
+          ]
+        }
+      ],
+      "pendingBest": {
+        "averageP95SchedulingDecisionLatencySeconds": 1.2356275073166665,
+        "averageMaxWorkloadOccupiedWorkerNodes": 3,
+        "novelOptimizerPoint": true,
+        "rediscoveredBaselinePoint": false,
+        "members": [
+          {
+            "seed": 999,
+            "name": "gen-03-002",
+            "source": "offspring",
+            "generation": 3,
+            "weights": {
+              "freeCPU": 0.03633641334655355,
+              "freeMem": 0.3493076941944843,
+              "balance": 0,
+              "consolidation": 0.6143558924589623
+            }
+          }
+        ]
+      },
+      "nodeBest": {
+        "averageP95SchedulingDecisionLatencySeconds": 1.2356275073166665,
+        "averageMaxWorkloadOccupiedWorkerNodes": 3,
+        "novelOptimizerPoint": true,
+        "rediscoveredBaselinePoint": false,
+        "members": [
+          {
+            "seed": 999,
+            "name": "gen-03-002",
+            "source": "offspring",
+            "generation": 3,
+            "weights": {
+              "freeCPU": 0.03633641334655355,
+              "freeMem": 0.3493076941944843,
+              "balance": 0,
+              "consolidation": 0.6143558924589623
+            }
+          }
+        ]
+      },
+      "strictInteriorKneeAvailable": false
+    }
+  ],
+  "aggregate": {
+    "seedCount": 3,
+    "optimizerCandidateCount": 216,
+    "totalSolutionCount": 225,
+    "workloadExecutionCount": 675,
+    "rawCombinedParetoMemberCount": 5,
+    "observedParetoPointCountAcrossSeeds": 5,
+    "seedsWithNovelOptimizerPoint": 3,
+    "baselineSurvivalBySeed": {},
+    "optimizerParetoFinalists": [
+      {
+        "seed": 42,
+        "name": "init-009",
+        "source": "initial",
+        "generation": 0,
+        "weights": {
+          "freeCPU": 0.3042625966448377,
+          "freeMem": 0.3399529891457154,
+          "balance": 0.023958349406149184,
+          "consolidation": 0.3318260648032976
+        }
+      },
+      {
+        "seed": 42,
+        "name": "gen-03-007",
+        "source": "offspring",
+        "generation": 3,
+        "weights": {
+          "freeCPU": 0.021292848462397672,
+          "freeMem": 0.12176403048499362,
+          "balance": 0.458921910482877,
+          "consolidation": 0.3980212105697318
+        }
+      },
+      {
+        "seed": 123,
+        "name": "gen-01-010",
+        "source": "offspring",
+        "generation": 1,
+        "weights": {
+          "freeCPU": 0.2124810085622907,
+          "freeMem": 0.2280134331514842,
+          "balance": 0.41221229450597974,
+          "consolidation": 0.14729326378024538
+        }
+      },
+      {
+        "seed": 123,
+        "name": "init-010",
+        "source": "initial",
+        "generation": 0,
+        "weights": {
+          "freeCPU": 0.13778523678950313,
+          "freeMem": 0.19993383721395763,
+          "balance": 0.25263801766253186,
+          "consolidation": 0.40964290833400735
+        }
+      },
+      {
+        "seed": 999,
+        "name": "gen-03-002",
+        "source": "offspring",
+        "generation": 3,
+        "weights": {
+          "freeCPU": 0.03633641334655355,
+          "freeMem": 0.3493076941944843,
+          "balance": 0,
+          "consolidation": 0.6143558924589623
+        }
+      }
+    ]
+  },
+  "notes": [
+    "Pareto points are deduplicated within each seed using exact objective values.",
+    "Objective values from different seeds are retained separately because live-cluster timing noise makes exact cross-seed point equality an invalid stability criterion.",
+    "Optimizer Pareto finalists are search outputs, not confirmed improvements; baselines and finalists require repeated validation under one shared protocol."
+  ]
+}

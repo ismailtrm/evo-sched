@@ -1,0 +1,44 @@
+{
+  "schemaVersion": "v1",
+  "analysisName": "official-v2-multi-seed-optimizer-summary",
+  "status": "completed",
+  "generatedAt": "2026-08-28T07:22:19Z",
+  "sourceResultsCommit": "990d10a8c9cdb3da0fa7ec333a0c818b588e26ec",
+  "summarizerCommit": "7200195800930b18404c1191229b0271b2b59940",
+  "command": "go run ./cmd/optimizer-summary --inputs ../results/2026-08-28-v2-official-optimizer-3seed/seed-42/result.json,../results/2026-08-28-v2-official-optimizer-3seed/seed-123/result.json,../results/2026-08-28-v2-official-optimizer-3seed/seed-999/result.json --output ../results/2026-08-28-v2-official-optimizer-3seed/summary.json --csv-output ../results/2026-08-28-v2-official-optimizer-3seed/summary-pareto.csv",
+  "workingDirectory": "/home/ismail/evo-sched/scheduler",
+  "acceptance": {
+    "seeds": 3,
+    "optimizerCandidates": 216,
+    "baselineEvaluations": 9,
+    "totalSolutions": 225,
+    "workloadExecutions": 675,
+    "podsSubmitted": 16200,
+    "podsScheduled": 16200,
+    "podsCompleted": 16200,
+    "decisionTimestamps": 16200,
+    "unschedulableTotal": 0,
+    "rawCombinedParetoMembersAcrossSeeds": 5,
+    "observedExactParetoPointsAcrossSeeds": 5,
+    "seedsWithNovelOptimizerPoint": 3,
+    "baselinesSurvivingAnySeed": 0
+  },
+  "outputs": [
+    {
+      "path": "summary.json",
+      "sha256": "b7ca3fe3cf7958de6600df37bd7d1ccf6093b876149cdc8bcbb5164234e68c2c"
+    },
+    {
+      "path": "summary-pareto.csv",
+      "sha256": "9ea73ab390c58b1110d5be6f32f3e06047522a155f7a06ad7f1cc844f8c05782"
+    }
+  ],
+  "interpretationBoundaries": [
+    "Each optimizer candidate and each per-seed baseline was evaluated once across the three training workloads.",
+    "No hand-authored baseline survived the single-evaluation combined Pareto front in any seed.",
+    "The five optimizer Pareto members are validation finalists, not confirmed improvements over repeated baselines.",
+    "Exact objective values are not merged across seeds because live-cluster timing noise makes equality an invalid stability criterion.",
+    "No seed produced at least three unique Pareto points, so no strict interior knee point is reported.",
+    "Repeated finalist validation under a shared protocol is required before paper or CFP superiority claims are updated."
+  ]
+}
