@@ -1,0 +1,73 @@
+{
+  "schemaVersion": "v1",
+  "analysisName": "official-v2-repeated-finalist-validation-summary",
+  "status": "completed",
+  "generatedAt": "2026-08-28T23:47:18Z",
+  "sourceResultsCommit": "34670453e293ae8e3b39130e3775481efb4d0b2d",
+  "summarizerCommit": "a7676d09bad1bf39a0454700a3feb19c6c8f2bd1",
+  "command": "go run ./cmd/baseline-summary --inputs ../results/2026-08-28-v2-official-finalist-validation/cpu-tight-train.json,../results/2026-08-28-v2-official-finalist-validation/mem-tight-train.json,../results/2026-08-28-v2-official-finalist-validation/fragmenting-mix-train.json --output ../results/2026-08-28-v2-official-finalist-validation/summary.json --csv-output ../results/2026-08-28-v2-official-finalist-validation/summary.csv",
+  "workingDirectory": "/home/ismail/evo-sched/scheduler",
+  "acceptance": {
+    "policies": 8,
+    "workloads": 3,
+    "repetitionsPerPolicyWorkload": 10,
+    "resultRows": 240,
+    "podsSubmitted": 5760,
+    "podsScheduled": 5760,
+    "podsCompleted": 5760,
+    "decisionTimestamps": 5760,
+    "kubernetesScheduledTimestamps": 5760,
+    "evaluatorObservationTimestamps": 5760,
+    "unschedulableTotal": 0,
+    "uniqueRepeatedMeanParetoPoints": 2,
+    "optimizerPoliciesOnRepeatedMeanPareto": 0,
+    "strictInteriorKneeAvailable": false
+  },
+  "outputs": [
+    {
+      "path": "summary.json",
+      "sha256": "915a78993955c40379916f5ba907cc6415974a0e8f71bf0dd7b5ec920d2667a9"
+    },
+    {
+      "path": "summary.csv",
+      "sha256": "285ace069aa80d7de1e95f3750a366c1f29254090ee3d2377de30dd3835a3cfb"
+    }
+  ],
+  "repeatedMeanPareto": [
+    {
+      "role": "pending-best",
+      "policy": "evok8s-v2-balanced",
+      "meanP95SchedulingDecisionLatencySeconds": 1.2518545438783333,
+      "meanP95Confidence95": [1.1994513441892825, 1.304257743567384],
+      "meanMaxWorkloadOccupiedWorkerNodes": 3.6666666666666665
+    },
+    {
+      "role": "node-best",
+      "policy": "evok8s-v2-consolidation-heavy",
+      "meanP95SchedulingDecisionLatencySeconds": 1.2643902736616666,
+      "meanP95Confidence95": [1.2058957048795989, 1.3228848424437343],
+      "meanMaxWorkloadOccupiedWorkerNodes": 3.0
+    }
+  ],
+  "tradeoff": {
+    "consolidationVsBalancedLatencyIncreasePercent": 1.0013727109618342,
+    "consolidationVsBalancedOccupiedWorkerReductionPercent": 18.181818181818176,
+    "absoluteMeanP95DifferenceSeconds": 0.012535729783333283
+  },
+  "validationDecision": {
+    "provisionalSingleEvaluationOptimizerGainReproduced": false,
+    "newRepeatedMeanOptimizerParetoRegimeFound": false,
+    "holdoutPoliciesAfterPreregisteredDeduplication": [
+      "evok8s-v2-balanced",
+      "evok8s-v2-spread-heavy",
+      "evok8s-v2-consolidation-heavy"
+    ]
+  },
+  "interpretationBoundaries": [
+    "The repeated-mean Pareto front is constructed from point estimates over thirty policy observations pooled across three workloads; workload-level n=10 rows are the primary uncertainty view.",
+    "The 95 percent confidence intervals overlap substantially, so the point-estimate dominance relation is not a claim of statistically significant superiority.",
+    "None of the five optimizer finalists produced a new repeated-mean Pareto point; the single-evaluation optimizer gain did not reproduce under the preregistered repeated protocol.",
+    "This is a valid negative validation result and indicates that live-cluster measurement noise can mislead single-evaluation evolutionary selection.",
+    "Because no optimizer finalist survived the train repeated-mean front, the preregistered holdout rule deduplicates to the three hand-authored baseline controls."
+  ]
+}
