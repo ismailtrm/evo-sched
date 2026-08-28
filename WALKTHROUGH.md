@@ -2270,6 +2270,71 @@ Gate 4 kararı:
 - sıradaki araştırma kapısı V2 objective'lerle official multi-seed optimization ve
   finalist doğrulamasıdır
 
+### 3.55. Gate 5 için repo-içi official multi-seed runner ekledik
+
+Yerel `multi-seed-experiment-runner` skill helper'ı execution sırasını doğru
+kuruyordu, fakat official V2 protokolü için iki blocking eksik taşıyordu:
+
+- optimizer'a explicit `--poll-interval 250ms` aktarmıyordu
+- clean Git/tag, input checksum, cluster preflight ve seed sonrası restoration
+  provenance'ını manifestte saklamıyordu
+
+Agent session veya terminal geçmişine bağımlı kalmamak için bu helper official
+koşuda doğrudan kullanılmadı. Bunun yerine Git ile sürümlenen
+`scheduler/cmd/multi-seed-runner` eklendi:
+
+- commit: `f89ffad feat: add official multi-seed runner`
+- clean working tree olmadan başlamaz
+- HEAD'de adı verilen annotated protocol tag yoksa başlamaz
+- workload, baseline, kind config ve deployment checksum'larını run başlamadan alır
+- dört Ready worker, converged rollout, canonical weights, `250ms` scheduler
+  interval ve boş evaluator namespace preflight'ını hard gate olarak uygular
+- seed'leri aynı cluster'ı çakıştırmadan sequential çalıştırır
+- population, generation, mutation, poll ve timeout flag'lerini optimizer'a explicit
+  aktarır
+- manifesti ilk seed'den önce `running` yazar ve her seed sonrası atomik günceller
+- her seed için JSON, Pareto CSV, all-candidates CSV ve `run.log` checksum'u tutar
+- result contract, seed ve beklenen aday sayısı uyuşmadan seed'i completed saymaz
+- her seed sonrası canonical weights, rollout ve namespace temizliğini doğrular
+- interruption/failure halinde optimizer process group'unu sonlandırıp evaluator
+  Pod'larını temizlemeyi ve canonical weights'i restore etmeyi dener
+
+Test-first implementasyonun unit testleri, full `go test -race ./...`, `go vet ./...`
+ve dirty-tree negatif acceptance testi geçti. Negatif test cluster'a erişmeden
+`official run requires a clean Git tree` mesajıyla durdu.
+
+Seçilen ilk official search bütçesi seed başına:
+
+- üç baseline evaluation
+- `12` initial individual
+- `5 x 12 = 60` offspring
+- toplam `75` aday
+- aday başına üç train workload, toplam `225` live workload run
+- yaklaşık süre seed başına `1.9-2.2` saat, üç seed için yaklaşık `6` saat
+
+Planlanan launch komutu:
+
+```bash
+go run ./cmd/multi-seed-runner \
+  --run-name 2026-08-28-v2-official-optimizer-3seed \
+  --seeds 42,123,999 \
+  --workloads ../workloads/v2/cpu-tight-train.json,../workloads/v2/mem-tight-train.json,../workloads/v2/fragmenting-mix-train.json \
+  --baseline-file ../experiments/weights-v2.json \
+  --protocol-tag protocol-v2-optimizer-2026-08-28 \
+  --population 12 \
+  --generations 5 \
+  --mutation-rate 0.8 \
+  --mutation-sigma 0.25 \
+  --min-weight 0 \
+  --max-weight 2 \
+  --poll-interval 250ms \
+  --timeout 90s
+```
+
+Bu bölüm yazılırken official optimizer henüz başlatılmadı. Sıradaki hard gate,
+runner ve bu karar kaydını içeren clean HEAD'e annotated optimizer protocol tag
+eklemek; ardından cluster'ı başlatıp `250ms` interval ile preflight yapmaktır.
+
 ## 4. Şu Anki Durum
 
 Şu anda proje durumu şöyledir:
@@ -2341,6 +2406,7 @@ Gate 4 kararı:
 - Evaluator custom ve external baseline'ları tek komutta round-robin tekrarlayıp tek output'ta birleştirebilmektedir
 - Üç V2 train workload üzerinde üç custom policy ve default kube-scheduler için üç tekrarlı official baseline protokolü tamamlanmıştır
 - Official baseline artifactleri, manifestleri ve mean/sample-SD/worst-case özetleri commitlenmiştir
+- Clean/tag/preflight hard gate'li ve interruption recovery destekli repo-içi official multi-seed runner tamamlanmıştır
 - Sıradaki iş Gate 5 için clean optimizer protocol SHA/tag oluşturup `42`, `123`, `999` seed'lerini sequential çalıştırmaktır
 
 Başka bir ifadeyle:
@@ -2480,6 +2546,7 @@ Sonuç:
 
 ### Gate 5 - Official optimization ve doğrulama
 
+- [x] Repo-içi official multi-seed runner ile clean SHA/tag, input checksum, preflight, seed log ve postflight provenance'ını zorunlu tut
 - Clean stable commit ve annotated protocol tag oluştur
 - Preflight sonrasında `42`, `123`, `999` seed'lerini sequential çalıştır
 - Her seed için unique nondominated objective noktalarını çıkar
