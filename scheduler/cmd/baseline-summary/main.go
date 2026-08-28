@@ -53,12 +53,37 @@ type summaryRow struct {
 }
 
 type summaryOutput struct {
-	SchemaVersion      string       `json:"schemaVersion"`
-	MeasurementVersion string       `json:"measurementVersion"`
-	SourceFiles        []string     `json:"sourceFiles"`
-	ResultRows         int          `json:"resultRows"`
-	ByWorkload         []summaryRow `json:"byWorkload"`
-	Aggregates         []summaryRow `json:"aggregates"`
+	SchemaVersion      string        `json:"schemaVersion"`
+	MeasurementVersion string        `json:"measurementVersion"`
+	SourceFiles        []string      `json:"sourceFiles"`
+	ResultRows         int           `json:"resultRows"`
+	ByWorkload         []summaryRow  `json:"byWorkload"`
+	Aggregates         []summaryRow  `json:"aggregates"`
+	RepeatedMeanPareto paretoSummary `json:"repeatedMeanPareto"`
+}
+
+type paretoSummary struct {
+	Points      []paretoPoint `json:"points"`
+	PendingBest *paretoPoint  `json:"pendingBest,omitempty"`
+	NodeBest    *paretoPoint  `json:"nodeBest,omitempty"`
+	Knee        *paretoPoint  `json:"knee,omitempty"`
+}
+
+type paretoPoint struct {
+	MeanP95SchedulingDecisionLatencySeconds float64        `json:"meanP95SchedulingDecisionLatencySeconds"`
+	MeanMaxWorkloadOccupiedWorkerNodes      float64        `json:"meanMaxWorkloadOccupiedWorkerNodes"`
+	Members                                 []paretoMember `json:"members"`
+}
+
+type paretoMember struct {
+	SchedulerName string               `json:"schedulerName"`
+	PolicyName    string               `json:"policyName"`
+	Weights       *evaluator.WeightSet `json:"weights,omitempty"`
+}
+
+type paretoKey struct {
+	latency float64
+	nodes   float64
 }
 
 type observation struct {
@@ -186,13 +211,117 @@ func summarizeBatches(batches []evaluator.BatchResult, sourceFiles []string) (su
 		return summaryOutput{}, err
 	}
 	return summaryOutput{
-		SchemaVersion:      "v1",
+		SchemaVersion:      "v2",
 		MeasurementVersion: measurementVersion,
 		SourceFiles:        append([]string(nil), sourceFiles...),
 		ResultRows:         len(observations),
 		ByWorkload:         byWorkload,
 		Aggregates:         aggregates,
+		RepeatedMeanPareto: buildParetoSummary(aggregates),
 	}, nil
+}
+
+func buildParetoSummary(rows []summaryRow) paretoSummary {
+	groups := make(map[paretoKey][]paretoMember)
+	for _, row := range rows {
+		if row.SchedulerMode != evaluator.SchedulerModeCustomPolicy ||
+			!row.DecisionLatencyApplicable || row.P95SchedulingDecisionLatency == nil {
+			continue
+		}
+		key := paretoKey{
+			latency: row.P95SchedulingDecisionLatency.Mean,
+			nodes:   row.MaxWorkloadOccupiedWorkerNodes.Mean,
+		}
+		groups[key] = append(groups[key], paretoMember{
+			SchedulerName: row.SchedulerName,
+			PolicyName:    row.PolicyName,
+			Weights:       cloneWeights(row.Weights),
+		})
+	}
+
+	points := make([]paretoPoint, 0, len(groups))
+	for candidate, members := range groups {
+		dominated := false
+		for other := range groups {
+			if other == candidate {
+				continue
+			}
+			if other.latency <= candidate.latency && other.nodes <= candidate.nodes &&
+				(other.latency < candidate.latency || other.nodes < candidate.nodes) {
+				dominated = true
+				break
+			}
+		}
+		if dominated {
+			continue
+		}
+		sort.Slice(members, func(i, j int) bool { return members[i].PolicyName < members[j].PolicyName })
+		points = append(points, paretoPoint{
+			MeanP95SchedulingDecisionLatencySeconds: candidate.latency,
+			MeanMaxWorkloadOccupiedWorkerNodes:      candidate.nodes,
+			Members:                                 members,
+		})
+	}
+	sort.Slice(points, func(i, j int) bool {
+		if points[i].MeanP95SchedulingDecisionLatencySeconds == points[j].MeanP95SchedulingDecisionLatencySeconds {
+			return points[i].MeanMaxWorkloadOccupiedWorkerNodes < points[j].MeanMaxWorkloadOccupiedWorkerNodes
+		}
+		return points[i].MeanP95SchedulingDecisionLatencySeconds < points[j].MeanP95SchedulingDecisionLatencySeconds
+	})
+
+	result := paretoSummary{Points: points}
+	if len(points) == 0 {
+		return result
+	}
+	result.PendingBest = &result.Points[0]
+	nodeBest := 0
+	for i := 1; i < len(result.Points); i++ {
+		if result.Points[i].MeanMaxWorkloadOccupiedWorkerNodes < result.Points[nodeBest].MeanMaxWorkloadOccupiedWorkerNodes ||
+			(result.Points[i].MeanMaxWorkloadOccupiedWorkerNodes == result.Points[nodeBest].MeanMaxWorkloadOccupiedWorkerNodes &&
+				result.Points[i].MeanP95SchedulingDecisionLatencySeconds < result.Points[nodeBest].MeanP95SchedulingDecisionLatencySeconds) {
+			nodeBest = i
+		}
+	}
+	result.NodeBest = &result.Points[nodeBest]
+	if knee := selectKnee(result.Points); knee >= 0 {
+		result.Knee = &result.Points[knee]
+	}
+	return result
+}
+
+func selectKnee(points []paretoPoint) int {
+	if len(points) < 3 {
+		return -1
+	}
+	minLatency := points[0].MeanP95SchedulingDecisionLatencySeconds
+	maxLatency := points[len(points)-1].MeanP95SchedulingDecisionLatencySeconds
+	minNodes := points[0].MeanMaxWorkloadOccupiedWorkerNodes
+	maxNodes := minNodes
+	for _, point := range points[1:] {
+		minNodes = math.Min(minNodes, point.MeanMaxWorkloadOccupiedWorkerNodes)
+		maxNodes = math.Max(maxNodes, point.MeanMaxWorkloadOccupiedWorkerNodes)
+	}
+	if maxLatency == minLatency || maxNodes == minNodes {
+		return -1
+	}
+	normalize := func(point paretoPoint) (float64, float64) {
+		return (point.MeanP95SchedulingDecisionLatencySeconds - minLatency) / (maxLatency - minLatency),
+			(point.MeanMaxWorkloadOccupiedWorkerNodes - minNodes) / (maxNodes - minNodes)
+	}
+	x1, y1 := normalize(points[0])
+	x2, y2 := normalize(points[len(points)-1])
+	denominator := math.Hypot(y2-y1, x2-x1)
+	bestIndex := -1
+	bestDistance := 0.0
+	for i := 1; i < len(points)-1; i++ {
+		x, y := normalize(points[i])
+		distance := math.Abs((y2-y1)*x-(x2-x1)*y+x2*y1-y2*x1) / denominator
+		if distance > bestDistance {
+			bestDistance = distance
+			bestIndex = i
+		}
+	}
+	return bestIndex
 }
 
 func summarizeGroups(observations []observation, byWorkload bool) ([]summaryRow, error) {

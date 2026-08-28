@@ -109,6 +109,51 @@ func TestCalculateStatisticsUsesDegenerateIntervalForSingleObservation(t *testin
 	}
 }
 
+func TestBuildParetoSummaryKeepsTradeoffAndDropsDominatedPolicy(t *testing.T) {
+	rows := []summaryRow{
+		paretoRow("pending", 1.0, 4),
+		paretoRow("balanced", 1.2, 3),
+		paretoRow("dominated", 1.4, 4),
+	}
+
+	got := buildParetoSummary(rows)
+	if len(got.Points) != 2 {
+		t.Fatalf("Pareto points = %d, want 2", len(got.Points))
+	}
+	if got.PendingBest.Members[0].PolicyName != "pending" {
+		t.Fatalf("pending best = %+v", got.PendingBest)
+	}
+	if got.NodeBest.Members[0].PolicyName != "balanced" {
+		t.Fatalf("node best = %+v", got.NodeBest)
+	}
+	if got.Knee != nil {
+		t.Fatalf("knee = %+v, want nil for two points", got.Knee)
+	}
+}
+
+func TestBuildParetoSummarySelectsInteriorKnee(t *testing.T) {
+	rows := []summaryRow{
+		paretoRow("pending", 1.0, 4),
+		paretoRow("knee", 1.1, 3.1),
+		paretoRow("node", 2.0, 3),
+	}
+
+	got := buildParetoSummary(rows)
+	if got.Knee == nil || got.Knee.Members[0].PolicyName != "knee" {
+		t.Fatalf("knee = %+v, want interior policy", got.Knee)
+	}
+}
+
+func paretoRow(name string, latency, nodes float64) summaryRow {
+	return summaryRow{
+		SchedulerMode:                  evaluator.SchedulerModeCustomPolicy,
+		PolicyName:                     name,
+		DecisionLatencyApplicable:      true,
+		P95SchedulingDecisionLatency:   &statistics{Mean: latency},
+		MaxWorkloadOccupiedWorkerNodes: statistics{Mean: nodes},
+	}
+}
+
 func row(name, scheduler string, weights *evaluator.WeightSet, weightsApplicable bool, p95 float64, nodes int, variance, imbalance float64) evaluator.ComparisonRow {
 	return evaluator.ComparisonRow{
 		SchedulerMode:                  evaluator.SchedulerModeCustomPolicy,
