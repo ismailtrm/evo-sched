@@ -633,6 +633,11 @@ func cleanupManagedPods(ctx context.Context, cs kubernetes.Interface, namespace 
 	return cleanupPodsBySelector(ctx, cs, namespace, managedPodsSelector)
 }
 
+// CleanupManagedPods removes evaluator-owned Pods and waits for namespace isolation.
+func CleanupManagedPods(ctx context.Context, cs kubernetes.Interface, namespace string) error {
+	return cleanupManagedPods(ctx, cs, namespace)
+}
+
 func cleanupPodsBySelector(ctx context.Context, cs kubernetes.Interface, namespace, selector string) error {
 	deletePolicy := metav1.DeletePropagationBackground
 	if err := cs.CoreV1().Pods(namespace).DeleteCollection(ctx, metav1.DeleteOptions{
@@ -697,6 +702,11 @@ func applyWeights(ctx context.Context, cs kubernetes.Interface, namespace, name 
 	}
 
 	return fmt.Errorf("update scheduler deployment after retries: %w", lastErr)
+}
+
+// ApplyDeploymentWeights updates scheduler weights and waits for rollout convergence.
+func ApplyDeploymentWeights(ctx context.Context, cs kubernetes.Interface, namespace, name string, weights WeightSet) error {
+	return applyWeights(ctx, cs, namespace, name, weights)
 }
 
 func upsertEnv(env []corev1.EnvVar, name, value string) []corev1.EnvVar {
