@@ -2425,6 +2425,85 @@ Gate 5 ara kararı:
 - finalist seçimi yalnızca train objective'lerine dayanmıştır; doğrulanan
   temsilciler ayrıca `mixed-burst-holdout` üzerinde ölçülmelidir
 
+### 3.57. Repeated finalist validation protokolünü sonuçtan önce sabitledik
+
+Beş optimizer finalisti, üç elle seçilmiş V2 baseline ile birlikte
+`experiments/weights-v2-validation-finalists.json` dosyasına optimizer
+artefaktlarındaki tam canonical değerlerle aktarıldı. WALKTHROUGH'daki altı
+basamaklı gösterimler deney girdisi olarak kullanılmadı. Dosya sekiz benzersiz
+policy taşır ve her weight vektörünün L1 toplamı `1`dir.
+
+Validation belirsizlik çıktısı için `baseline-summary` genişletildi. Mean, sample
+standard deviation, minimum ve maximum alanlarına ek olarak iki taraflı yüzde
+`95` Student-t confidence interval üretir. Tek gözlemde interval mean'e çöker;
+`n > 30` için normal yaklaşım kullanılır. Aggregate satır üç workload'u havuzladığı
+için paper'ın uncertainty yorumu workload-level `n=10` satırlarını esas alacaktır.
+
+Terminal geçmişine dayalı üç ayrı evaluator komutu yerine
+`scheduler/cmd/repeated-validation-runner` eklendi. Runner:
+
+- clean working tree ve HEAD'de annotated protocol tag olmadan başlamaz
+- workload, finalist weights, kind config ve deployment checksum'larını başlamadan
+  manifestte saklar
+- dört worker, canonical başlangıç weights, `250ms` scheduler interval, converged
+  rollout ve boş evaluator namespace preflight'ını zorunlu tutar
+- sekiz policy'yi repetition-major round-robin sırada çalıştırır
+- her workload sonrası raw JSON/CSV yazar, tam row/Pod/timestamp acceptance uygular
+  ve output checksum'larıyla manifesti atomik günceller
+- başarı, hata veya interruption sonunda managed Pod'ları temizler, canonical
+  weights'i ve `2s` scheduler interval'ini restore eder
+
+Kod ve analiz değişiklikleri:
+
+- `cb71546 feat: add confidence intervals to baseline summaries`
+- `9138699 feat: add v2 validation finalist policies`
+- `99d4038 feat: add official repeated validation runner`
+
+Ön-kayıtlı train validation bütçesi:
+
+- `8` policy
+- `3` train workload
+- policy-workload başına `10` tekrar
+- toplam `240` workload execution
+- workload başına `24` Pod, toplam `5,760` gerçek Pod binding
+- primary objective'ler: mean p95 scheduling decision latency ve mean maximum
+  workload-occupied worker count
+- yardımcı güvenlik/yorum metrikleri: unschedulable count, load variance,
+  CPU-memory imbalance, sample SD, worst-case ve yüzde `95` CI
+- beklenen süre mevcut official search throughput'una göre yaklaşık `2-2.5` saat
+
+Planlanan komut:
+
+```bash
+go run ./cmd/repeated-validation-runner \
+  --run-name 2026-08-28-v2-official-finalist-validation \
+  --workloads ../workloads/v2/cpu-tight-train.json,../workloads/v2/mem-tight-train.json,../workloads/v2/fragmenting-mix-train.json \
+  --weights-file ../experiments/weights-v2-validation-finalists.json \
+  --protocol-tag protocol-v2-finalist-validation-2026-08-28 \
+  --repetitions 10 \
+  --poll-interval 250ms \
+  --timeout 90s \
+  --expect-workers 4 \
+  --expect-scheduler-interval 250ms \
+  --final-scheduler-interval 2s
+```
+
+Holdout'a taşınacak temsilciler train validation sonucunu gördükten sonra keyfi
+seçilmeyecektir. Ön-kayıtlı seçim kuralı:
+
+- repeated mean objective'lerle bütün sekiz policy'nin nondominated front'unu kur
+- pending-best: nondominated sette en düşük mean p95; eşitlikte daha az worker
+- node-best: nondominated sette en düşük mean occupied worker; eşitlikte daha düşük
+  mean p95
+- en az üç unique nokta varsa, iki objective'i min-max normalize edip front
+  uçlarını birleştiren doğruya en uzak interior noktayı knee adayı seç
+- duplicate temsilcileri kaldır; seçilen train temsilcilerini ve üç baseline'ı
+  `mixed-burst-holdout` üzerinde aynı `n=10` protokolle değerlendir
+
+Bu bölüm yazılırken validation run henüz başlatılmadı. Sıradaki hard gate bu runner,
+policy file ve karar kaydını içeren clean HEAD'e annotated validation protocol tag
+eklemek; ardından cluster'ı başlatıp `250ms` preflight yapmaktır.
+
 ## 4. Şu Anki Durum
 
 Şu anda proje durumu şöyledir:
@@ -2478,6 +2557,9 @@ Gate 5 ara kararı:
 - Her üç seed'in tek-evaluation combined Pareto front'unda baseline'lar düşmüş, fakat üstünlük iddiası repeated finalist validation sonrasına ertelenmiştir
 - Seed başına unique Pareto nokta sayıları `2`, `2`, `1` olduğu için strict interior knee point bulunmamaktadır
 - V2 multi-seed summary JSON/CSV ve provenance manifesti commitlenmiştir
+- Beş finalist ve üç baseline için `n=10` repeated validation policy dosyası ve official runner hazırlanmıştır
+- Repeated summary istatistiklerine yüzde `95` Student-t confidence interval eklenmiştir
+- Holdout temsilci seçim kuralı train validation sonucu görülmeden önce sabitlenmiştir
 - Scheduler interval testli admin komutuyla canonical `2s` değerine restore edilmiştir
 - `evo-sched` kind container'ları Gate 5 search postflight sonrasında silinmeden durdurulmuştur
 - Scheduler experiment preflight skill'i V2 contract, canonical weights ve exact worker-count kontrolüyle güncellenmiştir
@@ -2646,6 +2728,9 @@ Sonuç:
 - [x] Clean stable commit ve annotated protocol tag oluştur
 - [x] Preflight sonrasında `42`, `123`, `999` seed'lerini sequential çalıştır
 - [x] Her seed için unique nondominated objective noktalarını çıkar
+- [x] Beş optimizer finalisti ile üç baseline'ı tek canonical validation dosyasında sabitle
+- [x] Clean/tag/checksum/preflight ve automatic cadence restoration içeren repeated validation runner ekle
+- [x] Mean/SD/worst-case özetine yüzde 95 confidence interval ekle
 - Finalist Pareto çözümlerini ve baseline'ları bağımsız tekrarlarla yeniden ölç
 - Merkezi eğilim yanında dağılım, worst-case ve güven aralığı raporla
 - Pareto yapısını all-measured solutions üzerinden yeniden kur
