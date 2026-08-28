@@ -2504,6 +2504,79 @@ Bu bölüm yazılırken validation run henüz başlatılmadı. Sıradaki hard ga
 policy file ve karar kaydını içeren clean HEAD'e annotated validation protocol tag
 eklemek; ardından cluster'ı başlatıp `250ms` preflight yapmaktır.
 
+### 3.58. Repeated validation tek-koşu optimizer kazanımını doğrulamadı
+
+Official validation, clean source commit
+`3cfef4c40977946b406ff8778960dac8cf5d322e` ve annotated
+`protocol-v2-finalist-validation-2026-08-28` tag'i üzerinden çalıştırıldı. Run
+yaklaşık `2 saat 11 dakika 37 saniye` sürdü ve üç workload'un tamamında acceptance
+geçti:
+
+- `8` policy x `3` workload x `10` tekrar = `240` result row
+- workload başına `1,920`, toplam `5,760` Pod
+- `5,760/5,760` scheduled ve completed
+- submission, scheduler decision, Kubernetes scheduled ve evaluator observation
+  timestamp coverage tam
+- sıfır unschedulable Pod
+- final postflight dört worker, canonical weights, `2s` scheduler interval ve boş
+  evaluator namespace doğruladı
+
+Ham artefaktlar `3467045 results: record official v2 finalist validation`
+commitinde tutulmaktadır. Mean, sample SD, min/max ve yüzde `95` Student-t CI
+özetine repeated-mean nondominated sort ve ön-kayıtlı pending/node/knee seçimi
+eklendi:
+
+- `a7676d0 feat: add repeated mean Pareto analysis`
+- `881500f results: summarize repeated finalist validation`
+
+Repeated aggregate point estimate front yalnızca iki baseline noktasından oluştu:
+
+- pending-best `evok8s-v2-balanced`:
+  - mean p95 decision latency `1.251855 s`
+  - pooled yüzde `95` CI `[1.199451, 1.304258] s`
+  - mean max workload-occupied workers `3.666667`
+- node-best `evok8s-v2-consolidation-heavy`:
+  - mean p95 decision latency `1.264390 s`
+  - pooled yüzde `95` CI `[1.205896, 1.322885] s`
+  - mean max workload-occupied workers `3.000000`
+
+Consolidation-heavy, balanced'a göre mean occupied worker sayısını yaklaşık yüzde
+`18.18` azaltırken mean p95 point estimate'i yalnızca yaklaşık yüzde `1.00`, yani
+`0.012536 s` artırdı. CI'lar belirgin biçimde çakıştığı için bu fark istatistiksel
+üstünlük iddiası değildir; front yalnızca repeated mean point estimate'lerden
+kurulmuştur.
+
+Beş optimizer finalistinin hiçbiri repeated-mean Pareto front'ta kalmadı:
+
+- `optimizer-s123-gen-01-010`, balanced tarafından domine edildi
+- `optimizer-s123-init-010`, consolidation-heavy tarafından domine edildi
+- `optimizer-s42-gen-03-007`, consolidation-heavy tarafından domine edildi
+- `optimizer-s42-init-009`, consolidation-heavy tarafından domine edildi
+- `optimizer-s999-gen-03-002`, consolidation-heavy tarafından domine edildi
+
+Özellikle `optimizer-s999-gen-03-002` node-best köşesinde consolidation-heavy'ye
+çok yakındı, fakat mean p95 değeri `1.265704 s` ile baseline'ın `1.264390 s`
+değerinden yaklaşık `0.001313 s` yüksekti. Bu büyüklük canlı-cluster timing
+gürültüsünden güvenle ayrılamaz.
+
+Araştırma kararı:
+
+- single-evaluation search'te görülen optimizer-only kazanım tekrarlı protokolde
+  yeniden üretilemedi
+- bu sonuç başarısız artefakt değil, tek ölçümlü expensive black-box search'ün
+  gürültüyü optimize edebileceğini gösteren geçerli negatif doğrulamadır
+- "optimizer baseline'ları geçti" claim'i paper ve CFP'den çıkarılacaktır
+- optimizer'ın katkısı, canlı-cluster policy search metodolojisi ve measurement
+  noise dersi olarak yeniden çerçevelenecektir
+- iki unique nokta bulunduğu için strict interior knee yine yoktur
+
+Ön-kayıtlı holdout kuralı repeated train front temsilcilerini üç baseline ile
+birleştirip duplicate'leri kaldırıyordu. Front temsilcileri zaten balanced ve
+consolidation-heavy olduğundan holdout policy seti mevcut
+`experiments/weights-v2.json` içindeki üç baseline'a çöker. Sıradaki official run,
+`mixed-burst-holdout` üzerinde üç policy x `10` tekrar, toplam `30` execution ve
+`720` Pod olacaktır.
+
 ## 4. Şu Anki Durum
 
 Şu anda proje durumu şöyledir:
@@ -2560,6 +2633,11 @@ eklemek; ardından cluster'ı başlatıp `250ms` preflight yapmaktır.
 - Beş finalist ve üç baseline için `n=10` repeated validation policy dosyası ve official runner hazırlanmıştır
 - Repeated summary istatistiklerine yüzde `95` Student-t confidence interval eklenmiştir
 - Holdout temsilci seçim kuralı train validation sonucu görülmeden önce sabitlenmiştir
+- Sekiz policy için `n=10` repeated train validation 240/240 satır ve 5,760/5,760 Pod ile tamamlanmıştır
+- Tek-koşu optimizer kazanımı repeated-mean front'ta yeniden üretilememiş; beş optimizer finalistinin tamamı baseline'lar tarafından domine edilmiştir
+- Repeated-mean Pareto front balanced pending-best ve consolidation-heavy node-best noktalarından oluşmaktadır
+- Pooled confidence interval'lar çakıştığı için point-estimate dominance istatistiksel üstünlük olarak yorumlanmamaktadır
+- Ön-kayıtlı holdout seti duplicate removal sonrası üç V2 baseline'a indirgenmiştir
 - Scheduler interval testli admin komutuyla canonical `2s` değerine restore edilmiştir
 - `evo-sched` kind container'ları Gate 5 search postflight sonrasında silinmeden durdurulmuştur
 - Scheduler experiment preflight skill'i V2 contract, canonical weights ve exact worker-count kontrolüyle güncellenmiştir
@@ -2585,7 +2663,7 @@ eklemek; ardından cluster'ı başlatıp `250ms` preflight yapmaktır.
 - Üç V2 train workload üzerinde üç custom policy ve default kube-scheduler için üç tekrarlı official baseline protokolü tamamlanmıştır
 - Official baseline artifactleri, manifestleri ve mean/sample-SD/worst-case özetleri commitlenmiştir
 - Clean/tag/preflight hard gate'li ve interruption recovery destekli repo-içi official multi-seed runner tamamlanmıştır
-- Sıradaki iş beş optimizer finalisti ve üç V2 baseline'ı aynı protokolde en az `10` tekrar ölçerek provisional Pareto bulgusunu doğrulamaktır
+- Sıradaki iş üç V2 baseline'ı `mixed-burst-holdout` üzerinde `n=10` ölçerek train tradeoff'unun genellemesini kontrol etmektir
 
 Başka bir ifadeyle:
 
@@ -2600,7 +2678,7 @@ Başka bir ifadeyle:
 - Adım 6 ve 7 için node-count tradeoff'u görünür hale gelmiş durumda
 - Adım 8 için gerekli evolutionary loop iskeleti kurulmuş durumda
 - Adım 8 için ilk tam seed sonucu alınmış ve Pareto özeti çıkarılmış durumda
-- Adım 8'in V2 multi-seed search fazı tamamlandı; final doğrulaması beş finalist ile üç baseline'ın bağımsız tekrarlarını bekliyor
+- Adım 8'in V2 multi-seed search ve repeated train validation fazları tamamlandı; optimizer-only kazanım doğrulanmadı ve holdout baseline genelleme kontrolü sıradadır
 
 ## 5. Sıradaki Muhtemel Adımlar
 
@@ -2731,10 +2809,10 @@ Sonuç:
 - [x] Beş optimizer finalisti ile üç baseline'ı tek canonical validation dosyasında sabitle
 - [x] Clean/tag/checksum/preflight ve automatic cadence restoration içeren repeated validation runner ekle
 - [x] Mean/SD/worst-case özetine yüzde 95 confidence interval ekle
-- Finalist Pareto çözümlerini ve baseline'ları bağımsız tekrarlarla yeniden ölç
-- Merkezi eğilim yanında dağılım, worst-case ve güven aralığı raporla
-- Pareto yapısını all-measured solutions üzerinden yeniden kur
-- Pending-best, node-best ve yeterli nokta varsa knee-point temsilcisini seç
+- [x] Finalist Pareto çözümlerini ve baseline'ları bağımsız tekrarlarla yeniden ölç
+- [x] Merkezi eğilim yanında dağılım, worst-case ve güven aralığı raporla
+- [x] Pareto yapısını all-measured solutions üzerinden yeniden kur
+- [x] Pending-best, node-best ve yeterli nokta varsa knee-point temsilcisini seç
 - Holdout workload üzerinde genelleme kontrolü yap
 
 Çıkış koşulu:
