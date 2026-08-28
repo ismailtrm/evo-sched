@@ -92,6 +92,23 @@ func TestWriteSummaryCSVLeavesExternalDecisionStatsBlank(t *testing.T) {
 	}
 }
 
+func TestCalculateStatisticsIncludesStudentTConfidenceInterval(t *testing.T) {
+	got := calculateStatistics([]float64{1, 2, 3, 4, 5})
+
+	assertClose(t, got.Mean, 3)
+	assertClose(t, got.SampleStdDev, math.Sqrt(2.5))
+	margin := 2.776 * got.SampleStdDev / math.Sqrt(5)
+	assertClose(t, got.Confidence95Lower, got.Mean-margin)
+	assertClose(t, got.Confidence95Upper, got.Mean+margin)
+}
+
+func TestCalculateStatisticsUsesDegenerateIntervalForSingleObservation(t *testing.T) {
+	got := calculateStatistics([]float64{7})
+	if got.Confidence95Lower != 7 || got.Confidence95Upper != 7 {
+		t.Fatalf("single-observation confidence interval = [%v, %v], want [7, 7]", got.Confidence95Lower, got.Confidence95Upper)
+	}
+}
+
 func row(name, scheduler string, weights *evaluator.WeightSet, weightsApplicable bool, p95 float64, nodes int, variance, imbalance float64) evaluator.ComparisonRow {
 	return evaluator.ComparisonRow{
 		SchedulerMode:                  evaluator.SchedulerModeCustomPolicy,

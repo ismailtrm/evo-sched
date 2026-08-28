@@ -26,10 +26,12 @@ type options struct {
 }
 
 type statistics struct {
-	Mean         float64 `json:"mean"`
-	SampleStdDev float64 `json:"sampleStdDev"`
-	Minimum      float64 `json:"minimum"`
-	Maximum      float64 `json:"maximum"`
+	Mean              float64 `json:"mean"`
+	SampleStdDev      float64 `json:"sampleStdDev"`
+	Minimum           float64 `json:"minimum"`
+	Maximum           float64 `json:"maximum"`
+	Confidence95Lower float64 `json:"confidence95Lower"`
+	Confidence95Upper float64 `json:"confidence95Upper"`
 }
 
 type summaryRow struct {
@@ -293,12 +295,38 @@ func calculateStatistics(values []float64) statistics {
 		}
 		variance /= float64(len(values) - 1)
 	}
-	return statistics{
-		Mean:         mean,
-		SampleStdDev: math.Sqrt(variance),
-		Minimum:      minimum,
-		Maximum:      maximum,
+	stdDev := math.Sqrt(variance)
+	margin := 0.0
+	if len(values) > 1 {
+		margin = studentTCritical95(len(values)-1) * stdDev / math.Sqrt(float64(len(values)))
 	}
+	return statistics{
+		Mean:              mean,
+		SampleStdDev:      stdDev,
+		Minimum:           minimum,
+		Maximum:           maximum,
+		Confidence95Lower: mean - margin,
+		Confidence95Upper: mean + margin,
+	}
+}
+
+func studentTCritical95(degreesOfFreedom int) float64 {
+	critical := [...]float64{
+		0,
+		12.706, 4.303, 3.182, 2.776, 2.571,
+		2.447, 2.365, 2.306, 2.262, 2.228,
+		2.201, 2.179, 2.160, 2.145, 2.131,
+		2.120, 2.110, 2.101, 2.093, 2.086,
+		2.080, 2.074, 2.069, 2.064, 2.060,
+		2.056, 2.052, 2.048, 2.045, 2.042,
+	}
+	if degreesOfFreedom < 1 {
+		return 0
+	}
+	if degreesOfFreedom < len(critical) {
+		return critical[degreesOfFreedom]
+	}
+	return 1.96
 }
 
 func writeSummaryCSV(writer io.Writer, output summaryOutput) error {
@@ -307,10 +335,12 @@ func writeSummaryCSV(writer io.Writer, output summaryOutput) error {
 		"scope", "workload", "workload_count", "scheduler_mode", "scheduler_name", "policy_name",
 		"free_cpu", "free_mem", "balance", "consolidation", "repetitions", "unschedulable_total",
 		"decision_latency_applicable", "p95_decision_mean_seconds", "p95_decision_sample_stddev_seconds",
-		"p95_decision_min_seconds", "p95_decision_max_seconds", "max_nodes_mean", "max_nodes_sample_stddev",
-		"max_nodes_min", "max_nodes_max", "load_variance_mean", "load_variance_sample_stddev",
-		"load_variance_min", "load_variance_max", "cpu_memory_imbalance_mean",
+		"p95_decision_min_seconds", "p95_decision_max_seconds", "p95_decision_ci95_lower_seconds", "p95_decision_ci95_upper_seconds",
+		"max_nodes_mean", "max_nodes_sample_stddev", "max_nodes_min", "max_nodes_max", "max_nodes_ci95_lower", "max_nodes_ci95_upper",
+		"load_variance_mean", "load_variance_sample_stddev", "load_variance_min", "load_variance_max",
+		"load_variance_ci95_lower", "load_variance_ci95_upper", "cpu_memory_imbalance_mean",
 		"cpu_memory_imbalance_sample_stddev", "cpu_memory_imbalance_min", "cpu_memory_imbalance_max",
+		"cpu_memory_imbalance_ci95_lower", "cpu_memory_imbalance_ci95_upper",
 	}
 	if err := csvWriter.Write(header); err != nil {
 		return err
@@ -326,7 +356,7 @@ func writeSummaryCSV(writer io.Writer, output summaryOutput) error {
 				formatFloat(row.Weights.Consolidation),
 			}
 		}
-		decision := []string{"", "", "", ""}
+		decision := []string{"", "", "", "", "", ""}
 		if row.P95SchedulingDecisionLatency != nil {
 			decision = statisticsFields(*row.P95SchedulingDecisionLatency)
 		}
@@ -352,6 +382,8 @@ func statisticsFields(value statistics) []string {
 		formatFloat(value.SampleStdDev),
 		formatFloat(value.Minimum),
 		formatFloat(value.Maximum),
+		formatFloat(value.Confidence95Lower),
+		formatFloat(value.Confidence95Upper),
 	}
 }
 
