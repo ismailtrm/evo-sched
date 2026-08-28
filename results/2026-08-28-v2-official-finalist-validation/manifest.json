@@ -1,0 +1,140 @@
+{
+  "schemaVersion": "v1",
+  "protocolVersion": "v2-official-repeated-validation",
+  "class": "official",
+  "paperEvidenceEligible": true,
+  "runName": "2026-08-28-v2-official-finalist-validation",
+  "status": "completed",
+  "startedAt": "2026-08-28T07:36:35.843060256Z",
+  "finishedAt": "2026-08-28T09:48:13.199900386Z",
+  "repository": "/home/ismail/evo-sched",
+  "workingDirectory": "/home/ismail/evo-sched/scheduler",
+  "git": {
+    "sha": "3cfef4c40977946b406ff8778960dac8cf5d322e",
+    "branch": "research/policy-space-v2",
+    "protocolTag": "protocol-v2-finalist-validation-2026-08-28",
+    "dirtyAtStart": false
+  },
+  "inputs": [
+    {
+      "path": "deploy.yaml",
+      "sha256": "3de13f7b422236a72f0d1cce608957e469d8124f0ab5ad2b26d6d2af80dbf91c"
+    },
+    {
+      "path": "experiments/weights-v2-validation-finalists.json",
+      "sha256": "039f93cc5b21cee19820fbd193133d95d0f49a85730e1c06af543d120f8230b2"
+    },
+    {
+      "path": "kind-config-4workers.yaml",
+      "sha256": "d26c091ff873418387e8c45148283a71235a2190efe1d8f021fc566de0bd664f"
+    },
+    {
+      "path": "workloads/v2/cpu-tight-train.json",
+      "sha256": "4f5f37555465b179c48b5e9a3bc1c738cddf03309c0823c9c55f51ec99374096"
+    },
+    {
+      "path": "workloads/v2/fragmenting-mix-train.json",
+      "sha256": "8dca751f14582c2fa56fa6f83d4bc58bb1d66a19e550716076715e9227143872"
+    },
+    {
+      "path": "workloads/v2/mem-tight-train.json",
+      "sha256": "9fbf91b4fe156c7100ed4363f674a3bddaaf56c572c1f23ba50e2fbb78f1c7b4"
+    }
+  ],
+  "repetitionsPerPolicyWorkload": 10,
+  "policyCount": 8,
+  "expectedResultRows": 240,
+  "expectedWorkloadRuns": 240,
+  "preflight": {
+    "capturedAt": "2026-08-28T07:36:35.84297777Z",
+    "workerCount": 4,
+    "workerCpuMilli": 16000,
+    "workerMemoryMiB": 31712,
+    "schedulerRolloutReady": true,
+    "schedulerIntervalSeconds": 0.25,
+    "schedulerCanonicalWeights": {
+      "freeCPU": 0.25,
+      "freeMem": 0.25,
+      "balance": 0.25,
+      "consolidation": 0.25
+    },
+    "evaluatorPodCount": 0
+  },
+  "runs": [
+    {
+      "workload": "cpu-tight-train",
+      "path": "workloads/v2/cpu-tight-train.json",
+      "status": "completed",
+      "startedAt": "2026-08-28T07:36:35.843242517Z",
+      "finishedAt": "2026-08-28T08:20:04.473108823Z",
+      "expectedRows": 80,
+      "resultRows": 80,
+      "podCount": 1920,
+      "outputs": [
+        {
+          "path": "results/2026-08-28-v2-official-finalist-validation/cpu-tight-train.json",
+          "sha256": "33f3af398972223519185c2a3a7c38c9660c4e14077554346ba9aa056c08d85f"
+        },
+        {
+          "path": "results/2026-08-28-v2-official-finalist-validation/cpu-tight-train.csv",
+          "sha256": "3b15797514039711aefca471c619c937499170f23cf81ae009d9305752ab22bd"
+        }
+      ]
+    },
+    {
+      "workload": "mem-tight-train",
+      "path": "workloads/v2/mem-tight-train.json",
+      "status": "completed",
+      "startedAt": "2026-08-28T08:20:04.563100296Z",
+      "finishedAt": "2026-08-28T09:03:51.962809093Z",
+      "expectedRows": 80,
+      "resultRows": 80,
+      "podCount": 1920,
+      "outputs": [
+        {
+          "path": "results/2026-08-28-v2-official-finalist-validation/mem-tight-train.json",
+          "sha256": "cda7394a10038c767e5f73b1c11ddf251239eb18b0aea2ad65cfa2a9696b117e"
+        },
+        {
+          "path": "results/2026-08-28-v2-official-finalist-validation/mem-tight-train.csv",
+          "sha256": "87b432265f71747fdefa4c057cf694ce31661b147f53c30eca83646bf00ded07"
+        }
+      ]
+    },
+    {
+      "workload": "fragmenting-mix-train",
+      "path": "workloads/v2/fragmenting-mix-train.json",
+      "status": "completed",
+      "startedAt": "2026-08-28T09:03:52.06512816Z",
+      "finishedAt": "2026-08-28T09:48:10.573727327Z",
+      "expectedRows": 80,
+      "resultRows": 80,
+      "podCount": 1920,
+      "outputs": [
+        {
+          "path": "results/2026-08-28-v2-official-finalist-validation/fragmenting-mix-train.json",
+          "sha256": "93c4905d606da41a65bcacb99f8e584b4a6f0a929f53220a0173c5471ccc5c87"
+        },
+        {
+          "path": "results/2026-08-28-v2-official-finalist-validation/fragmenting-mix-train.csv",
+          "sha256": "20e07f91d75a21393602be85ac7d7fbf05cec498a79e0eeee28265620f8e2a2f"
+        }
+      ]
+    }
+  ],
+  "postflight": {
+    "capturedAt": "2026-08-28T09:48:13.199899644Z",
+    "workerCount": 4,
+    "workerCpuMilli": 16000,
+    "workerMemoryMiB": 31712,
+    "schedulerRolloutReady": true,
+    "schedulerIntervalSeconds": 2,
+    "schedulerCanonicalWeights": {
+      "freeCPU": 0.25,
+      "freeMem": 0.25,
+      "balance": 0.25,
+      "consolidation": 0.25
+    },
+    "evaluatorPodCount": 0
+  }
+}
