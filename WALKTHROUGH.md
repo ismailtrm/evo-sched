@@ -2335,6 +2335,96 @@ Bu bölüm yazılırken official optimizer henüz başlatılmadı. Sıradaki har
 runner ve bu karar kaydını içeren clean HEAD'e annotated optimizer protocol tag
 eklemek; ardından cluster'ı başlatıp `250ms` interval ile preflight yapmaktır.
 
+### 3.56. Gate 5 official üç-seed search tamamlandı ve finalistler ayrıldı
+
+Official search, clean source commit
+`9bc7e5aa1642de6ea31d94f27e3ff2f4d2180ebd` ve annotated
+`protocol-v2-optimizer-2026-08-28` tag'i üzerinden başlatıldı. Başlangıç
+preflight'ı dört Ready worker, converged custom scheduler rollout, canonical
+`0.25/0.25/0.25/0.25` V2 weights, `250ms` scheduler interval ve boş
+`evo-sched-eval` namespace doğruladı.
+
+Run manifestine göre batch `2026-08-28 00:10:37 UTC` ile
+`2026-08-28 06:19:46 UTC` arasında, toplam yaklaşık `6 saat 9 dakika` çalıştı.
+Seed süreleri birbirine yakın kaldı:
+
+- `seed=42`: yaklaşık `2 saat 2 dakika 54 saniye`
+- `seed=123`: yaklaşık `2 saat 3 dakika 9 saniye`
+- `seed=999`: yaklaşık `2 saat 3 dakika 5 saniye`
+
+Her seed için sözleşme eksiksiz gerçekleşti:
+
+- `72` optimizer adayı ve `3` baseline, toplam `75` solution
+- solution başına üç train workload, toplam `225` workload execution
+- `5,400` Pod submission/scheduling/completion ve tam decision timestamp coverage
+- sıfır unschedulable Pod
+- seed sonrası canonical weights, converged rollout ve boş namespace postflight
+- manifestteki bütün result/log checksum'larıyla bağımsız `sha256sum` eşleşmesi
+
+Üç seed toplamında `216` optimizer adayı, `9` baseline evaluation, `675`
+workload execution ve `16,200` gerçek Pod binding ölçüldü. Ham artefaktlar
+`990d10a results: record official v2 multi-seed search` commitinde tutulmaktadır.
+
+V1 Pareto helper'ı eski `averageP95Pending` alanını beklediği için V2 objective
+şemasında çalışmadı. Sayıları elle çıkarmak yerine test-first
+`scheduler/cmd/optimizer-summary` eklendi. Bu komut:
+
+- aynı seed içindeki identical objective noktalarını deduplicate eder
+- baseline'ın front'ta kalması ile optimizer'ın baseline noktasını yeniden
+  keşfetmesini ayırır
+- optimizer-only yeni objective noktalarını işaretler
+- pending-best, node-best ve strict interior knee availability alanlarını üretir
+- cross-seed exact objective equality'nin canlı-cluster timing gürültüsü nedeniyle
+  stability kanıtı olmadığını output notlarında sabitler
+
+Özetleyici `7200195 feat: add v2 multi-seed optimizer summary`, analiz artefaktları
+ise `a203f50 results: summarize official v2 multi-seed search` commitlerinde
+kayıtlıdır.
+
+Per-seed combined Pareto sonuçları:
+
+- `seed=42`: iki unique nokta
+  - `init-009`: `(1.250408 s, 3.333333 worker)`, weights
+    `(0.304263, 0.339953, 0.023958, 0.331826)`
+  - `gen-03-007`: `(1.284070 s, 3 worker)`, weights
+    `(0.021293, 0.121764, 0.458922, 0.398021)`
+- `seed=123`: iki unique nokta
+  - `gen-01-010`: `(1.254573 s, 4 worker)`, weights
+    `(0.212481, 0.228013, 0.412212, 0.147293)`
+  - `init-010`: `(1.255230 s, 3 worker)`, weights
+    `(0.137785, 0.199934, 0.252638, 0.409643)`
+- `seed=999`: tek unique nokta
+  - `gen-03-002`: `(1.235628 s, 3 worker)`, weights
+    `(0.036336, 0.349308, 0.000000, 0.614356)`
+
+Her üç seed'in kendi tek-evaluation combined front'unda da balanced,
+spread-heavy ve consolidation-heavy baseline'ların tamamı düştü; beş front
+üyesinin tamamı optimizer kökenlidir. Ancak bu sonuç doğrudan "optimizer
+baseline'ları geçti" şeklinde raporlanmayacaktır. Her candidate yalnızca bir kez
+ölçüldüğü ve latency canlı cluster timing gürültüsü taşıdığı için bu beş policy
+yalnızca **validation finalist** statüsündedir.
+
+Hiçbir seed üç veya daha fazla unique Pareto noktası üretmedi. Bu nedenle strict
+interior knee point yoktur; iki noktalı seed'lerde yalnızca uçlar, tek noktalı
+seed'de ise aynı pending/node temsilcisi raporlanır.
+
+Koşu sonunda runner weights ve namespace durumunu restore etti, fakat scheduler
+interval'i deney cadence'i olan `250ms` değerinde bıraktı. Bu operasyonel açık
+`e388aee feat: add scheduler cadence admin command` ile kapatıldı. Testli
+`scheduler-admin` komutu canlı deployment'ı `250ms -> 2s` restore etti; ardından
+beş kind container silinmeden durduruldu.
+
+Gate 5 ara kararı:
+
+- search tamamlandı ve beş optimizer finalisti üretildi
+- yeni rejim iddiası repeated validation tamamlanana kadar provisional kalacak
+- sıradaki official deney, üç baseline ile beş finalisti aynı round-robin
+  protokolde en az `10` tekrar ölçmektir
+- doğrulama merkezi eğilim, sample dispersion, worst-case ve yüzde `95` güven
+  aralığı üretmelidir
+- finalist seçimi yalnızca train objective'lerine dayanmıştır; doğrulanan
+  temsilciler ayrıca `mixed-burst-holdout` üzerinde ölçülmelidir
+
 ## 4. Şu Anki Durum
 
 Şu anda proje durumu şöyledir:
@@ -2363,7 +2453,7 @@ eklemek; ardından cluster'ı başlatıp `250ms` interval ile preflight yapmakt�
 - `seed=42` altında iki baskın Pareto rejimi gözlenmiş durumda
 - `seed=42` ve mevcut resource-pressure matrix'i artık `v1 pilot` kanıtı olarak sınıflandırılmış durumda
 - Policy-space redundancy ve measurement-resolution riskleri kayıt altına alınmış durumda
-- `seed=123` ve `seed=999` historical V1 protokolünde çalıştırılmadı; sıradaki koşular Gate 5 V2 official multi-seed protokolü olacak
+- `seed=123` ve `seed=999` historical V1 protokolünde çalıştırılmadı; bunun yerine `42`, `123`, `999` seed'lerinin tamamı V2 official protokolünde çalıştırıldı
 - Official deneyler için clean Git SHA, manifest ve preflight hard gate'i kabul edilmiş durumda
 - Hibrit branch ve atomik kanıt commit düzeni kabul edilmiş durumda
 - Paper kaynakları Git ile izleniyor; build ürünleri ignore ediliyor
@@ -2382,8 +2472,14 @@ eklemek; ardından cluster'ı başlatıp `250ms` interval ile preflight yapmakt�
 - Gate 1 kod doğrulamaları race detector ve `go vet` ile geçmiştir
 - Gate 1 live integration smoke testi temiz commit üzerinden geçmiştir
 - Gate 1 tamamlanmıştır
-- Gate 4 official baseline protokolü tamamlanmıştır; official optimizer koşuları için sıradaki hard gate yeni clean SHA/tag ve Gate 5 preflight'tır
-- `evo-sched` kind container'ları Gate 4 official postflight sonrasında silinmeden durdurulmuştur
+- Gate 4 official baseline protokolü tamamlanmıştır
+- Gate 5 official `42`, `123`, `999` multi-seed search tamamlanmış ve beş optimizer validation finalisti çıkarılmıştır
+- Üç seed toplamında `216` optimizer adayı, `9` baseline evaluation, `675` workload execution ve `16,200` Pod başarıyla ölçülmüştür
+- Her üç seed'in tek-evaluation combined Pareto front'unda baseline'lar düşmüş, fakat üstünlük iddiası repeated finalist validation sonrasına ertelenmiştir
+- Seed başına unique Pareto nokta sayıları `2`, `2`, `1` olduğu için strict interior knee point bulunmamaktadır
+- V2 multi-seed summary JSON/CSV ve provenance manifesti commitlenmiştir
+- Scheduler interval testli admin komutuyla canonical `2s` değerine restore edilmiştir
+- `evo-sched` kind container'ları Gate 5 search postflight sonrasında silinmeden durdurulmuştur
 - Scheduler experiment preflight skill'i V2 contract, canonical weights ve exact worker-count kontrolüyle güncellenmiştir
 - Güncellenen preflight helper'ın gerçek-cluster acceptance testi geçmiştir
 - Measurement `v2` timestamp semantiği source audit ile tanımlanmıştır
@@ -2407,7 +2503,7 @@ eklemek; ardından cluster'ı başlatıp `250ms` interval ile preflight yapmakt�
 - Üç V2 train workload üzerinde üç custom policy ve default kube-scheduler için üç tekrarlı official baseline protokolü tamamlanmıştır
 - Official baseline artifactleri, manifestleri ve mean/sample-SD/worst-case özetleri commitlenmiştir
 - Clean/tag/preflight hard gate'li ve interruption recovery destekli repo-içi official multi-seed runner tamamlanmıştır
-- Sıradaki iş Gate 5 için clean optimizer protocol SHA/tag oluşturup `42`, `123`, `999` seed'lerini sequential çalıştırmaktır
+- Sıradaki iş beş optimizer finalisti ve üç V2 baseline'ı aynı protokolde en az `10` tekrar ölçerek provisional Pareto bulgusunu doğrulamaktır
 
 Başka bir ifadeyle:
 
@@ -2422,7 +2518,7 @@ Başka bir ifadeyle:
 - Adım 6 ve 7 için node-count tradeoff'u görünür hale gelmiş durumda
 - Adım 8 için gerekli evolutionary loop iskeleti kurulmuş durumda
 - Adım 8 için ilk tam seed sonucu alınmış ve Pareto özeti çıkarılmış durumda
-- Adım 8'in final doğrulaması, `v2` policy ve measurement protokolü tamamlanana kadar beklemede
+- Adım 8'in V2 multi-seed search fazı tamamlandı; final doğrulaması beş finalist ile üç baseline'ın bağımsız tekrarlarını bekliyor
 
 ## 5. Sıradaki Muhtemel Adımlar
 
@@ -2547,9 +2643,9 @@ Sonuç:
 ### Gate 5 - Official optimization ve doğrulama
 
 - [x] Repo-içi official multi-seed runner ile clean SHA/tag, input checksum, preflight, seed log ve postflight provenance'ını zorunlu tut
-- Clean stable commit ve annotated protocol tag oluştur
-- Preflight sonrasında `42`, `123`, `999` seed'lerini sequential çalıştır
-- Her seed için unique nondominated objective noktalarını çıkar
+- [x] Clean stable commit ve annotated protocol tag oluştur
+- [x] Preflight sonrasında `42`, `123`, `999` seed'lerini sequential çalıştır
+- [x] Her seed için unique nondominated objective noktalarını çıkar
 - Finalist Pareto çözümlerini ve baseline'ları bağımsız tekrarlarla yeniden ölç
 - Merkezi eğilim yanında dağılım, worst-case ve güven aralığı raporla
 - Pareto yapısını all-measured solutions üzerinden yeniden kur
