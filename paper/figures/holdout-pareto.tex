@@ -1,0 +1,63 @@
+\begin{tikzpicture}
+\begin{axis}[
+  width=\linewidth,
+  height=5.1cm,
+  xmin=1.12,
+  xmax=1.45,
+  ymin=1.72,
+  ymax=4.28,
+  xtick={1.15,1.25,1.35,1.45},
+  ytick={2,3,4},
+  xlabel={mean p95 decision latency (s)},
+  ylabel={max occupied workers},
+  grid=both,
+  grid style={gray!18},
+  tick label style={font=\scriptsize},
+  label style={font=\small},
+  legend style={
+    font=\tiny,
+    at={(0.5,1.02)},
+    anchor=south,
+    legend columns=3,
+    draw=none
+  },
+]
+\addplot[draw=black!45, thick, dashed] coordinates {
+  (1.252656,4) (1.260228,3) (1.304153,2)
+};
+\addplot+[
+  only marks,
+  mark=square*,
+  mark size=2.8pt,
+  draw=accentblue,
+  fill=accentblue!70,
+  error bars/.cd,
+  x dir=both,
+  x explicit,
+] coordinates {(1.252656,4) +- (0.095824,0)};
+\addlegendentry{spread}
+\addplot+[
+  only marks,
+  mark=star,
+  mark size=4.0pt,
+  very thick,
+  draw=accentorange,
+  fill=accentorange!75,
+  error bars/.cd,
+  x dir=both,
+  x explicit,
+] coordinates {(1.260228,3) +- (0.088247,0)};
+\addlegendentry{balanced knee}
+\addplot+[
+  only marks,
+  mark=triangle*,
+  mark size=3.2pt,
+  draw=black,
+  fill=black!65,
+  error bars/.cd,
+  x dir=both,
+  x explicit,
+] coordinates {(1.304153,2) +- (0.120187,0)};
+\addlegendentry{consolidation}
+\end{axis}
+\end{tikzpicture}

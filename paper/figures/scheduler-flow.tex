@@ -2,10 +2,10 @@
   node distance=6mm and 7mm,
   every node/.style={font=\footnotesize}
 ]
-\node[box, minimum width=0.18\linewidth] (watch) {Watch pending Pods\\\texttt{schedulerName=evok8s-scheduler}};
+\node[box, minimum width=0.18\linewidth] (watch) {Poll unbound Pods\\\texttt{schedulerName=evok8s-scheduler}};
 \node[box, right=of watch, minimum width=0.16\linewidth] (filter) {Feasibility filter\\Ready, schedulable,\\taints, fit};
 \node[box, right=of filter, minimum width=0.15\linewidth] (state) {Node state\\allocatable, used,\\free, pod count};
-\node[box, right=of state, minimum width=0.14\linewidth] (score) {Score feasible nodes\\weighted policy};
+\node[box, right=of state, minimum width=0.14\linewidth] (score) {Score feasible nodes\\free, balance,\\consolidation};
 \node[box, right=of score, minimum width=0.13\linewidth] (bind) {Choose best\\create Binding};
 
 \draw[line] (watch) -- (filter);

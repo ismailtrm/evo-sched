@@ -27,7 +27,7 @@ line/.style={-{Latex[length=2.2mm]}, thick, draw=softgray},
 databox/.style={draw=softgray, rounded corners=2pt, thick, fill=blue!3, align=center, inner sep=5pt},
 }
 
-\title{Workload-Aware Multi-Objective Search for a Parameterized Kubernetes Scheduler}
+\title{Live Multi-Objective Policy Search for a Parameterized Kubernetes Scheduler}
 
 \author{
 \IEEEauthorblockN{Ismail Tarim}
@@ -42,52 +42,52 @@ Izmir, Turkiye \\
 
 \hypersetup{
   hidelinks,
-  pdftitle={Workload-Aware Multi-Objective Search for a Parameterized Kubernetes Scheduler},
+  pdftitle={Live Multi-Objective Policy Search for a Parameterized Kubernetes Scheduler},
   pdfauthor={Ismail Tarim},
   pdfsubject={IEEE conference paper draft on Kubernetes scheduler policy optimization},
-  pdfkeywords={Kubernetes scheduler, custom scheduler, evolutionary optimization, Pareto front, workload-aware scheduling}
+  pdfkeywords={Kubernetes scheduler, custom scheduler, evolutionary optimization, Pareto front, noisy optimization}
 }
 
 \maketitle
 
 \begin{abstract}
-Kubernetes scheduling is a placement problem in which low queueing delay and efficient node usage are often competing goals. We present a live custom Kubernetes scheduler whose node-scoring policy is parameterized by four interpretable weights: \texttt{FreeCPU}, \texttt{FreeMem}, \texttt{PodPenalty}, and \texttt{Packing}. We formulate policy search as a multi-objective optimization problem over p95 pending time and maximum active node count, and we evaluate candidate policies under synthetic pressure workloads that expose CPU-, memory-, and fragmentation-driven tradeoffs. To search this policy space, we connect an evolutionary optimizer to a live evaluator that patches scheduler weights, waits for rollout completion, replays workloads, and collects cluster-level metrics. Our central question is whether, for controlled workload regimes, live-cluster multi-objective search can discover better tradeoff points than fixed hand-designed scheduler policies. On a 4-worker cluster, the Packing baseline cuts mean active nodes from $4$ to $2$ under both \texttt{cpu-tight} and \texttt{mem-tight}, while a \texttt{seed=42} search over $72$ candidates yields two unique combined Pareto points, including an optimizer-only lower-pending regime. These results show that scheduler policy weights materially affect behavior and that real-cluster multi-objective search can recover useful workload-aware tradeoffs.
+Kubernetes node placement couples scheduling delay, resource balance, and workload consolidation. We present a live custom scheduler whose scoring policy is represented by four nonnegative, normalized weights: \texttt{FreeCPU}, \texttt{FreeMem}, \texttt{Balance}, and \texttt{Consolidation}. Candidate policies are evaluated by patching a running scheduler deployment, replaying 24-Pod synthetic workloads, and measuring high-resolution scheduling-decision latency and maximum workload-occupied worker count. An NSGA-II-style search evaluated 216 candidates across three seeds on a 4-worker kind cluster. Although each single-evaluation search produced apparently novel Pareto points, none of five finalists survived a preregistered validation with ten repetitions per policy--workload pair. This negative result shows that live-cluster timing noise can mislead expensive black-box search when each candidate is measured once. An independent ten-repeat holdout nevertheless produced a stable three-point baseline tradeoff: spread-heavy, balanced, and consolidation-heavy policies occupied four, three, and two workers, with mean p95 decision latencies of $1.253$, $1.260$, and $1.304$ s, respectively. The latency confidence intervals overlap, so the ordering is descriptive rather than a significance claim. The study contributes a reproducible live-cluster search method, an identifiable policy representation, and evidence that repeated validation is essential when optimizing scheduler measurements.
 \end{abstract}
 
 \begin{IEEEkeywords}
-Kubernetes scheduler, custom scheduler, evolutionary optimization, Pareto front, multi-objective optimization, workload-aware scheduling
+Kubernetes scheduler, custom scheduler, evolutionary optimization, Pareto front, multi-objective optimization, noisy fitness
 \end{IEEEkeywords}
 
 \section{Introduction}
-Kubernetes scheduling decides where newly created Pods should run. That decision directly affects queueing delay, resource fragmentation, and how many worker nodes must remain active to serve a workload \cite{ref-borg-k8s}. In practice, these objectives conflict. A scheduler that spreads Pods aggressively may reduce waiting time by activating more nodes, while a scheduler that packs work into fewer nodes may improve consolidation at the cost of higher delay under pressure. Scheduler design is therefore a tradeoff problem rather than a search for a universally best heuristic.
+Kubernetes scheduling chooses a feasible node for each pending Pod and therefore influences placement delay, multi-resource fragmentation, and workload consolidation. Production cluster managers such as Borg combine placement, packing, admission, and isolation policies to improve utilization \cite{ref-borg}. Kubernetes exposes a pluggable scheduling cycle that filters invalid nodes before scoring the feasible set \cite{ref-k8s-framework}. This separation makes the scoring policy a natural optimization surface, but it does not remove the central systems difficulty: a candidate policy must be evaluated against a live, variable control plane.
 
-This paper studies that tradeoff on a real Kubernetes deployment. Instead of treating scheduler behavior as fixed, we expose the node-scoring policy of a custom scheduler through four interpretable weights: \texttt{FreeCPU}, \texttt{FreeMem}, \texttt{PodPenalty}, and \texttt{Packing}. These weights make the policy surface small enough to search directly while still capturing distinct spread-oriented and packing-oriented behaviors.
+This paper studies that difficulty on a reproducible Kubernetes deployment. We expose a compact four-weight scoring policy, connect it to an NSGA-II-style optimizer, and evaluate candidates by executing real Pod creation and binding operations. The two objectives are p95 scheduling-decision latency and maximum workload-occupied worker count. The latter is a consolidation proxy, not a count of powered, autoscaled, or billable infrastructure nodes.
 
-Our goal is not to claim universal superiority over the default Kubernetes scheduler or any single hand-designed heuristic. The narrower question is whether, for controlled workload regimes, a parameterized scheduler policy can produce better tradeoff points than fixed hand-designed baselines. To answer that question, we run the scheduler inside a kind-based cluster, replay reproducible synthetic workloads, and evaluate policies against two explicit objectives: p95 pending time and maximum active node count. The reported baseline matrix already separates spread-oriented and packing-oriented regimes under resource pressure while preserving zero unschedulable Pods. We then attach this live evaluation loop to a multi-objective evolutionary search procedure that explores the policy space and reports Pareto-efficient tradeoffs.
+The research question is deliberately falsifiable: \emph{does single-evaluation evolutionary search find tradeoff points that remain Pareto-relevant under repeated live-cluster validation?} The answer in our experiments is no. Three seeds produce promising one-shot candidates, but all five finalists are dominated when re-evaluated ten times on each training workload. This changes the contribution from a claim of optimizer superiority to a methodological result about noisy live fitness. Separately, an unseen mixed-burst workload confirms that the parameterized baselines express a genuine latency--consolidation tradeoff.
 
 The main contributions of the paper are as follows:
 \begin{itemize}
-\item We implement and deploy a custom Kubernetes scheduler in a reproducible kind-based cluster, including live feasibility filtering for node readiness, unschedulable state, taints, tolerations, and resource fit.
-\item We define a four-weight node-scoring policy that turns scheduler behavior from a fixed heuristic into a compact searchable policy surface.
-\item We build a live evaluation loop that couples workload replay, scheduler reconfiguration, rollout verification, and cluster-level metric collection on a running Kubernetes deployment rather than relying only on simulation.
-\item We show that this search space exhibits meaningful Pareto tradeoffs and that evolutionary search can discover policy regimes beyond fixed hand-designed baselines.
+\item A real custom scheduler and evaluator that perform feasibility filtering, Pod binding, deployment reconfiguration, workload replay, cleanup, and provenance capture on a live Kubernetes cluster.
+\item A versioned four-feature policy whose nonnegative weights are normalized to remove positive-scale equivalence and whose signals independently affect representative node rankings.
+\item An official three-seed search and preregistered repeated-validation protocol covering 16,200 search Pods and 5,760 validation Pods, with the default Kubernetes scheduler retained as an external placement reference.
+\item An empirical result showing both a held-out three-point baseline tradeoff and the failure of one-shot optimizer improvements to survive repeated evaluation.
 \end{itemize}
 
 \section{Background and Problem Statement}
-Kubernetes scheduling can be viewed as a two-stage decision process. When a Pod is created without a bound node, the scheduler first identifies a feasible candidate set and then chooses one candidate according to its placement policy \cite{ref-k8s-scheduling}. Feasibility is not optional bookkeeping; it encodes the minimum conditions under which a placement is valid. In a realistic cluster, a node that is not \texttt{Ready}, is explicitly marked unschedulable, or carries a taint that the Pod does not tolerate should not be considered an eligible placement target \cite{ref-k8s-node-status,ref-k8s-taints}. Likewise, even a healthy node must be rejected if the Pod's resource request does not fit the node's remaining allocatable CPU or memory. Any policy optimization built on top of scheduling therefore has to operate \emph{after} these feasibility constraints have been applied.
+Kubernetes scheduling can be viewed as a filtering and ranking process. The scheduling cycle selects a node, and the binding cycle applies that decision \cite{ref-k8s-framework}. Feasibility is not optional bookkeeping: a node that is not \texttt{Ready}, is explicitly unschedulable, carries an untolerated taint, or lacks requested CPU or memory must not be scored as a valid target \cite{ref-k8s-node-status,ref-k8s-taints}. Optimization therefore begins only after the feasible set $\mathcal{F}$ is established.
 
 This distinction matters for the present work. We do not optimize over arbitrary nodes in the cluster; we optimize how to rank nodes that already satisfy operational constraints. Concretely, the custom scheduler implemented in this paper filters candidate nodes according to readiness, the \texttt{unschedulable} flag, taint--toleration compatibility, and resource fit. Only the surviving nodes are scored by the parameterized policy. As a result, the search problem is not ``which invalid placements should be allowed,'' but ``how should a valid candidate set be prioritized under competing objectives.''
 
-The optimization target is the scheduler policy itself. Let $\mathbf{w} = (w_{\mathrm{cpu}}, w_{\mathrm{mem}}, w_{\mathrm{pod}}, w_{\mathrm{pack}})$ denote the four policy weights used by the scoring function. For any fixed weight vector, the scheduler can be deployed, exercised on a workload suite, and measured using cluster-level outcomes. In this paper, those outcomes are summarized by two objectives:
+The optimization target is the scoring policy. Let $\mathbf{w}$ denote its four weights. For any fixed vector, the scheduler is deployed, exercised on the three training workloads, and measured using two objectives:
 \begin{equation}
-\min \; f_1(\mathbf{w}) = \mathrm{AvgP95Pending}(\mathbf{w})
+\min \; f_1(\mathbf{w}) = \mathrm{AvgP95DecisionLatency}(\mathbf{w})
 \end{equation}
 \begin{equation}
-\min \; f_2(\mathbf{w}) = \mathrm{AvgMaxActiveNodes}(\mathbf{w})
+\min \; f_2(\mathbf{w}) = \mathrm{AvgMaxOccupiedWorkers}(\mathbf{w})
 \end{equation}
-where each objective is aggregated across the workload set used by the evaluator. The first objective captures tail scheduling delay, while the second acts as a proxy for node consolidation and operational cost.
+where each objective is aggregated across the workload suite. The first captures tail delay from evaluator submission to the custom scheduler's node decision. The second is the maximum number of workers simultaneously hosting non-terminal evaluator Pods and acts only as a consolidation proxy.
 
-These objectives are intentionally not collapsed into a single scalar fitness in the main analysis. A spread-oriented policy may improve pending time by activating more nodes, while a packing-oriented policy may reduce node usage at the cost of higher delay under pressure. This makes the problem naturally multi-objective and motivates Pareto analysis rather than a single ``best'' scheduler score. Our claim is therefore modest but concrete: for controlled workload regimes, a workload-aware evaluation loop can discover useful Pareto tradeoffs among parameterized scheduler policies. We do not claim that the resulting policies are universally better than the default Kubernetes scheduler across all clusters and workloads.
+The objectives are not collapsed into a scalar fitness. Pareto analysis preserves the exchange between delay and consolidation instead of selecting an arbitrary cost coefficient. We make no claim that a policy is universally best or that the custom scheduler dominates the Kubernetes reference scheduler.
 
 \begin{figure}[t]
 \centering
@@ -96,284 +96,260 @@ These objectives are intentionally not collapsed into a single scalar fitness in
 \label{fig:scheduler-flow}
 \end{figure}
 
+\section{Related Work}
+Large-scale cluster schedulers expose several ways to trade placement quality, responsiveness, and utilization. Borg uses admission control, task packing, over-commitment, and machine sharing in production clusters \cite{ref-borg}; Omega studies shared-state parallel scheduling under optimistic concurrency \cite{ref-omega}; and Firmament uses min-cost max-flow to obtain high-quality centralized placements at scale \cite{ref-firmament}. Multi-resource work such as Dominant Resource Fairness formalizes allocation across heterogeneous resource demands \cite{ref-drf}, while Tetris explicitly packs tasks using multiple resource dimensions to reduce fragmentation \cite{ref-tetris}. Our contribution is narrower: we do not propose a production-scale scheduler architecture or fairness mechanism, but expose and experimentally search a small policy inside a live Kubernetes control loop.
+
+Kubernetes itself provides configurable profiles and score plugins, including resource-fit, topology, affinity, and taint-related plugins \cite{ref-k8s-config}. The platform also permits multiple named schedulers in one cluster. We use that mechanism to run a separate custom scheduler and retain the unmodified \texttt{default-scheduler} profile as an external placement reference.
+
+NSGA-II supplies the nondominated sorting, crowding, and elitist selection used in our optimizer \cite{ref-nsga2}. However, live systems create uncertain fitness through timing jitter and environmental variation. Prior evolutionary-computation literature identifies re-evaluation and other uncertainty-handling measures as necessary when fitness is noisy \cite{ref-noisy-ea}. Our experiment gives a concrete Kubernetes instance of that warning: apparent one-shot improvements disappear under repeated validation.
+
 \section{System Design}
-The experimental platform is a real Kubernetes deployment built with kind \cite{ref-kind}. We use kind because it preserves the Kubernetes control-plane interfaces needed for scheduling experiments while remaining easy to recreate on a single machine. The cluster configurations used in this project are version-controlled, including the 4-worker topology used for the main resource-pressure experiments. This gives the study a controlled and repeatable testbed without reducing the system to a pure simulator.
+The platform is a kind cluster with one control-plane node and four homogeneous workers \cite{ref-kind}. It preserves the Kubernetes API server, scheduler coexistence, deployment rollout, and Pod binding path while remaining reproducible on one host. Official manifests record the clean Git commit, annotated protocol tag, workload and deployment checksums, cluster topology, server and client versions, scheduler image identity, preflight state, and postflight restoration.
 
-The custom scheduler itself runs as a normal in-cluster deployment in the \texttt{evo-sched} namespace. A dedicated service account and cluster-wide RBAC policy grant the minimal permissions required for the scheduler to list Pods and Nodes and to create Pod bindings. The deployment injects the scheduler name and policy weights through environment variables, which allows the evaluator to reconfigure the policy without rebuilding the binary for each experiment. This deployment model is important methodologically: policy search interacts with the same mechanism that would be used to operate the scheduler in a real cluster.
+The custom scheduler runs as a single-replica deployment in namespace \texttt{evo-sched}. RBAC permits it to list Pods and Nodes and create Pod bindings. It polls unbound Pods whose \texttt{schedulerName} is \texttt{evok8s-scheduler}, builds node state from allocatable resources and assigned Pod requests, filters infeasible nodes, scores the survivors, and submits a Kubernetes \texttt{Binding}. The deployment uses a \texttt{Recreate} strategy because overlapping scheduler replicas caused a binding race during a pilot rollout; official runs require exact one-replica convergence before replay begins.
 
-At runtime, the scheduler uses in-cluster client credentials when running inside Kubernetes and falls back to the local kubeconfig only for out-of-cluster execution. The active scheduling loop polls unscheduled Pods using the field selector \texttt{spec.nodeName=} and processes only those whose \texttt{schedulerName} matches \texttt{evok8s-scheduler}. For each eligible Pod, the scheduler refreshes cluster state, builds a node resource snapshot from allocatable capacity and current Pod requests, filters infeasible nodes, scores the remaining candidates, and finally creates a Kubernetes \texttt{Binding} object for the selected node.
-
-Two design choices are especially relevant for the credibility of the experiments. First, feasibility filtering is implemented in the live scheduler rather than approximated outside it: node readiness, explicit unschedulable state, taint--toleration compatibility, and resource fit are all checked before scoring. Second, the scheduling policy is separated cleanly from cluster orchestration. The binary always performs the same operational loop, while only the scoring weights change across experiments. This separation makes it possible to attribute observed behavior changes to policy differences rather than to different control logic.
-
-The current implementation is intentionally simple in one respect: it follows a periodic scheduling loop with a two-second interval instead of implementing a full event-driven scheduler framework. That choice reduces engineering complexity for this project while preserving the essential live-cluster behavior needed for controlled policy evaluation. The resulting artifact is therefore best understood as a lightweight but real scheduler platform for workload-aware policy experiments.
+The evaluator operates in namespace \texttt{evo-sched-eval}. For each candidate it patches environment-based weights, blocks until rollout convergence, creates Pods according to a versioned workload JSON, collects timings and requested-resource samples, removes managed Pods, and restores the original policy. Official runs also restore the normal two-second idle cadence after experiments. During measurement, both the custom scheduling loop and evaluator sampling interval are 250 ms. Thus, orchestration remains fixed while only the policy vector and workload vary.
 
 \begin{figure*}[t]
 \centering
 \resizebox{0.93\textwidth}{!}{\input{figures/system-architecture}}
-\caption{End-to-end architecture of the custom scheduler, evaluator, and optimizer pipeline. The evaluator reconfigures the live deployment, executes workloads on the cluster, and feeds measured outcomes back to the search procedure.}
+\caption{Live evaluation architecture. Every candidate causes a scheduler rollout and real Pod bindings; raw timings, placement samples, and provenance are retained as JSON and CSV artifacts.}
 \label{fig:system-architecture}
 \end{figure*}
 
 \section{Parameterized Scheduling Policy}
-The optimized policy is a weighted node-scoring function defined over a compact per-node state representation. For each node, the scheduler records allocatable CPU and memory, the aggregate CPU and memory requests already assigned to the node, the resulting free capacity, and the number of non-terminal Pods currently placed there. These values are rebuilt from live cluster state before each scheduling pass, so the policy scores nodes using the same resource view that is available to the running scheduler.
+The V1 pilot used an unnormalized representation containing a packing term that was linearly dependent on free CPU and memory for homogeneous workers. Positive scaling also preserved node rankings. V2 removes both ambiguities: weights are nonnegative and normalized onto the L1 simplex,
+\begin{equation}
+\mathbf{w}=(w_c,w_m,w_b,w_k),\quad w_i\geq0,\quad\sum_i w_i=1.
+\end{equation}
+This canonical form prevents scale-equivalent chromosomes from being evaluated as distinct policies.
 
-The four policy signals are chosen to be both interpretable and operationally meaningful. \texttt{FreeCPU} rewards nodes with more available CPU capacity. \texttt{FreeMem} plays the same role for memory. \texttt{PodPenalty} discourages additional placements on nodes that already host many Pods, which biases the scheduler away from highly populated nodes even when resources remain available. \texttt{Packing} captures the opposite tendency: it rewards placements that leave less residual capacity after the candidate Pod is hypothetically assigned, thereby encouraging consolidation when feasible.
-
-Let a node state be denoted by $s$, and let $r_{\mathrm{cpu}}$ and $r_{\mathrm{mem}}$ be the CPU and memory requests of the candidate Pod. The first two normalized terms are
-\begin{equation}
-\mathrm{freeCPU}(s) = \frac{\mathrm{FreeCPU}(s)}{\mathrm{AllocCPU}(s)},
-\end{equation}
-\begin{equation}
-\mathrm{freeMem}(s) = \frac{\mathrm{FreeMem}(s)}{\mathrm{AllocMem}(s)}.
-\end{equation}
-To account for node population, the scheduler normalizes Pod count against the most populated feasible node in the current candidate set. Let
-\begin{equation}
-P_{\max} = \max_{s' \in \mathcal{F}} \mathrm{PodCount}(s').
-\end{equation}
-Then
-\begin{equation}
-\mathrm{podPenalty}(s) =
-\left\{
-\begin{aligned}
-\frac{\mathrm{PodCount}(s)}{P_{\max}} & \quad \text{if } P_{\max} > 0,\\
-0 & \quad \text{otherwise.}
-\end{aligned}
-\right.
-\end{equation}
-where $\mathcal{F}$ is the feasible node set after filtering.
-
-The packing term is computed after a hypothetical placement of the candidate Pod on node $s$. If the remaining post-placement fractions are
-\begin{equation}
-\mathrm{remCPU}(s) = \frac{\max(0, \mathrm{FreeCPU}(s) - r_{\mathrm{cpu}})}{\mathrm{AllocCPU}(s)},
-\end{equation}
-\begin{equation}
-\mathrm{remMem}(s) = \frac{\max(0, \mathrm{FreeMem}(s) - r_{\mathrm{mem}})}{\mathrm{AllocMem}(s)},
-\end{equation}
-then the normalized packing score is
-\begin{equation}
-\mathrm{packing}(s) = 1 - \frac{\mathrm{remCPU}(s) + \mathrm{remMem}(s)}{2}.
-\end{equation}
-This formulation assigns higher packing scores to nodes that would become more filled after placement, while still respecting the hard feasibility checks described earlier.
-
-The final node score is a weighted linear combination:
+For a feasible node $s$ and Pod request $(r_c,r_m)$, post-placement free fractions are
 \begin{equation}
 \begin{aligned}
-\mathrm{score}(s) =\;&
-w_{\mathrm{cpu}} \cdot \mathrm{freeCPU}(s) +
-w_{\mathrm{mem}} \cdot \mathrm{freeMem}(s) \\
-&- w_{\mathrm{pod}} \cdot \mathrm{podPenalty}(s) +
-w_{\mathrm{pack}} \cdot \mathrm{packing}(s).
+q_c(s)&=\frac{\max(0,\mathrm{FreeCPU}(s)-r_c)}{\mathrm{AllocCPU}(s)},\\
+q_m(s)&=\frac{\max(0,\mathrm{FreeMem}(s)-r_m)}{\mathrm{AllocMem}(s)}.
 \end{aligned}
 \end{equation}
-The scheduler chooses the feasible node with the highest score, breaking ties deterministically by node name. The search space is therefore the four-dimensional weight vector $\mathbf{w} = (w_{\mathrm{cpu}}, w_{\mathrm{mem}}, w_{\mathrm{pod}}, w_{\mathrm{pack}})$ rather than a large discrete space of hand-authored scheduling rules. This is the surface explored by the evolutionary search procedure in the next section.
+The balance feature rewards complementary placements,
+\begin{equation}
+ B(s)=1-|q_c(s)-q_m(s)|,
+\end{equation}
+and the consolidation feature is an occupancy indicator,
+\begin{equation}
+ K(s)=\mathbb{I}[\text{$s$ already hosts a non-terminal evaluator Pod}].
+\end{equation}
+The final score is
+\begin{equation}
+S(s)=w_cq_c(s)+w_mq_m(s)+w_bB(s)+w_kK(s).
+\end{equation}
+Free-capacity weights favor spreading, $B$ favors CPU--memory balance, and $K$ favors already occupied workers. Tests establish that each feature changes at least one representative node ranking independently. The highest-scoring feasible node is chosen, with node name as a deterministic tie-breaker.
 
 \section{Evolutionary Policy Search}
-The evolutionary search procedure treats each scheduler policy as an individual in a four-dimensional continuous search space. A candidate solution is simply the weight vector $\mathbf{w} = (w_{\mathrm{cpu}}, w_{\mathrm{mem}}, w_{\mathrm{pod}}, w_{\mathrm{pack}})$ introduced in the previous section. Evaluating an individual means deploying these weights to the running scheduler through the evaluator and measuring the resulting workload outcomes on the cluster. The optimizer therefore does not work with a surrogate model or synthetic fitness proxy; it searches directly against live cluster measurements.
-
-The two optimization objectives are the aggregated outcomes returned by the evaluator:
+Each individual is one normalized V2 weight vector. Evaluation deploys it and averages outcomes across \texttt{cpu-tight-train}, \texttt{mem-tight-train}, and \texttt{fragmenting-mix-train}:
 \begin{equation}
 \begin{aligned}
-\min \; f_1(\mathbf{w}) &= \mathrm{AvgP95Pending}(\mathbf{w}), \\
-\min \; f_2(\mathbf{w}) &= \mathrm{AvgMaxActiveNodes}(\mathbf{w}).
+\min f_1(\mathbf{w})&=\mathrm{AvgP95DecisionLatency}(\mathbf{w}),\\
+\min f_2(\mathbf{w})&=\mathrm{AvgMaxOccupiedWorkers}(\mathbf{w}).
 \end{aligned}
 \end{equation}
-Each objective is averaged over the workload set passed to the optimizer. In the current experiments, the optimizer evaluates three workloads---\texttt{cpu-tight}, \texttt{mem-tight}, and \texttt{fragmenting-mix}---so the search favors policies that perform well across multiple pressure regimes rather than overfitting to a single case.
+The optimizer uses population 12, five offspring generations, uniform crossover, and per-gene Gaussian mutation with probability $0.8$ and standard deviation $0.25$. Raw genes are clamped to $[0,2]$ and normalized before evaluation. NSGA-II-style nondominated sorting, crowding distance, tournament selection, and elitist replacement preserve multiple objective regimes \cite{ref-nsga2}. The three manual baselines are measured in each seed but are reference points, not reproductive individuals.
 
-The initial population is generated by sampling each weight independently from a bounded interval. In the implementation used here, the default search range is $[0, 2]$ for every weight and the initial population size is $12$. At each generation, offspring are created by tournament-selecting two parents from the current population, applying uniform crossover, and then applying per-gene Gaussian mutation. Uniform crossover means that each gene in the child is copied from one of the two parents with equal probability, while mutation perturbs each gene independently with probability $0.8$ using Gaussian noise with standard deviation $0.25$, followed by clamping back to the allowed weight interval.
-
-Selection follows an NSGA-II-style elitist multi-objective procedure \cite{ref-nsga2}. After evaluating the offspring, the optimizer merges the parent and child populations, computes nondominated fronts, assigns crowding distance within each front, and then fills the next generation by rank and crowding priority. Tournament selection also uses this ordering: lower-rank candidates are preferred, and crowding distance breaks ties in favor of more isolated solutions. This mechanism simultaneously preserves high-quality tradeoff points and discourages premature collapse onto a single narrow region of the objective space.
-
-One methodological detail is important for interpretation. The hand-designed baseline policies are evaluated by the same cluster-level loop, but they are not injected into the reproductive population. They serve as reference points for the final combined Pareto analysis rather than as seed individuals for crossover and mutation. This keeps the optimizer responsible for discovering its own tradeoff regimes while still allowing direct comparison against meaningful manually specified scheduler behaviors.
-
-The experiments reported in this paper use a population size of $12$ and $5$ generations, which yields $72$ optimizer-evaluated candidates after the initial population and offspring generations, in addition to the separately evaluated baselines. Multiple random seeds are planned to test stability of the observed Pareto structure; the first complete run uses \texttt{seed=42}, and the remaining planned seeds are \texttt{123} and \texttt{999}.
-
-Optimizer hyperparameters were not themselves treated as a separate tuning problem in this study. They were chosen as reasonable first-pass settings for a small search space with expensive real-cluster evaluation. In particular, the relatively high mutation probability is intentional: with only four genes and costly fitness evaluation, maintaining exploration is more valuable than aggressively exploiting early population structure. A more exhaustive sensitivity analysis over mutation rate, mutation scale, and population size remains future work.
+Seeds 42, 123, and 999 each evaluate 72 optimizer candidates plus three baselines. Candidate fitness is intentionally one live execution per training workload because evaluation is expensive; the consequence of that choice is tested explicitly by selecting all five single-evaluation Pareto finalists and re-evaluating them with the three baselines under a shared ten-repeat protocol. Hyperparameter sensitivity is outside scope.
 
 \section{Evaluation Methodology and Experimental Setup}
-\textit{Evaluator.} The evaluator is the component that turns a policy weight vector into measured outcomes. For each run, it reads the current scheduler deployment, stores the active weights, patches the deployment with the candidate weight set, waits for rollout completion, and then replays one or more workload files into a dedicated evaluator namespace. During execution it records Pod creation, scheduling, start, and completion timestamps, as well as the number of active worker nodes sampled over time. After the run, it summarizes the resulting Pod timings, cleans evaluator-managed Pods if cleanup is enabled, and restores the scheduler deployment to its original weight configuration. This reset step is essential for preventing cross-run contamination.
+\textit{Workloads.} Each version-controlled workload is a list of Pod arrival times, CPU and memory fractions, and durations. Fractions are resolved against the minimum worker allocatable capacity, which was 16,000 millicores and 31,712 MiB. Every workload contains 24 ten-second Pods arriving in two 12-Pod bursts at $t=0$ and $t=16$ s. \texttt{cpu-tight-train} and \texttt{mem-tight-train} use $(0.22,0.06)$ and $(0.06,0.22)$ CPU--memory fractions per Pod. \texttt{fragmenting-mix-train} alternates $(0.32,0.08)$ and $(0.08,0.32)$. The unseen \texttt{mixed-burst-holdout} instead combines $(0.23,0.08)$, $(0.08,0.23)$, and $(0.14,0.14)$ Pods.
 
-\textit{Workload model.} A workload is a time-ordered list of Pod descriptions. Each item specifies a Pod name, arrival time in seconds, CPU request, memory request, and runtime duration. The evaluator supports both absolute resource requests and fractional requests relative to the current worker-node capacity. Fractional workloads were introduced because they make the scenarios portable across cluster topologies: when a worker's allocatable capacity changes, the intended pressure profile is preserved by resolving fractions against the minimum allocatable CPU and memory observed across schedulable worker nodes.
+\textit{Measurements.} The evaluator records a nanosecond-resolution submission timestamp immediately before the Pod create request. The custom scheduler records its decision immediately before the bind request. Their difference is \emph{scheduling-decision latency}. Kubernetes \texttt{PodScheduled} condition time and the evaluator's first observation of \texttt{spec.nodeName} are retained separately; they are not used as the primary objective. The default kube-scheduler cannot emit our decision annotation, so its decision latency is unavailable rather than imputed from a coarser source.
 
-\textit{Cluster setup.} The main experiments use a kind cluster with one control-plane node and four worker nodes. The custom scheduler runs as the \texttt{evok8s-scheduler} deployment in namespace \texttt{evo-sched}, while evaluator-created Pods run in the separate namespace \texttt{evo-sched-eval}. The scheduler image is configured once and then re-parameterized through environment variables, so repeated experiments differ only in policy weights and workload definitions.
+Every 250 ms, the evaluator counts workers hosting non-terminal managed Pods and computes requested-load support metrics from Pod requests divided by run-start allocatable capacity. Dominant requested load on a worker is the larger CPU or memory requested fraction; the reported load variance is the population variance of that value across the four workers, averaged over samples. It is a placement-balance measure, not hardware utilization. Completion and unschedulable counts are safety checks.
 
-\textit{Baselines.} Three hand-designed custom-scheduler baselines are used in the current study. For readability, we refer to them as \emph{Default}, \emph{Spread}, and \emph{Packing}; Table~\ref{tab:baseline-weights} maps these paper-facing names to their exact deployments and weight assignments. The three policies intentionally represent different regions of the search space: a neutral default setting, a spread-oriented regime that emphasizes free capacity and Pod-count avoidance, and a packing-oriented regime that rewards consolidation. The default Kubernetes scheduler is discussed as an external reference point, but it is not yet included as a fully experimental baseline in the current result tables.
-
-\textit{Workload families.} The three main pressure workloads are \texttt{cpu-tight}, \texttt{mem-tight}, and \texttt{fragmenting-mix}. The first two isolate CPU-dominant and memory-dominant pressure by requesting approximately $45\%$ of worker capacity in one dominant resource dimension. The mixed workload combines CPU-heavy, memory-heavy, and balanced Pods in short bursts so that packing and spreading interact with fragmentation. This workload family proved most informative in the exploratory experiments because it exposes clear tradeoffs between low pending time and low node usage.
-
-\textit{Metrics and repetition protocol.} The primary objectives are p95 pending time and maximum active node count. Pending time is measured as the time between Pod creation and the moment the Pod receives a node assignment; the reported p95 is computed over scheduled Pods only. Maximum active node count is the largest number of worker nodes simultaneously hosting evaluator-managed Pods during a run. We also record scheduled count, completed count, and unschedulable count as supporting metrics to ensure that node consolidation is not achieved by simply failing to place Pods. For the baseline matrix experiments, each workload--policy combination is repeated three times. For the optimizer, repeated runs are organized by random seed, with \texttt{42}, \texttt{123}, and \texttt{999} selected as the planned seed set. Load variance is a plausible additional metric, but because it is not yet part of the final result tables, it is treated as future work rather than as a primary evaluated quantity.
+\textit{Protocols.} Official baselines use three repetitions for each of three custom policies and the default kube-scheduler on each training workload. The evolutionary stage evaluates each candidate once per training workload for three seeds. Repeated validation then evaluates five optimizer finalists and all three baselines ten times per training workload. Finally, a preregistered selection rule carries repeated-front representatives plus baselines to the holdout; because no optimizer finalist survives, deduplication leaves the three baselines. Latency uncertainty is summarized with sample standard deviation, extrema, and 95\% Student-$t$ confidence intervals. Pareto relations use repeated-mean point estimates and are not significance tests.
 
 \begin{table}[t]
-\caption{Experimental setup used for the main reported runs.}
+\caption{Official V2 experimental setup.}
 \label{tab:setup}
 \centering
 \begin{tabular}{p{0.18\linewidth} p{0.72\linewidth}}
 \toprule
 Item & Value \\
 \midrule
-Cluster & kind, 1 control-plane + 4 workers \\
-Scheduler & \texttt{evok8s-scheduler} custom deployment \\
-Baselines & Default, Spread, and Packing; see Table~\ref{tab:baseline-weights} \\
-Workloads & cpu-tight, mem-tight, fragmenting-mix \\
-Objectives & average p95 pending, average max active nodes \\
-Support metrics & scheduled, completed, unschedulable counts \\
-Repeats & 3 per workload--baseline combination \\
-Seeds & 42 completed; 123 and 999 planned \\
+Cluster & kind; Kubernetes v1.35.0; 1 control-plane + 4 workers \\
+Worker base & 16,000 mCPU; 31,712 MiB allocatable \\
+Runtime & Go 1.27.0; Docker 29.7.2; BusyBox 1.36.1 \\
+Cadence & scheduler 250 ms; evaluator 250 ms \\
+Objectives & mean p95 decision latency; mean max workload-occupied workers \\
+Search & 3 seeds; population 12; 5 generations \\
+Validation & 8 policies $\times$ 3 workloads $\times$ 10 repeats \\
+Holdout & 3 policies $\times$ 1 unseen workload $\times$ 10 repeats \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \begin{table}[t]
-\caption{Exact weight assignments for the three fixed baseline policies. The paper-facing names map to deployments \texttt{evok8s-default}, \texttt{evok8s-spread-heavy}, and \texttt{evok8s-packing-heavy}.}
+\caption{Canonical V2 baseline weights; each row sums to one.}
 \label{tab:baseline-weights}
 \centering
 \scriptsize
 \begin{tabular}{lcccc}
 \toprule
-Policy & CPU & Mem & Pod & Pack \\
+Policy & CPU & Mem & Bal. & Cons. \\
 \midrule
-Default & 1.0 & 1.0 & 0.5 & 0.2 \\
-Spread & 1.4 & 1.4 & 1.0 & 0.0 \\
-Packing & 0.5 & 0.5 & 0.2 & 1.3 \\
+Balanced & 0.25 & 0.25 & 0.25 & 0.25 \\
+Spread-heavy & 0.35 & 0.35 & 0.25 & 0.05 \\
+Consolidation-heavy & 0.10 & 0.10 & 0.20 & 0.60 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \section{Results}
-We report results in two stages. First, we compare the hand-designed baseline policies on the 4-worker resource-pressure workloads to establish whether the parameterized policy surface actually produces different scheduling behavior. Second, we analyze the first full optimizer run (\texttt{seed=42}) to determine whether evolutionary search finds Pareto tradeoff points beyond the hand-picked baseline set.
+Results are separated by protocol because one-shot search fitness, repeated training validation, and held-out validation answer different questions.
 
-\subsection{Baseline Policy Comparison}
-Table~\ref{tab:baseline-results} summarizes the 4-worker resource-pressure matrix. Across all reported baseline runs, every Pod was scheduled and completed successfully, and the unschedulable count remained zero. This is useful context: the observed node-usage reductions are not achieved by silently dropping workload demand.
-
-The baseline comparison reveals that policy weights materially affect behavior under pressured workloads. The clearest pattern, visible in Table~\ref{tab:baseline-results} and Fig.~\ref{fig:baseline-nodes}, is that Packing consistently reduces node usage. Under both \texttt{cpu-tight} and \texttt{mem-tight}, it cuts the mean maximum active-node count from $4$ to $2$. Under \texttt{fragmenting-mix}, it still reduces node usage, but only to $3$, indicating that the mixed workload partially resists aggressive consolidation.
-
-The delay-side story, shown in Fig.~\ref{fig:baseline-pending}, is more workload-dependent. Under \texttt{cpu-tight}, both Spread and Packing improve mean p95 pending from $2.00$ to $1.67$ relative to Default. Under \texttt{mem-tight}, all three baselines achieve the same mean p95 pending ($1.67$), but Packing does so with only half as many active nodes. Under \texttt{fragmenting-mix}, Spread and Packing achieve the same mean p95 pending, but Packing does so with fewer active nodes, reducing the mean maximum active-node count from $4$ to $3$. This confirms that the problem behaves as a real tradeoff surface rather than a single dominant heuristic regime.
-
-Two conclusions follow from this matrix. First, the four policy weights are not cosmetic parameters; they generate distinct operational behaviors. Second, the active-node objective becomes visible only under sufficiently pressured workloads and a sufficiently large cluster. Earlier light-load experiments on the smaller cluster did not expose this separation nearly as clearly.
-
-\begin{table*}[t]
-\caption{Baseline comparison on the 4-worker resource-pressure workloads. Reported values are means across three repeats; all combinations produced zero unschedulable Pods.}
-\label{tab:baseline-results}
-\centering
-\begin{tabular}{l l r r r}
-\toprule
-Workload & Policy & Mean p95 pending (s) & Mean max active nodes & Unschedulable \\
-\midrule
-\texttt{cpu-tight} & Default & 2.00 & 4.00 & 0 \\
-\texttt{cpu-tight} & Spread & 1.67 & 4.00 & 0 \\
-\texttt{cpu-tight} & Packing & 1.67 & 2.00 & 0 \\
-\texttt{mem-tight} & Default & 1.67 & 4.00 & 0 \\
-\texttt{mem-tight} & Spread & 1.67 & 4.00 & 0 \\
-\texttt{mem-tight} & Packing & 1.67 & 2.00 & 0 \\
-\texttt{fragmenting-mix} & Default & 2.00 & 4.00 & 0 \\
-\texttt{fragmenting-mix} & Spread & 1.67 & 4.00 & 0 \\
-\texttt{fragmenting-mix} & Packing & 1.67 & 3.00 & 0 \\
-\bottomrule
-\end{tabular}
-\end{table*}
-
-\begin{figure}[t]
-\centering
-\input{figures/baseline-pending}
-\caption{Mean p95 pending time across the three baseline policies for each resource-pressure workload. Values are means across three repeats.}
-\label{fig:baseline-pending}
-\end{figure}
-
-\begin{figure}[t]
-\centering
-\input{figures/baseline-nodes}
-\caption{Mean maximum active-node count across the three baseline policies for each resource-pressure workload. Values are means across three repeats.}
-\label{fig:baseline-nodes}
-\end{figure}
-
-\subsection{Pareto Front Analysis}
-The first complete optimizer run uses population size $12$, $5$ generations, and \texttt{seed=42}. It evaluates $72$ optimizer-generated candidates and, with the three baselines, yields $75$ measured solutions. Unlike the three-repeat matrix in Table~\ref{tab:baseline-results}, these Pareto objectives come from the single optimizer evaluation stream. The combined front contains $4$ nondominated members but only $2$ \emph{unique} objective points, so we report unique coordinates rather than duplicate representatives.
-
-For \texttt{seed=42}, the two unique combined Pareto points are $(0.67, 4.00)$ and $(1.00, 2.33)$ in the objective space of average p95 pending and average maximum active nodes. Figure~\ref{fig:pareto-seed42} shows this structure: one point is optimizer-only, while the other coincides with the Packing baseline. Rather than producing a dense cloud of incomparable solutions, the first run collapses onto two dominant regimes: lower pending or stronger consolidation.
-
-\begin{figure}[t]
-\centering
-\input{figures/pareto-seed42}
-\caption{Seed-42 Pareto front. Gray: all measured solutions; blue: baselines; orange: unique Pareto points. A is optimizer-only; B coincides with Packing.}
-\label{fig:pareto-seed42}
-\end{figure}
-
-\subsection{Optimizer-Discovered Policies}
-The optimizer contributes two important findings. First, not all hand-designed baselines survive Pareto comparison. In the combined front, Packing remains nondominated, while Default and Spread are dominated. This means the default custom-policy setting is not a robust compromise policy for the selected workloads, and the spread-oriented heuristic does not remain Pareto-optimal once nearby regions of the policy space are explored.
-
-Second, the optimizer discovers a genuinely new lower-pending Pareto regime. Two generation-3 candidates reach the point $(0.67, 4.00)$, which improves on the pending objective of every baseline while accepting the cost of keeping all four worker nodes active. At the consolidation-oriented end of the tradeoff, the optimizer does not open a third distinct regime; instead, it rediscovers the Packing solution family and lands on the same objective point $(1.00, 2.33)$.
-
-The weight patterns of these representative policies are also informative. In the low-pending regime, the four weights are about $1.21$, $0.24$, $1.94$, and $1.37$ for FreeCPU, FreeMem, PodPenalty, and Packing. This setting strongly prioritizes free CPU and Pod-count avoidance while still retaining nonzero packing pressure. In the consolidation regime, the corresponding weights are about $0.76$, $0.18$, $0.46$, and $1.79$, which places much less emphasis on population penalty and much more emphasis on packing. The optimizer therefore does not merely output abstract Pareto points; it recovers concrete policy settings whose semantics are consistent with the observed cluster behavior.
-
-This structure leads to a clear interpretation of the first optimizer run. The discovered Pareto surface separates into two dominant behavioral regimes: a low-pending regime that prefers broad activation of workers, and a lower-node regime that accepts a moderate pending penalty to consolidate work more aggressively. Because only two unique Pareto points remain, there is no strict interior knee-point in this run. That absence is not a failure of the method; it is itself a result about the geometry of the current search space under the selected workload set.
+\subsection{Official Baselines and External Reference}
+The official baseline matrix contains 36 result rows: three custom policies and the default kube-scheduler, three workloads, and three repetitions. Every Pod completed and no run was unschedulable. Table~\ref{tab:baseline-results} pools the nine observations per policy across workloads. Spread-heavy has the lowest custom point-estimate latency and lowest requested-load variance, while consolidation-heavy uses exactly three workers in every training run. The default kube-scheduler uses all four workers and has placement variance similar to spread-heavy. Its decision latency is intentionally unavailable because it does not emit the custom high-resolution timestamp.
 
 \begin{table}[t]
-\caption{Unique seed-42 Pareto points from the optimizer stream; A is optimizer-only and B is shared with Packing.}
-\label{tab:seed42-pareto}
+\caption{Official training baselines. Custom latency is mean p95 with pooled sample SD over nine observations; load variance is request-based.}
+\label{tab:baseline-results}
 \centering
-\small
-\begin{tabular}{p{0.42\linewidth} c c}
+\scriptsize
+\begin{tabular}{lccc}
 \toprule
-Representative regime & Avg. p95 & Avg. active nodes \\
+Policy & p95 decision (s) & Max workers & Load var. \\
 \midrule
-Low-pending regime & 0.67 & 4.00 \\
-Packing regime & 1.00 & 2.33 \\
+Balanced & 1.287 (0.176) & 3.67 & 0.0437 \\
+Spread-heavy & 1.208 (0.037) & 4.00 & 0.0073 \\
+Consolidation-heavy & 1.255 (0.162) & 3.00 & 0.1196 \\
+Kube default & -- & 4.00 & 0.0033 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\subsection{Seed Stability}
-Only \texttt{seed=42} is complete at the time of writing. The remaining planned seeds (\texttt{123} and \texttt{999}) are intended to test whether the same two dominant Pareto regimes recur under different random initializations. When those runs are available, the comparison will focus on unique Pareto coordinates, regime recurrence, and baseline survival rather than on raw nondominated member counts, since the latter can be inflated by duplicate representatives of the same tradeoff point.
+\begin{figure}[t]
+\centering
+\input{figures/baseline-placement}
+\caption{Mean maximum workload-occupied workers over three repetitions. The default kube-scheduler is a common placement reference, not a latency baseline.}
+\label{fig:baseline-placement}
+\end{figure}
+
+\subsection{Three-Seed Search: Provisional Fronts}
+Across seeds 42, 123, and 999, the optimizer evaluates 216 candidates plus nine per-seed baseline references. This corresponds to 675 workload executions and 16,200 completed Pods. The one-shot combined fronts contain two, two, and one unique objective points, respectively; no baseline survives those provisional fronts. Five optimizer policies are therefore selected as validation finalists.
+
+These observations alone look favorable to search, but each candidate was measured only once per workload. Exact objective coordinates also fail to recur across seeds. We therefore make no improvement claim from this stage; its purpose is finalist generation.
+
+\subsection{Repeated Finalist Validation}
+Repeated validation evaluates eight policies on three workloads with ten repetitions each: 240 policy--workload observations and 5,760 completed Pods. The repeated-mean Pareto front collapses to two hand-designed baselines. Balanced is the pending-best point at $(1.251855,3.6667)$ and consolidation-heavy is the node-best point at $(1.264390,3.0000)$. Their pooled 95\% latency intervals are $[1.199451,1.304258]$ and $[1.205896,1.322885]$ s. Thus, consolidation reduces mean occupied workers by 18.18\% for a 1.00\% point-estimate latency increase, but the overlapping intervals preclude a statistical-superiority statement.
+
+None of the five optimizer finalists remains nondominated. The closest, \texttt{optimizer-s999-gen-03-002}, also uses three workers but has mean p95 $1.265704$ s, only $0.001313$ s above consolidation-heavy. That difference is much smaller than run variation. Figure~\ref{fig:repeated-validation} shows that every finalist is weakly behind one of the two baseline front points. With only two unique front points, no strict interior knee exists.
+
+\begin{figure}[t]
+\centering
+\input{figures/repeated-validation}
+\caption{Repeated training validation point estimates. The zoomed horizontal axis resolves dominance: all five optimizer finalists are dominated by balanced or consolidation-heavy.}
+\label{fig:repeated-validation}
+\end{figure}
+
+\subsection{Independent Holdout}
+The holdout contains 30 observations and 720 completed Pods. All three baselines are now nondominated (Table~\ref{tab:holdout}). Spread-heavy is pending-best and uses four workers; consolidation-heavy uses two; balanced lies between them. Relative to spread-heavy, balanced reduces occupied workers by 25\% for a 0.60\% point-estimate latency increase. Consolidation-heavy halves occupied workers for a 4.11\% increase. The preregistered normalized line-distance rule selects balanced as the interior knee.
+
+\begin{table}[t]
+\caption{Ten-repeat mixed-burst holdout. CI is a 95\% Student-$t$ interval for mean p95 decision latency.}
+\label{tab:holdout}
+\centering
+\scriptsize
+\begin{tabular}{lccc}
+\toprule
+Policy & Mean p95 [CI] (s) & Workers & Load var. \\
+\midrule
+Spread & 1.253 [1.157, 1.348] & 4 & 0.0043 \\
+Balanced & 1.260 [1.172, 1.348] & 3 & 0.0709 \\
+Consolidation & 1.304 [1.184, 1.424] & 2 & 0.1650 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[t]
+\centering
+\input{figures/holdout-pareto}
+\caption{Holdout Pareto front with 95\% confidence intervals on mean p95 latency. Intervals overlap; worker counts separate deterministically. The star marks the balanced knee.}
+\label{fig:holdout-pareto}
+\end{figure}
+
+The holdout validates the policy tradeoff, not optimizer generalization. The preregistered rule excluded all optimizer finalists after they failed repeated training validation. The change from a two-point training front to a three-point holdout front also demonstrates workload-dependent Pareto geometry.
 
 \section{Discussion and Limitations}
-The reported results should be read as evidence about a controlled live-cluster testbed, not as a universal claim about Kubernetes scheduling. Running on kind preserves the real control-plane API, Pod binding path, and deployment mechanics, which is precisely what this study needs. At the same time, it remains a local and intentionally simplified environment. The results therefore support methodological claims about policy search on a real scheduler implementation, but not broad claims about behavior under all production infrastructures, background workloads, or autoscaling policies.
+The strongest result is methodological. A one-shot evaluator made every seed appear to improve upon the baselines, yet shared repeated validation removed every optimizer finalist. The search was functioning as implemented; its fitness estimate was insufficiently robust. Re-evaluation is therefore not a cosmetic reporting step but part of the optimization design for live systems. Future search should use repeated or adaptive resampling during selection, confidence-aware dominance, or a two-stage low-cost screening and high-confidence promotion protocol.
 
-The workload suite is intentionally controlled. The three main workloads were selected because they expose CPU pressure, memory pressure, and fragmentation effects clearly enough to make the delay-versus-consolidation tradeoff visible. That clarity is useful, but it narrows the scope of the conclusions. The current evidence is therefore strongest for these synthetic pressure regimes. A broader study would extend the suite with trace-derived demand, longer-running mixed workloads, and more heterogeneous node capacities.
+The holdout establishes a real policy tradeoff but not statistically distinct latency means. Its confidence intervals overlap, while occupied-worker counts and requested-load variance separate strongly. The responsible interpretation is that placement character changes reliably and latency point estimates move modestly. Larger repeated samples would be required to resolve those latency differences.
 
-The optimizer side has similar scope limits. Hyperparameters such as mutation rate, mutation scale, and population size were treated as fixed first-pass settings rather than as a second optimization problem, and only one full seed is complete in the current results. That is enough to show that the live search loop can discover Pareto-improving regimes, but it is not enough to support strong claims about cross-seed stability or hyperparameter sensitivity. Those questions remain follow-up experiments rather than resolved properties of the method.
+External validity is limited. kind preserves the Kubernetes API, rollout, and binding path, but all four workers are homogeneous containers on one host. Workloads are synthetic, short, request-driven, and run without unrelated background demand or autoscaling. Maximum workload-occupied workers is not active infrastructure cost; requested-load variance is not measured CPU or memory utilization. Trace-derived workloads, heterogeneous workers, longer durations, and multi-host clusters remain future work.
 
-Two comparison boundaries should be explicit. First, the current baselines are three hand-designed policies within the same custom-scheduler family. This is the right comparison for asking whether evolutionary search improves over manually selected settings of the \emph{same} policy surface, but it is not yet a direct experimental comparison against the default Kubernetes scheduler. If \texttt{kube-scheduler} is added later, it should be interpreted as an external reference baseline rather than as a system this work claims to dominate generally. Second, load variance remains outside the final result tables. Because it is not yet measured end-to-end with the same discipline as pending and node count, it remains future work rather than a partially reported metric.
+The default kube-scheduler comparison also has a strict boundary. Common completion and placement metrics show that the default profile spreads these workloads across four workers, but its event-driven implementation does not emit the custom scheduler's decision annotation. A direct latency ranking would therefore mix timestamp sources and architectures. A future comparison could instrument a scheduler-framework plugin or use a shared tracing point.
 
-These limits also clarify what the paper does \emph{not} establish: it does not identify a globally best scheduler, prove superiority over \texttt{kube-scheduler} across arbitrary workloads, or yet provide a seed-stable Pareto characterization of the search space. What it does establish is narrower but still meaningful: once the scheduler policy is parameterized and measured through a live evaluator, workload-aware multi-objective optimization becomes an observable engineering problem rather than a purely conceptual one.
+Finally, optimizer hyperparameters were fixed rather than tuned, and the holdout contains only baselines because finalist selection was determined before holdout execution. Consequently, the study does not establish optimizer generalization, universal policy ordering, or superiority over Kubernetes defaults. It does establish a reproducible negative result and a workload-dependent policy tradeoff on a real control-plane path.
 
 \section{Conclusion}
-This paper presented a live Kubernetes custom scheduler whose node-selection policy is parameterized by four interpretable weights and evaluated through a real cluster loop. Framing scheduler tuning as a multi-objective problem over p95 pending time and maximum active node count turns policy design into an explicit tradeoff analysis rather than a search for a single universal heuristic.
+We built a versioned, parameterized scheduler and coupled multi-objective evolutionary search to real Kubernetes rollout, replay, measurement, and binding operations. The V2 representation removes scale redundancy and replaces a dependent packing feature with explicit balance and consolidation signals.
 
-The experiments show that the weights matter. On the 4-worker resource-pressure workloads, the fixed baselines already separate into different behavioral regimes: Spread improves pending relative to Default on \texttt{cpu-tight} and \texttt{fragmenting-mix}, while Packing achieves comparable pending with fewer active nodes in multiple workloads. More importantly, the first complete evolutionary run shows that search over this policy surface can discover Pareto-relevant behavior beyond the fixed baseline set. In the current results, the optimizer finds a new lower-pending regime while also rediscovering the strong consolidation regime represented by Packing.
+Three search seeds generated promising one-shot Pareto candidates, but ten-repeat validation rejected all five finalists. This negative result is the central lesson: live-cluster policy search can optimize measurement noise unless uncertainty is included in evaluation and selection. Separately, the independent holdout produced a three-point baseline front spanning four, three, and two occupied workers, with balanced selected as the geometric knee. Thus, policy weights materially alter placement, but the best tradeoff remains workload-dependent.
 
-The main conclusion is therefore not that one scheduler is globally best, but that the scheduling problem exposed here behaves as a real multi-objective surface on a live Kubernetes deployment. For the selected workloads, the first full run separates into two dominant tradeoff regimes: lower pending with broader worker activation, and lower node usage with a moderate pending penalty. That structure is exactly the kind of outcome for which Pareto-oriented evolutionary search is appropriate.
-
-This conclusion should be read with the same scope discipline as the rest of the paper: the current evidence supports a claim about controlled workload regimes on a live reproducible testbed, not universal deployment guidance. The immediate next steps are to complete the remaining seeds, compare the resulting Pareto fronts at the level of unique objective points, decide whether to add an experimental \texttt{kube-scheduler} reference baseline, and integrate load variance only if it can be measured with the same rigor as the primary objectives. Even without those extensions, the current system already supports a defensible claim: for controlled workload regimes, live-cluster multi-objective search can reveal scheduler tradeoff points that are not obvious from fixed hand-designed policies alone.
+The project demonstrates both why live evaluation matters and why it is not enough by itself. Reproducible manifests, repeated validation, held-out workloads, timestamp-source separation, and conservative claims are necessary parts of scheduler optimization. Code, workloads, commands, manifests, and raw results are available at \url{https://github.com/ismailtrm/evo-sched}.
 
 \bibliographystyle{IEEEtran}
+\IEEEtriggeratref{6}
 \begin{thebibliography}{00}
-\bibitem{ref-borg-k8s}
-B. Burns, B. Grant, D. Oppenheimer, E. Brewer, and J. Wilkes,
-``Borg, Omega, and Kubernetes,''
-\emph{Communications of the ACM},
-vol. 59, no. 5, pp. 50--57, 2016.
+\bibitem{ref-borg}
+A. Verma, L. Pedrosa, M. R. Korupolu, D. Oppenheimer, E. Tune, and J. Wilkes,
+``Large-scale cluster management at Google with Borg,''
+in \emph{Proc. 10th Eur. Conf. Comput. Syst.}, 2015, pp. 1--17,
+doi: 10.1145/2741948.2741964.
 
-\bibitem{ref-k8s-scheduling}
-Kubernetes Documentation,
-``Scheduling, Preemption and Eviction,''
-accessed Jun. 3, 2026.
-[Online]. Available: \url{https://kubernetes.io/docs/concepts/scheduling-eviction/}
+\bibitem{ref-omega}
+M. Schwarzkopf, A. Konwinski, M. Abd-El-Malek, and J. Wilkes,
+``Omega: Flexible, scalable schedulers for large compute clusters,''
+in \emph{Proc. 8th Eur. Conf. Comput. Syst.}, 2013, pp. 351--364.
+
+\bibitem{ref-firmament}
+I. Gog, M. Schwarzkopf, A. Gleave, R. N. M. Watson, and S. Hand,
+``Firmament: Fast, centralized cluster scheduling at scale,''
+in \emph{Proc. 12th USENIX Symp. Oper. Syst. Design Implement.},
+2016, pp. 99--115.
+
+\bibitem{ref-drf}
+A. Ghodsi, M. Zaharia, B. Hindman, A. Konwinski, S. Shenker, and I. Stoica,
+``Dominant resource fairness: Fair allocation of multiple resource types,''
+in \emph{Proc. 8th USENIX Symp. Netw. Syst. Design Implement.}, 2011.
+
+\bibitem{ref-tetris}
+R. Grandl, G. Ananthanarayanan, S. Kandula, S. Rao, and A. Akella,
+``Multi-resource packing for cluster schedulers,''
+in \emph{Proc. ACM SIGCOMM}, 2014, pp. 455--466,
+doi: 10.1145/2619239.2626334.
+
+\bibitem{ref-k8s-framework}
+Kubernetes Documentation, ``Scheduling Framework,'' accessed Aug. 29, 2026.
+[Online]. Available: \url{https://kubernetes.io/docs/concepts/scheduling-eviction/scheduling-framework/}
+
+\bibitem{ref-k8s-config}
+Kubernetes Documentation, ``Scheduler Configuration,'' accessed Aug. 29, 2026.
+[Online]. Available: \url{https://kubernetes.io/docs/reference/scheduling/config/}
 
 \bibitem{ref-k8s-node-status}
 Kubernetes Documentation,
 ``Node Status,''
-accessed Jun. 3, 2026.
+accessed Aug. 29, 2026.
 [Online]. Available: \url{https://kubernetes.io/docs/reference/node/node-status/}
 
 \bibitem{ref-k8s-taints}
 Kubernetes Documentation,
 ``Taints and Tolerations,''
-accessed Jun. 3, 2026.
+accessed Aug. 29, 2026.
 [Online]. Available: \url{https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/}
 
 \bibitem{ref-kind}
 kind Documentation,
 ``kind: Kubernetes IN Docker,''
-accessed Jun. 3, 2026.
+accessed Aug. 29, 2026.
 [Online]. Available: \url{https://kind.sigs.k8s.io/}
 
 \bibitem{ref-nsga2}
@@ -381,6 +357,12 @@ K. Deb, A. Pratap, S. Agarwal, and T. Meyarivan,
 ``A fast and elitist multiobjective genetic algorithm: NSGA-II,''
 \emph{IEEE Transactions on Evolutionary Computation},
 vol. 6, no. 2, pp. 182--197, 2002.
+
+\bibitem{ref-noisy-ea}
+Y. Jin and J. Branke,
+``Evolutionary optimization in uncertain environments---A survey,''
+\emph{IEEE Trans. Evol. Comput.}, vol. 9, no. 3, pp. 303--317, 2005,
+doi: 10.1109/TEVC.2005.846356.
 \end{thebibliography}
 
 \end{document}

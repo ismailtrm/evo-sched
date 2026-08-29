@@ -1,0 +1,66 @@
+\begin{tikzpicture}
+\begin{axis}[
+  width=\linewidth,
+  height=5.0cm,
+  xmin=1.245,
+  xmax=1.315,
+  ymin=2.85,
+  ymax=4.12,
+  xtick={1.25,1.27,1.29,1.31},
+  ytick={3,3.33,3.67,4},
+  xlabel={mean p95 decision latency (s)},
+  ylabel={mean max occupied workers},
+  grid=both,
+  grid style={gray!18},
+  tick label style={font=\scriptsize},
+  label style={font=\small},
+  legend style={
+    font=\tiny,
+    at={(0.5,1.02)},
+    anchor=south,
+    legend columns=3,
+    draw=none
+  },
+]
+\addplot[draw=accentorange, thick, dashed] coordinates {
+  (1.251855,3.666667) (1.264390,3.000000)
+};
+\addplot[
+  only marks,
+  mark=square*,
+  mark size=2.6pt,
+  draw=accentblue,
+  fill=accentblue!70,
+] coordinates {
+  (1.251855,3.666667)
+  (1.264390,3.000000)
+  (1.298361,4.000000)
+};
+\addlegendentry{baselines}
+\addplot[
+  only marks,
+  mark=x,
+  mark size=3.0pt,
+  very thick,
+  draw=black!70,
+] coordinates {
+  (1.274759,4.000000)
+  (1.294087,3.000000)
+  (1.298254,3.000000)
+  (1.307147,3.333333)
+  (1.265704,3.000000)
+};
+\addlegendentry{optimizer finalists}
+\addplot[
+  only marks,
+  mark=o,
+  mark size=4.2pt,
+  very thick,
+  draw=accentorange,
+] coordinates {
+  (1.251855,3.666667)
+  (1.264390,3.000000)
+};
+\addlegendentry{repeated front}
+\end{axis}
+\end{tikzpicture}

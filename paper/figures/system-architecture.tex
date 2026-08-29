@@ -6,12 +6,12 @@
   metricblock/.style={databox, text width=2.8cm, minimum height=1.55cm},
   flowlabel/.style={font=\scriptsize, fill=white, inner sep=1pt}
 ]
-\node[wideblock] (workloads) {Workload JSONs\\cpu-tight\\mem-tight\\fragmenting-mix};
+\node[wideblock] (workloads) {Versioned workloads\\3 training regimes\\1 unseen holdout};
 \node[block, right=13mm of workloads] (evaluator) {Evaluator\\patch, rollout,\\replay, collect};
 \node[block, below=10mm of evaluator] (optimizer) {Evolutionary\\optimizer\\policy weights $\mathbf{w}$};
 \node[block, right=14mm of evaluator] (scheduler) {Custom scheduler\\deployment\\\texttt{evo-sched}};
 \node[block, right=9mm of scheduler] (cluster) {kind cluster\\4 workers\\real Pod binding};
-\node[metricblock, below=10mm of cluster] (metrics) {Metrics and artifacts\\pending, active nodes\\JSON / CSV / Pareto};
+\node[metricblock, below=10mm of cluster] (metrics) {Versioned artifacts\\decision latency, occupancy\\variance, JSON / CSV};
 
 \draw[line] (workloads) -- (evaluator);
 \draw[line] (optimizer.north) -- (evaluator.south);

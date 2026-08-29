@@ -1,0 +1,40 @@
+\begin{tikzpicture}
+\begin{axis}[
+  width=\linewidth,
+  height=5.0cm,
+  ybar,
+  bar width=4.8pt,
+  ymin=0,
+  ymax=4.45,
+  ylabel={mean max occupied workers},
+  symbolic x coords={CPU-tight,Mem-tight,Mixed},
+  xtick=data,
+  xticklabel style={font=\scriptsize},
+  ytick={0,1,2,3,4},
+  ymajorgrids=true,
+  grid style={gray!20},
+  legend style={
+    font=\tiny,
+    at={(0.5,1.02)},
+    anchor=south,
+    legend columns=2,
+    draw=none,
+    cells={anchor=west}
+  },
+  enlarge x limits=0.22,
+]
+\addplot+[fill=white, draw=black, thick] coordinates {
+  (CPU-tight,4.00) (Mem-tight,4.00) (Mixed,3.00)
+};
+\addplot+[fill=black!20, draw=black] coordinates {
+  (CPU-tight,4.00) (Mem-tight,4.00) (Mixed,4.00)
+};
+\addplot+[fill=black!55, draw=black] coordinates {
+  (CPU-tight,3.00) (Mem-tight,3.00) (Mixed,3.00)
+};
+\addplot+[fill=black!85, draw=black] coordinates {
+  (CPU-tight,4.00) (Mem-tight,4.00) (Mixed,4.00)
+};
+\legend{Balanced,Spread-heavy,Consolidation-heavy,Kube default}
+\end{axis}
+\end{tikzpicture}
