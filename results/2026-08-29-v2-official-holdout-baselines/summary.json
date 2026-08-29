@@ -1,0 +1,412 @@
+{
+  "schemaVersion": "v2",
+  "measurementVersion": "v2",
+  "sourceFiles": [
+    "../results/2026-08-29-v2-official-holdout-baselines/mixed-burst-holdout.json"
+  ],
+  "resultRows": 30,
+  "byWorkload": [
+    {
+      "scope": "workload",
+      "workload": "mixed-burst-holdout",
+      "workloadCount": 1,
+      "schedulerMode": "custom-policy",
+      "schedulerName": "evok8s-scheduler",
+      "policyName": "evok8s-v2-balanced",
+      "weights": {
+        "freeCPU": 0.25,
+        "freeMem": 0.25,
+        "balance": 0.25,
+        "consolidation": 0.25
+      },
+      "weightsApplicable": true,
+      "repetitions": 10,
+      "unschedulableTotal": 0,
+      "decisionLatencyApplicable": true,
+      "p95SchedulingDecisionLatencySeconds": {
+        "mean": 1.2602275836699999,
+        "sampleStdDev": 0.12336948466463261,
+        "minimum": 1.14096739355,
+        "maximum": 1.5742940479999992,
+        "confidence95Lower": 1.1719805021988112,
+        "confidence95Upper": 1.3484746651411885
+      },
+      "maxWorkloadOccupiedWorkerNodes": {
+        "mean": 3,
+        "sampleStdDev": 0,
+        "minimum": 3,
+        "maximum": 3,
+        "confidence95Lower": 3,
+        "confidence95Upper": 3
+      },
+      "meanWorkloadDominantRequestedLoadVariance": {
+        "mean": 0.07086071867510049,
+        "sampleStdDev": 0.001096089698673147,
+        "minimum": 0.06914821673024,
+        "maximum": 0.0727734604458136,
+        "confidence95Lower": 0.07007667781441698,
+        "confidence95Upper": 0.071644759535784
+      },
+      "meanWorkloadCpuToMemoryImbalance": {
+        "mean": 0.0642489020785927,
+        "sampleStdDev": 0.0022322024121169777,
+        "minimum": 0.060127926881979564,
+        "maximum": 0.06769450137665703,
+        "confidence95Lower": 0.06265219160632514,
+        "confidence95Upper": 0.06584561255086026
+      }
+    },
+    {
+      "scope": "workload",
+      "workload": "mixed-burst-holdout",
+      "workloadCount": 1,
+      "schedulerMode": "custom-policy",
+      "schedulerName": "evok8s-scheduler",
+      "policyName": "evok8s-v2-consolidation-heavy",
+      "weights": {
+        "freeCPU": 0.1,
+        "freeMem": 0.1,
+        "balance": 0.2,
+        "consolidation": 0.6
+      },
+      "weightsApplicable": true,
+      "repetitions": 10,
+      "unschedulableTotal": 0,
+      "decisionLatencyApplicable": true,
+      "p95SchedulingDecisionLatencySeconds": {
+        "mean": 1.3041529261949996,
+        "sampleStdDev": 0.16802174221998403,
+        "minimum": 1.1540407474,
+        "maximum": 1.567520492999999,
+        "confidence95Lower": 1.1839657630977,
+        "confidence95Upper": 1.424340089292299
+      },
+      "maxWorkloadOccupiedWorkerNodes": {
+        "mean": 2,
+        "sampleStdDev": 0,
+        "minimum": 2,
+        "maximum": 2,
+        "confidence95Lower": 2,
+        "confidence95Upper": 2
+      },
+      "meanWorkloadDominantRequestedLoadVariance": {
+        "mean": 0.16503395482143893,
+        "sampleStdDev": 0.0022664536449380312,
+        "minimum": 0.1616831406710775,
+        "maximum": 0.16751780035479416,
+        "confidence95Lower": 0.1634127441954951,
+        "confidence95Upper": 0.16665516544738276
+      },
+      "meanWorkloadCpuToMemoryImbalance": {
+        "mean": 0.0033441210829741443,
+        "sampleStdDev": 0.002256896451599803,
+        "minimum": 0.0006432501147653494,
+        "maximum": 0.006681135297357144,
+        "confidence95Lower": 0.0017297467863012434,
+        "confidence95Upper": 0.004958495379647045
+      }
+    },
+    {
+      "scope": "workload",
+      "workload": "mixed-burst-holdout",
+      "workloadCount": 1,
+      "schedulerMode": "custom-policy",
+      "schedulerName": "evok8s-scheduler",
+      "policyName": "evok8s-v2-spread-heavy",
+      "weights": {
+        "freeCPU": 0.35,
+        "freeMem": 0.35,
+        "balance": 0.25,
+        "consolidation": 0.05
+      },
+      "weightsApplicable": true,
+      "repetitions": 10,
+      "unschedulableTotal": 0,
+      "decisionLatencyApplicable": true,
+      "p95SchedulingDecisionLatencySeconds": {
+        "mean": 1.252656339745,
+        "sampleStdDev": 0.1339617884392378,
+        "minimum": 1.1613768986,
+        "maximum": 1.6274461874,
+        "confidence95Lower": 1.1568325070479617,
+        "confidence95Upper": 1.348480172442038
+      },
+      "maxWorkloadOccupiedWorkerNodes": {
+        "mean": 4,
+        "sampleStdDev": 0,
+        "minimum": 4,
+        "maximum": 4,
+        "confidence95Lower": 4,
+        "confidence95Upper": 4
+      },
+      "meanWorkloadDominantRequestedLoadVariance": {
+        "mean": 0.0042713155622200825,
+        "sampleStdDev": 0.000397355700729819,
+        "minimum": 0.003809635124497339,
+        "maximum": 0.0052215365425310615,
+        "confidence95Lower": 0.003987084165852759,
+        "confidence95Upper": 0.004555546958587406
+      },
+      "meanWorkloadCpuToMemoryImbalance": {
+        "mean": 0.06174985454741135,
+        "sampleStdDev": 0.0010338766841796727,
+        "minimum": 0.06044072518844187,
+        "maximum": 0.06334724061880652,
+        "confidence95Lower": 0.06101031510434743,
+        "confidence95Upper": 0.062489393990475275
+      }
+    }
+  ],
+  "aggregates": [
+    {
+      "scope": "aggregate",
+      "workload": "all-workloads",
+      "workloadCount": 1,
+      "schedulerMode": "custom-policy",
+      "schedulerName": "evok8s-scheduler",
+      "policyName": "evok8s-v2-balanced",
+      "weights": {
+        "freeCPU": 0.25,
+        "freeMem": 0.25,
+        "balance": 0.25,
+        "consolidation": 0.25
+      },
+      "weightsApplicable": true,
+      "repetitions": 10,
+      "unschedulableTotal": 0,
+      "decisionLatencyApplicable": true,
+      "p95SchedulingDecisionLatencySeconds": {
+        "mean": 1.2602275836699999,
+        "sampleStdDev": 0.12336948466463261,
+        "minimum": 1.14096739355,
+        "maximum": 1.5742940479999992,
+        "confidence95Lower": 1.1719805021988112,
+        "confidence95Upper": 1.3484746651411885
+      },
+      "maxWorkloadOccupiedWorkerNodes": {
+        "mean": 3,
+        "sampleStdDev": 0,
+        "minimum": 3,
+        "maximum": 3,
+        "confidence95Lower": 3,
+        "confidence95Upper": 3
+      },
+      "meanWorkloadDominantRequestedLoadVariance": {
+        "mean": 0.07086071867510049,
+        "sampleStdDev": 0.001096089698673147,
+        "minimum": 0.06914821673024,
+        "maximum": 0.0727734604458136,
+        "confidence95Lower": 0.07007667781441698,
+        "confidence95Upper": 0.071644759535784
+      },
+      "meanWorkloadCpuToMemoryImbalance": {
+        "mean": 0.0642489020785927,
+        "sampleStdDev": 0.0022322024121169777,
+        "minimum": 0.060127926881979564,
+        "maximum": 0.06769450137665703,
+        "confidence95Lower": 0.06265219160632514,
+        "confidence95Upper": 0.06584561255086026
+      }
+    },
+    {
+      "scope": "aggregate",
+      "workload": "all-workloads",
+      "workloadCount": 1,
+      "schedulerMode": "custom-policy",
+      "schedulerName": "evok8s-scheduler",
+      "policyName": "evok8s-v2-consolidation-heavy",
+      "weights": {
+        "freeCPU": 0.1,
+        "freeMem": 0.1,
+        "balance": 0.2,
+        "consolidation": 0.6
+      },
+      "weightsApplicable": true,
+      "repetitions": 10,
+      "unschedulableTotal": 0,
+      "decisionLatencyApplicable": true,
+      "p95SchedulingDecisionLatencySeconds": {
+        "mean": 1.3041529261949996,
+        "sampleStdDev": 0.16802174221998403,
+        "minimum": 1.1540407474,
+        "maximum": 1.567520492999999,
+        "confidence95Lower": 1.1839657630977,
+        "confidence95Upper": 1.424340089292299
+      },
+      "maxWorkloadOccupiedWorkerNodes": {
+        "mean": 2,
+        "sampleStdDev": 0,
+        "minimum": 2,
+        "maximum": 2,
+        "confidence95Lower": 2,
+        "confidence95Upper": 2
+      },
+      "meanWorkloadDominantRequestedLoadVariance": {
+        "mean": 0.16503395482143893,
+        "sampleStdDev": 0.0022664536449380312,
+        "minimum": 0.1616831406710775,
+        "maximum": 0.16751780035479416,
+        "confidence95Lower": 0.1634127441954951,
+        "confidence95Upper": 0.16665516544738276
+      },
+      "meanWorkloadCpuToMemoryImbalance": {
+        "mean": 0.0033441210829741443,
+        "sampleStdDev": 0.002256896451599803,
+        "minimum": 0.0006432501147653494,
+        "maximum": 0.006681135297357144,
+        "confidence95Lower": 0.0017297467863012434,
+        "confidence95Upper": 0.004958495379647045
+      }
+    },
+    {
+      "scope": "aggregate",
+      "workload": "all-workloads",
+      "workloadCount": 1,
+      "schedulerMode": "custom-policy",
+      "schedulerName": "evok8s-scheduler",
+      "policyName": "evok8s-v2-spread-heavy",
+      "weights": {
+        "freeCPU": 0.35,
+        "freeMem": 0.35,
+        "balance": 0.25,
+        "consolidation": 0.05
+      },
+      "weightsApplicable": true,
+      "repetitions": 10,
+      "unschedulableTotal": 0,
+      "decisionLatencyApplicable": true,
+      "p95SchedulingDecisionLatencySeconds": {
+        "mean": 1.252656339745,
+        "sampleStdDev": 0.1339617884392378,
+        "minimum": 1.1613768986,
+        "maximum": 1.6274461874,
+        "confidence95Lower": 1.1568325070479617,
+        "confidence95Upper": 1.348480172442038
+      },
+      "maxWorkloadOccupiedWorkerNodes": {
+        "mean": 4,
+        "sampleStdDev": 0,
+        "minimum": 4,
+        "maximum": 4,
+        "confidence95Lower": 4,
+        "confidence95Upper": 4
+      },
+      "meanWorkloadDominantRequestedLoadVariance": {
+        "mean": 0.0042713155622200825,
+        "sampleStdDev": 0.000397355700729819,
+        "minimum": 0.003809635124497339,
+        "maximum": 0.0052215365425310615,
+        "confidence95Lower": 0.003987084165852759,
+        "confidence95Upper": 0.004555546958587406
+      },
+      "meanWorkloadCpuToMemoryImbalance": {
+        "mean": 0.06174985454741135,
+        "sampleStdDev": 0.0010338766841796727,
+        "minimum": 0.06044072518844187,
+        "maximum": 0.06334724061880652,
+        "confidence95Lower": 0.06101031510434743,
+        "confidence95Upper": 0.062489393990475275
+      }
+    }
+  ],
+  "repeatedMeanPareto": {
+    "points": [
+      {
+        "meanP95SchedulingDecisionLatencySeconds": 1.252656339745,
+        "meanMaxWorkloadOccupiedWorkerNodes": 4,
+        "members": [
+          {
+            "schedulerName": "evok8s-scheduler",
+            "policyName": "evok8s-v2-spread-heavy",
+            "weights": {
+              "freeCPU": 0.35,
+              "freeMem": 0.35,
+              "balance": 0.25,
+              "consolidation": 0.05
+            }
+          }
+        ]
+      },
+      {
+        "meanP95SchedulingDecisionLatencySeconds": 1.2602275836699999,
+        "meanMaxWorkloadOccupiedWorkerNodes": 3,
+        "members": [
+          {
+            "schedulerName": "evok8s-scheduler",
+            "policyName": "evok8s-v2-balanced",
+            "weights": {
+              "freeCPU": 0.25,
+              "freeMem": 0.25,
+              "balance": 0.25,
+              "consolidation": 0.25
+            }
+          }
+        ]
+      },
+      {
+        "meanP95SchedulingDecisionLatencySeconds": 1.3041529261949996,
+        "meanMaxWorkloadOccupiedWorkerNodes": 2,
+        "members": [
+          {
+            "schedulerName": "evok8s-scheduler",
+            "policyName": "evok8s-v2-consolidation-heavy",
+            "weights": {
+              "freeCPU": 0.1,
+              "freeMem": 0.1,
+              "balance": 0.2,
+              "consolidation": 0.6
+            }
+          }
+        ]
+      }
+    ],
+    "pendingBest": {
+      "meanP95SchedulingDecisionLatencySeconds": 1.252656339745,
+      "meanMaxWorkloadOccupiedWorkerNodes": 4,
+      "members": [
+        {
+          "schedulerName": "evok8s-scheduler",
+          "policyName": "evok8s-v2-spread-heavy",
+          "weights": {
+            "freeCPU": 0.35,
+            "freeMem": 0.35,
+            "balance": 0.25,
+            "consolidation": 0.05
+          }
+        }
+      ]
+    },
+    "nodeBest": {
+      "meanP95SchedulingDecisionLatencySeconds": 1.3041529261949996,
+      "meanMaxWorkloadOccupiedWorkerNodes": 2,
+      "members": [
+        {
+          "schedulerName": "evok8s-scheduler",
+          "policyName": "evok8s-v2-consolidation-heavy",
+          "weights": {
+            "freeCPU": 0.1,
+            "freeMem": 0.1,
+            "balance": 0.2,
+            "consolidation": 0.6
+          }
+        }
+      ]
+    },
+    "knee": {
+      "meanP95SchedulingDecisionLatencySeconds": 1.2602275836699999,
+      "meanMaxWorkloadOccupiedWorkerNodes": 3,
+      "members": [
+        {
+          "schedulerName": "evok8s-scheduler",
+          "policyName": "evok8s-v2-balanced",
+          "weights": {
+            "freeCPU": 0.25,
+            "freeMem": 0.25,
+            "balance": 0.25,
+            "consolidation": 0.25
+          }
+        }
+      ]
+    }
+  }
+}

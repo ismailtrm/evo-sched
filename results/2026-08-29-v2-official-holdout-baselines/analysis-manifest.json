@@ -1,0 +1,79 @@
+{
+  "schemaVersion": "v1",
+  "analysisName": "official-v2-holdout-baseline-summary",
+  "status": "completed",
+  "generatedAt": "2026-08-29T00:11:15Z",
+  "sourceResultsCommit": "59dc049cc80a067ef90ce5d84b77cfd008a73746",
+  "summarizerCommit": "a7676d09bad1bf39a0454700a3feb19c6c8f2bd1",
+  "command": "go run ./cmd/baseline-summary --inputs ../results/2026-08-29-v2-official-holdout-baselines/mixed-burst-holdout.json --output ../results/2026-08-29-v2-official-holdout-baselines/summary.json --csv-output ../results/2026-08-29-v2-official-holdout-baselines/summary.csv",
+  "workingDirectory": "/home/ismail/evo-sched/scheduler",
+  "acceptance": {
+    "policies": 3,
+    "workloads": 1,
+    "repetitionsPerPolicyWorkload": 10,
+    "resultRows": 30,
+    "podsSubmitted": 720,
+    "podsScheduled": 720,
+    "podsCompleted": 720,
+    "decisionTimestamps": 720,
+    "kubernetesScheduledTimestamps": 720,
+    "evaluatorObservationTimestamps": 720,
+    "unschedulableTotal": 0,
+    "uniqueRepeatedMeanParetoPoints": 3,
+    "strictInteriorKneeAvailable": true
+  },
+  "outputs": [
+    {
+      "path": "summary.json",
+      "sha256": "8971a09d166c964657bbe92bbf869912ea9c3517a396e9cd3d9d2d26ba7d6cd5"
+    },
+    {
+      "path": "summary.csv",
+      "sha256": "1726043e6fbf1755a87dd0eb93a6b424f8db38fac4b4236306ea055817f89d9c"
+    }
+  ],
+  "repeatedMeanPareto": [
+    {
+      "role": "pending-best",
+      "policy": "evok8s-v2-spread-heavy",
+      "meanP95SchedulingDecisionLatencySeconds": 1.252656339745,
+      "meanP95Confidence95": [1.1568325070479617, 1.348480172442038],
+      "meanMaxWorkloadOccupiedWorkerNodes": 4.0
+    },
+    {
+      "role": "knee",
+      "policy": "evok8s-v2-balanced",
+      "meanP95SchedulingDecisionLatencySeconds": 1.2602275836699999,
+      "meanP95Confidence95": [1.1719805021988112, 1.3484746651411885],
+      "meanMaxWorkloadOccupiedWorkerNodes": 3.0
+    },
+    {
+      "role": "node-best",
+      "policy": "evok8s-v2-consolidation-heavy",
+      "meanP95SchedulingDecisionLatencySeconds": 1.3041529261949996,
+      "meanP95Confidence95": [1.1839657630977, 1.424340089292299],
+      "meanMaxWorkloadOccupiedWorkerNodes": 2.0
+    }
+  ],
+  "tradeoff": {
+    "balancedVsSpreadLatencyIncreasePercent": 0.6044150885422539,
+    "balancedVsSpreadOccupiedWorkerReductionPercent": 25.0,
+    "consolidationVsBalancedLatencyIncreasePercent": 3.485508736214249,
+    "consolidationVsBalancedOccupiedWorkerReductionPercent": 33.33333333333333,
+    "consolidationVsSpreadLatencyIncreasePercent": 4.110990765470657,
+    "consolidationVsSpreadOccupiedWorkerReductionPercent": 50.0
+  },
+  "holdoutDecision": {
+    "threeBaselineTradeoffObserved": true,
+    "balancedSelectedAsGeometricKnee": true,
+    "optimizerGeneralizationEvaluated": false,
+    "reasonOptimizerGeneralizationNotEvaluated": "No optimizer finalist survived the preregistered repeated-mean train Pareto front, so the holdout policy set deduplicated to the three hand-authored controls."
+  },
+  "interpretationBoundaries": [
+    "All three hand-authored controls are nondominated by repeated-mean point estimates on the independent mixed-burst holdout workload.",
+    "The latency confidence intervals overlap substantially, so latency ordering is descriptive rather than evidence of statistically significant superiority.",
+    "Occupied-worker count separates deterministically at four, three, and two workers for spread-heavy, balanced, and consolidation-heavy respectively.",
+    "Requested-load variance increases as policies consolidate, providing an auxiliary explanation of the spread-to-packing behavior.",
+    "The holdout validates a workload-specific baseline tradeoff and a balanced knee point; it does not reverse the negative repeated-validation result for optimizer finalists."
+  ]
+}
