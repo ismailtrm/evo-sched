@@ -2668,6 +2668,92 @@ Gate 5 tamamlandı. Canlı sistem canonical postflight sonrasında kapatıldı v
 kind container resource tasarrufu için durduruldu. Sıradaki aktif kapı, yalnızca
 commitlenmiş official kanıtları kullanan Gate 6 paper/repo/CFP revizyonudur.
 
+### 3.60. Gate 6 paper'ı official V2 kanıtıyla yeniden kurduk
+
+Gate 6'ya doğrudan metin yazarak değil, önce claim--artifact audit'i yaparak
+başlandı. İlk audit
+[`paper/evidence-audit-v2.json`](./paper/evidence-audit-v2.json) içinde `3`
+blocking, `6` major ve `1` minor bulgu kaydetti; bu başlangıç durumu
+`aab8284 docs: audit paper against official v2 evidence` commit'iyle
+donduruldu. Audit'in kullandığı tek final kanıt sınıfı aşağıdaki dört official
+artifact zinciridir:
+
+- [`results/2026-08-28-v2-official-baselines`](./results/2026-08-28-v2-official-baselines)
+- [`results/2026-08-28-v2-official-optimizer-3seed`](./results/2026-08-28-v2-official-optimizer-3seed)
+- [`results/2026-08-28-v2-official-finalist-validation`](./results/2026-08-28-v2-official-finalist-validation)
+- [`results/2026-08-29-v2-official-holdout-baselines`](./results/2026-08-29-v2-official-holdout-baselines)
+
+Paper'ın ana araştırma anlatısı bu audit sonucuna göre değiştirildi:
+
+- V1 `FreeCPU/FreeMem/PodPenalty/Packing` yüzeyi ve seed-42 pilot grafikleri
+  historical evidence olarak bırakıldı; final paper'dan çıkarıldı
+- yöntem, nonnegative L1-normalized `FreeCPU`, `FreeMem`, `Balance` ve
+  `Consolidation` V2 policy contract'ı üzerinden yeniden yazıldı
+- üç seed'deki single-evaluation Pareto noktaları yalnızca provisional search
+  sonucu olarak raporlandı
+- beş optimizer finalistinin `n=10` repeated validation'da baseline'lar
+  tarafından domine edilmesi ana negatif metodoloji sonucu yapıldı
+- bağımsız holdout'taki spread/balanced/consolidation `4/3/2` occupied-worker
+  front'u doğrulanmış policy tradeoff'u olarak ayrıldı
+- default kube-scheduler yalnızca completion, placement ve requested-load
+  ölçümleri için external reference olarak tutuldu; eksik custom decision
+  timestamp'i nedeniyle latency baseline'ı yapılmadı
+- çakışan latency confidence interval'ları açıkça yazıldı ve istatistiksel
+  üstünlük iddiası kaldırıldı
+- title, offline/live search'ü online workload adaptation gibi göstermemek için
+  `Live Multi-Objective Policy Search for a Parameterized Kubernetes Scheduler`
+  olarak değiştirildi
+
+Sonuç görselleri de official V2 summary değerlerinden yeniden üretildi:
+
+- [`paper/figures/baseline-placement.tex`](./paper/figures/baseline-placement.tex):
+  üç train workload için custom baseline ve default kube-scheduler occupied-worker
+  karşılaştırması
+- [`paper/figures/repeated-validation.tex`](./paper/figures/repeated-validation.tex):
+  beş optimizer finalisti ile üç baseline'ın repeated-mean dominance görünümü
+- [`paper/figures/holdout-pareto.tex`](./paper/figures/holdout-pareto.tex):
+  yüzde 95 Student-t latency interval'lı üç noktalı holdout front'u ve balanced
+  knee
+
+Scheduler decision-flow ve live experiment-loop TikZ figürleri V2 terimleriyle
+güncellendi. Related-work bölümü Borg, Omega, Firmament, DRF, Tetris, NSGA-II,
+noisy evolutionary optimization ve official Kubernetes/kind kaynaklarıyla
+genişletildi; discovery metadata'sı yerine primary paper ve official docs
+bilgileri kullanıldı.
+
+Paper değişiklikleri atomik olarak
+`549e272 docs: rewrite paper around official v2 evidence` commit'ine alındı.
+Ardından evidence audit tarihsel başlangıç bulgularını silmeden closure kaydıyla
+güncellendi ve `9b678f0 docs: close official v2 paper evidence audit` commit'i
+oluşturuldu. Closure audit `10/10` bulguyu resolved kabul eder ve paper commit
+SHA'sını doğrudan taşır.
+
+Final paper doğrulamaları:
+
+- `latexmk -pdf -interaction=nonstopmode -halt-on-error main.tex` geçti
+- yerel build çıktısı `paper/main.pdf`, IEEE conference US Letter formatında
+  `6` sayfa üretildi; PDF build ürünü olarak Git tarafından ignore edilmektedir
+- undefined citation/reference, LaTeX error ve overfull box sayısı sıfır
+- `qpdf --check` PDF yapısını hatasız doğruladı
+- bütün fontlar embedded Type 1 olarak doğrulandı
+- altı sayfanın tamamı `150 dpi` render edilip clipping, overlap, broken figure,
+  tablo ve eksen okunabilirliği açısından görsel incelendi
+- son sayfadaki kaynakça `\IEEEtriggeratref{6}` ile iki sütuna dengelendi
+- abstract, tablolar, yüzdeler ve figür koordinatları dört official summary JSON
+  artifact'iyle yeniden karşılaştırıldı
+
+Araştırma kararı:
+
+- Gate 6'nın paper-evidence alt-fazı tamamlandı ve submission claim seti official
+  V2 kanıtına kapatıldı
+- paper artık optimizer üstünlüğü değil, canlı single-evaluation fitness'in
+  gürültüye duyarlılığı ile workload-dependent latency--consolidation tradeoff'unu
+  savunmaktadır
+- yeni bir deney sonucu paper claim'ini değiştirecekse yeni versioned artifact,
+  ayrı results/analysis commit'i ve yeni evidence-audit closure gerekecektir
+- Gate 6'nın kalan işleri global README/reproduction yüzeyi ve KubeCon CFP
+  metninin aynı commitlenmiş kanıt setine bağlanmasıdır
+
 ## 4. Şu Anki Durum
 
 Şu anda proje durumu şöyledir:
@@ -2733,7 +2819,10 @@ commitlenmiş official kanıtları kullanan Gate 6 paper/repo/CFP revizyonudur.
 - Holdout repeated-mean front'u spread-heavy, balanced ve consolidation-heavy için sırasıyla 4, 3 ve 2 occupied-worker kullanan üç unique noktadan oluşmuştur
 - Holdout interior knee point'i `evok8s-v2-balanced` olarak seçilmiştir
 - Holdout latency confidence interval'ları çakıştığı için latency sıralaması descriptive point estimate olarak tutulmaktadır
-- Gate 5 tamamlanmış, Gate 6 paper/repo/CFP revizyonu sıradaki aktif kapı olmuştur
+- Gate 5 tamamlanmış, Gate 6 paper-evidence alt-fazı tamamlanmıştır
+- Final V2 paper source'u `549e272` commit'inde sabitlenmiş; altı sayfalık IEEE conference PDF'ye derlenip görsel/sayısal denetimden geçmiştir
+- V2 paper evidence audit `9b678f0` commit'inde `10/10` bulgu resolved ve submission evidence ready olarak kapatılmıştır
+- Gate 6'nın aktif kalan işleri README/reproduction yüzeyi ile CFP metnidir
 - Scheduler interval testli admin komutuyla canonical `2s` değerine restore edilmiştir
 - `evo-sched` kind container'ları Gate 5 search postflight sonrasında silinmeden durdurulmuştur
 - Scheduler experiment preflight skill'i V2 contract, canonical weights ve exact worker-count kontrolüyle güncellenmiştir
@@ -2759,7 +2848,7 @@ commitlenmiş official kanıtları kullanan Gate 6 paper/repo/CFP revizyonudur.
 - Üç V2 train workload üzerinde üç custom policy ve default kube-scheduler için üç tekrarlı official baseline protokolü tamamlanmıştır
 - Official baseline artifactleri, manifestleri ve mean/sample-SD/worst-case özetleri commitlenmiştir
 - Clean/tag/preflight hard gate'li ve interruption recovery destekli repo-içi official multi-seed runner tamamlanmıştır
-- Sıradaki iş paper evidence audit ile yalnızca official V2 sonuçlarını paper, README ve CFP anlatısına taşımaktır
+- Sıradaki iş official V2 claim setini README/reproduction yüzeyi ve CFP anlatısına taşımaktır
 
 Başka bir ifadeyle:
 
@@ -2927,11 +3016,12 @@ Sonuç:
 
 ### Gate 6 - Paper, repo ve CFP hazırlığı
 
-- `paper-evidence-audit` ile her sayısal claim'i official artifact'e bağla
-- Abstract, results ve conclusion'ı yalnızca final protokol sonuçlarıyla güncelle
+- [x] `paper-evidence-audit` ile her sayısal claim'i official artifact'e bağla
+- [x] Abstract, methods, results, discussion ve conclusion'ı yalnızca final protokol sonuçlarıyla güncelle
+- [x] Official V2 uncertainty, baseline, repeated-validation ve holdout bilgisini grafiklerde görünür yap
+- [x] Final PDF'yi derle, altı sayfayı görsel incele ve evidence audit'i commit SHA ile kapat
 - README, lisans, pinned sürümler ve tek komutlu reproduction akışı ekle
-- Grafiklerde uncertainty, baseline ve seed bilgisini görünür yap
-- Paper ve CFP anlatısını "evrensel en iyi scheduler" yerine canlı cluster üzerinde policy-space search sırasında öğrenilen tradeoff ve metodoloji dersleri üzerine kur
+- CFP anlatısını "evrensel en iyi scheduler" yerine canlı cluster üzerinde policy-space search sırasında öğrenilen tradeoff ve metodoloji dersleri üzerine kur
 
 Çıkış koşulu:
 
