@@ -2598,6 +2598,76 @@ doğrulanacaktır. Holdout sonucu train policy seçimini değiştirmek için
 kullanılmayacak; yalnızca seçilmiş baseline tradeoff'unun farklı burst yapısında
 korunup korunmadığını değerlendirecektir.
 
+### 3.59. Official holdout üç noktalı baseline tradeoff'unu doğruladı
+
+Ön-kayıtlı holdout, clean source commit
+`9de2178716eb11f4ec0df10faa3fb599ac251d50` ve annotated
+`protocol-v2-holdout-2026-08-29` tag'i üzerinden çalıştırıldı. Run yaklaşık
+`16 dakika 50 saniye` sürdü ve acceptance koşullarının tamamını geçti:
+
+- `3` baseline x `10` tekrar = `30` result row
+- tekrar başına `24`, toplam `720` Pod
+- `720/720` scheduled ve completed
+- scheduler decision, Kubernetes scheduled ve evaluator observation timestamp
+  coverage ayrı ayrı `720/720`
+- sıfır unschedulable Pod
+- input ve output checksum'larının tamamı manifest ile bağımsız olarak eşleşti
+- postflight dört worker, canonical `0.25/0.25/0.25/0.25` weights, `2s`
+  scheduler interval ve boş evaluator namespace doğruladı
+
+Kanıt zinciri ham sonuç ile türetilmiş analizi ayrı commitlerde tutar:
+
+- `59dc049 results: record official v2 holdout baselines`
+- `937bd79 results: summarize official v2 holdout`
+- artifact directory:
+  [`results/2026-08-29-v2-official-holdout-baselines`](./results/2026-08-29-v2-official-holdout-baselines)
+
+`baseline-summary` çıktısı aynı input'tan ikinci kez üretilip byte-for-byte
+karşılaştırıldı; JSON ve CSV deterministik olarak yeniden üretildi. Holdout
+repeated-mean point estimate front'u üç benzersiz nondominated noktadan oluştu:
+
+| Rol | Policy | Mean p95 decision (s) | Yüzde 95 CI (s) | Mean max occupied workers | Mean dominant-load variance |
+| --- | --- | ---: | ---: | ---: | ---: |
+| pending-best | `evok8s-v2-spread-heavy` | 1.252656 | [1.156833, 1.348480] | 4 | 0.004271 |
+| knee | `evok8s-v2-balanced` | 1.260228 | [1.171981, 1.348475] | 3 | 0.070861 |
+| node-best | `evok8s-v2-consolidation-heavy` | 1.304153 | [1.183966, 1.424340] | 2 | 0.165034 |
+
+Point estimate tradeoff'u:
+
+- balanced, spread-heavy'ye göre occupied worker sayısını yüzde `25` azaltırken
+  mean p95 yalnızca yüzde `0.60` arttı
+- consolidation-heavy, balanced'a göre occupied worker sayısını yüzde `33.33`
+  azaltırken mean p95 yüzde `3.49` arttı
+- consolidation-heavy, spread-heavy'ye göre worker sayısını yarıya indirirken
+  mean p95 yüzde `4.11` arttı
+- üç unique nokta bulunduğu için normalize edilmiş doğru-uzaklığı kuralı gerçek
+  bir interior knee seçebildi; bu temsilci `evok8s-v2-balanced` oldu
+
+Latency CI'ları belirgin biçimde çakışmaktadır. Bu nedenle p95 sıralaması
+istatistiksel üstünlük claim'i değil, descriptive point estimate tradeoff'udur.
+Buna karşılık occupied-worker sayısı her tekrarda sırasıyla `4`, `3` ve `2` oldu.
+Requested-load variance da spread'den consolidation'a doğru belirgin arttı; bu
+yardımcı metrik policy karakterinin beklenen yayma/sıkıştırma yönünde değiştiğini
+açıklar, gerçek donanım utilization'ı olarak yorumlanmaz.
+
+Araştırma kararı:
+
+- bağımsız holdout, üç elle tanımlı policy arasında latency-consolidation
+  tradeoff'unu ve dengeli bir knee noktasını doğruladı
+- train repeated front iki, holdout front üç unique noktadan oluştu; Pareto şekli
+  workload'a duyarlıdır ve evrensel policy sıralaması iddia edilmeyecektir
+- ön-kayıtlı seçim kuralı optimizer finalistlerini holdout'a taşımadığı için bu
+  koşu optimizer genellemesini test etmez
+- repeated train validation'ın negatif optimizer sonucu değişmez: bu kanıt seti
+  optimizer'ın baseline'ı geçtiği iddiasını desteklemez
+- paper/CFP anlatısında doğrulanmış ana sonuç, canlı cluster'da workload-duyarlı
+  baseline tradeoff'u; yöntem dersi ise single-evaluation search'ün ölçüm
+  gürültüsüne duyarlılığı olacaktır
+
+Gate 5 tamamlandı. Canlı sistem canonical postflight sonrasında kapatıldı ve beş
+kind container resource tasarrufu için durduruldu. Sıradaki aktif kapı, yalnızca
+commitlenmiş official kanıtları kullanan Gate 6 paper/repo/CFP revizyonudur.
+
 ## 4. Şu Anki Durum
 
 Şu anda proje durumu şöyledir:
@@ -2659,6 +2729,11 @@ korunup korunmadığını değerlendirecektir.
 - Repeated-mean Pareto front balanced pending-best ve consolidation-heavy node-best noktalarından oluşmaktadır
 - Pooled confidence interval'lar çakıştığı için point-estimate dominance istatistiksel üstünlük olarak yorumlanmamaktadır
 - Ön-kayıtlı holdout seti duplicate removal sonrası üç V2 baseline'a indirgenmiştir
+- Official holdout üç baseline x on tekrar ve 720/720 tamamlanan Pod ile acceptance'ı geçmiştir
+- Holdout repeated-mean front'u spread-heavy, balanced ve consolidation-heavy için sırasıyla 4, 3 ve 2 occupied-worker kullanan üç unique noktadan oluşmuştur
+- Holdout interior knee point'i `evok8s-v2-balanced` olarak seçilmiştir
+- Holdout latency confidence interval'ları çakıştığı için latency sıralaması descriptive point estimate olarak tutulmaktadır
+- Gate 5 tamamlanmış, Gate 6 paper/repo/CFP revizyonu sıradaki aktif kapı olmuştur
 - Scheduler interval testli admin komutuyla canonical `2s` değerine restore edilmiştir
 - `evo-sched` kind container'ları Gate 5 search postflight sonrasında silinmeden durdurulmuştur
 - Scheduler experiment preflight skill'i V2 contract, canonical weights ve exact worker-count kontrolüyle güncellenmiştir
@@ -2684,7 +2759,7 @@ korunup korunmadığını değerlendirecektir.
 - Üç V2 train workload üzerinde üç custom policy ve default kube-scheduler için üç tekrarlı official baseline protokolü tamamlanmıştır
 - Official baseline artifactleri, manifestleri ve mean/sample-SD/worst-case özetleri commitlenmiştir
 - Clean/tag/preflight hard gate'li ve interruption recovery destekli repo-içi official multi-seed runner tamamlanmıştır
-- Sıradaki iş üç V2 baseline'ı `mixed-burst-holdout` üzerinde `n=10` ölçerek train tradeoff'unun genellemesini kontrol etmektir
+- Sıradaki iş paper evidence audit ile yalnızca official V2 sonuçlarını paper, README ve CFP anlatısına taşımaktır
 
 Başka bir ifadeyle:
 
@@ -2699,7 +2774,7 @@ Başka bir ifadeyle:
 - Adım 6 ve 7 için node-count tradeoff'u görünür hale gelmiş durumda
 - Adım 8 için gerekli evolutionary loop iskeleti kurulmuş durumda
 - Adım 8 için ilk tam seed sonucu alınmış ve Pareto özeti çıkarılmış durumda
-- Adım 8'in V2 multi-seed search ve repeated train validation fazları tamamlandı; optimizer-only kazanım doğrulanmadı ve holdout baseline genelleme kontrolü sıradadır
+- Adım 8'in V2 multi-seed search, repeated train validation ve holdout baseline genelleme fazları tamamlandı; optimizer-only kazanım doğrulanmadı, workload-duyarlı baseline tradeoff'u doğrulandı
 
 ## 5. Sıradaki Muhtemel Adımlar
 
@@ -2834,11 +2909,21 @@ Sonuç:
 - [x] Merkezi eğilim yanında dağılım, worst-case ve güven aralığı raporla
 - [x] Pareto yapısını all-measured solutions üzerinden yeniden kur
 - [x] Pending-best, node-best ve yeterli nokta varsa knee-point temsilcisini seç
-- Holdout workload üzerinde genelleme kontrolü yap
+- [x] Holdout workload üzerinde genelleme kontrolü yap
 
 Çıkış koşulu:
 
-- Yeni Pareto rejimlerinin baseline ve seed gürültüsünün ötesinde tekrarlandığı gösterilmeli
+- Optimizer-only kazanım repeated validation ile ya yeniden üretilmeli ya da
+  reddedilmeli; seçilmiş baseline tradeoff'u bağımsız holdout üzerinde ölçülmeli
+  ve bütün official kanıt zinciri commitlenmiş olmalı
+
+Sonuç:
+
+- Gate 5 tamamlandı
+- single-evaluation optimizer kazanımı repeated train validation'da reddedildi
+- bağımsız holdout üç baseline için üç noktalı Pareto tradeoff'u ve balanced knee
+  üretti
+- Gate 6 artık sıradaki aktif kapıdır
 
 ### Gate 6 - Paper, repo ve CFP hazırlığı
 
