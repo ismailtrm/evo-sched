@@ -2754,6 +2754,81 @@ Araştırma kararı:
 - Gate 6'nın kalan işleri global README/reproduction yüzeyi ve KubeCon CFP
   metninin aynı commitlenmiş kanıt setine bağlanmasıdır
 
+### 3.61. Repo giriş ve tek komutlu evidence verification yüzeyini ekledik
+
+Paper evidence closure sonrasında dışarıdan gelen bir kullanıcının projeyi yalnızca
+bu uzun ledger üzerinden çözmek zorunda kalmaması için public repo yüzeyi kuruldu.
+İngilizce [`README.md`](./README.md) şu ayrımları açık biçimde yapar:
+
+- sistem artefact'i, V2 policy contract'ı ve live evaluator mimarisi
+- official baseline, multi-seed search, repeated validation ve holdout sonuçları
+- optimizer'ın one-shot başarısı ile repeated validation negatif sonucunun ayrımı
+- default kube-scheduler'ın placement-only external-reference sınırı
+- hızlı offline verification, functional live smoke ve pahalı official protocol
+  reproduction akışlarının birbirinden ayrılması
+- kind, synthetic workload, proxy metric ve timestamp-source sınırlılıkları
+
+Test edilen Kubernetes `v1.35.0`, kind `v0.31.0`, Go `1.25`, client-go `v0.35.0`,
+Docker `29.7.2` ve BusyBox `1.36.1` sürümleri README'de official manifestlerle
+uyumlu biçimde sabitlendi. README'deki Mermaid şeması workload, evaluator,
+scheduler deployment, cluster, artifacts ve optimizer objective feedback
+döngüsünü GitHub üzerinde ek build gerektirmeden görünür kılar.
+
+Repo için Apache License 2.0 seçildi ve [`LICENSE`](./LICENSE) eklendi. Seçim,
+Kubernetes ekosistemiyle uyumlu permissive kullanım ve açık patent lisansı sağlamak
+için yapıldı; copyright sahibi `Ismail Tarim`, yıl `2026` olarak kaydedildi.
+
+Tek komutlu doğrulama yüzeyi
+[`scripts/verify-official-v2.sh`](./scripts/verify-official-v2.sh) ve kök
+[`Makefile`](./Makefile) ile oluşturuldu. `make verify` canlı cluster başlatmadan:
+
+1. bütün Go paketlerinde `go test -count=1 ./...` çalıştırır
+2. `go vet ./...` çalıştırır
+3. dört official kanıt zincirinin summary çıktılarını yeniden üretir
+4. regenerated analizleri committed sonuçlarla karşılaştırır
+5. evidence audit closure ve audited paper commit bağını doğrular
+6. paper'ı yeniden derleyip sayfa sayısı, LaTeX log'u, PDF yapısı ve Type 1
+   fontları kontrol eder
+
+Verifier geliştirilirken ilk byte comparison eski official baseline summary'de
+fark gösterdi. İnceleme bunun sayısal drift olmadığını ortaya koydu:
+
+- official baseline summary, `baseline-summary` aracına confidence interval ve
+  repeated Pareto alanları eklenmeden önce üretilmişti
+- mevcut araç eski bütün alanlarda aynı değerleri üretiyor, yalnızca additive CI,
+  Pareto ve schema-version alanlarını ekliyordu
+- verifier bu bilinen schema evolution'ını yalnızca yeni alanları çıkararak
+  normalize eder ve eski bütün alanları karşılaştırır
+- optimizer summary'de yalnızca nondeterministic `generatedAt` alanı dışlanır;
+  geri kalan JSON ve Pareto CSV karşılaştırılır
+- repeated finalist validation ve holdout JSON/CSV çıktıları byte-for-byte
+  karşılaştırılır
+
+Bu ayrım, yeniden analiz aracının evrilmesini raw evidence drift'i gibi yanlış
+raporlamadan ortak sayısal sözleşmeyi sıkı biçimde doğrular. `make verify` uçtan
+uca geçti. Shell syntax `bash -n` ile doğrulandı; yerel ortamda `shellcheck`
+bulunmadığı için ayrıca shellcheck raporu üretilmedi.
+
+Makefile ayrıca şu güvenli operasyonel entrypoint'leri sağlar:
+
+- `make cluster-up`: durdurulmuş `evo-sched` container'larını başlatır veya pinned
+  image ile yeni 4-worker cluster kurar
+- `make scheduler-image` ve `make scheduler-deploy`: image build/load ile RBAC ve
+  strict rollout deployment'ını uygular
+- `make live-smoke`: V2 baseline'larla küçük wiring smoke çalıştırır; bu çıktı
+  functional check'tir ve paper evidence değildir
+- `make cluster-stop`: cluster state'ini silmeden beş kind container'ını durdurur
+- `make test`, `make vet` ve `make paper`: alt doğrulamaları ayrı çalıştırır
+
+Değişiklikler iki atomik commit'e ayrıldı:
+
+- `8d4dc5a chore: add official v2 verification entrypoint`
+- `563705b docs: add public project overview and license`
+
+Gate 6'nın repo giriş, lisans, pinned-version ve reproduction alt-fazı tamamlandı.
+Aktif kalan iş, aynı conservative claim setinden KubeCon CFP başlık, abstract,
+audience outcome ve session-outline metnini üretmektir.
+
 ## 4. Şu Anki Durum
 
 Şu anda proje durumu şöyledir:
@@ -2822,7 +2897,10 @@ Araştırma kararı:
 - Gate 5 tamamlanmış, Gate 6 paper-evidence alt-fazı tamamlanmıştır
 - Final V2 paper source'u `549e272` commit'inde sabitlenmiş; altı sayfalık IEEE conference PDF'ye derlenip görsel/sayısal denetimden geçmiştir
 - V2 paper evidence audit `9b678f0` commit'inde `10/10` bulgu resolved ve submission evidence ready olarak kapatılmıştır
-- Gate 6'nın aktif kalan işleri README/reproduction yüzeyi ile CFP metnidir
+- Public İngilizce README, Apache-2.0 lisansı ve pinned tested-version bilgisi eklenmiştir
+- `make verify` Go test/vet, official summary regeneration, evidence audit ve paper PDF kontrollerini tek komutta geçmiştir
+- Functional live smoke ve kind resource lifecycle komutları Makefile entrypoint'leri olarak eklenmiştir
+- Gate 6'nın aktif kalan işi KubeCon CFP metnidir
 - Scheduler interval testli admin komutuyla canonical `2s` değerine restore edilmiştir
 - `evo-sched` kind container'ları Gate 5 search postflight sonrasında silinmeden durdurulmuştur
 - Scheduler experiment preflight skill'i V2 contract, canonical weights ve exact worker-count kontrolüyle güncellenmiştir
@@ -2848,7 +2926,7 @@ Araştırma kararı:
 - Üç V2 train workload üzerinde üç custom policy ve default kube-scheduler için üç tekrarlı official baseline protokolü tamamlanmıştır
 - Official baseline artifactleri, manifestleri ve mean/sample-SD/worst-case özetleri commitlenmiştir
 - Clean/tag/preflight hard gate'li ve interruption recovery destekli repo-içi official multi-seed runner tamamlanmıştır
-- Sıradaki iş official V2 claim setini README/reproduction yüzeyi ve CFP anlatısına taşımaktır
+- Sıradaki iş official V2 claim setinden KubeCon CFP anlatısını üretmektir
 
 Başka bir ifadeyle:
 
@@ -3020,7 +3098,7 @@ Sonuç:
 - [x] Abstract, methods, results, discussion ve conclusion'ı yalnızca final protokol sonuçlarıyla güncelle
 - [x] Official V2 uncertainty, baseline, repeated-validation ve holdout bilgisini grafiklerde görünür yap
 - [x] Final PDF'yi derle, altı sayfayı görsel incele ve evidence audit'i commit SHA ile kapat
-- README, lisans, pinned sürümler ve tek komutlu reproduction akışı ekle
+- [x] README, lisans, pinned sürümler ve tek komutlu reproduction akışı ekle
 - CFP anlatısını "evrensel en iyi scheduler" yerine canlı cluster üzerinde policy-space search sırasında öğrenilen tradeoff ve metodoloji dersleri üzerine kur
 
 Çıkış koşulu:
