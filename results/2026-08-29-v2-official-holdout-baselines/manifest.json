@@ -1,0 +1,92 @@
+{
+  "schemaVersion": "v1",
+  "protocolVersion": "v2-official-repeated-validation",
+  "class": "official",
+  "paperEvidenceEligible": true,
+  "runName": "2026-08-29-v2-official-holdout-baselines",
+  "status": "completed",
+  "startedAt": "2026-08-28T23:51:28.337509607Z",
+  "finishedAt": "2026-08-29T00:08:18.393230365Z",
+  "repository": "/home/ismail/evo-sched",
+  "workingDirectory": "/home/ismail/evo-sched/scheduler",
+  "git": {
+    "sha": "9de2178716eb11f4ec0df10faa3fb599ac251d50",
+    "branch": "research/policy-space-v2",
+    "protocolTag": "protocol-v2-holdout-2026-08-29",
+    "dirtyAtStart": false
+  },
+  "inputs": [
+    {
+      "path": "deploy.yaml",
+      "sha256": "3de13f7b422236a72f0d1cce608957e469d8124f0ab5ad2b26d6d2af80dbf91c"
+    },
+    {
+      "path": "experiments/weights-v2.json",
+      "sha256": "fe690c528b277d4a41496f5f702e25a554d7406f04accf17e832f75566d8d782"
+    },
+    {
+      "path": "kind-config-4workers.yaml",
+      "sha256": "d26c091ff873418387e8c45148283a71235a2190efe1d8f021fc566de0bd664f"
+    },
+    {
+      "path": "workloads/v2/mixed-burst-holdout.json",
+      "sha256": "6d7c5766ec294392fba459beaa96fe946d82f0ce4e7ed4c4934b581f3bccab49"
+    }
+  ],
+  "repetitionsPerPolicyWorkload": 10,
+  "policyCount": 3,
+  "expectedResultRows": 30,
+  "expectedWorkloadRuns": 30,
+  "preflight": {
+    "capturedAt": "2026-08-28T23:51:28.337355169Z",
+    "workerCount": 4,
+    "workerCpuMilli": 16000,
+    "workerMemoryMiB": 31712,
+    "schedulerRolloutReady": true,
+    "schedulerIntervalSeconds": 0.25,
+    "schedulerCanonicalWeights": {
+      "freeCPU": 0.25,
+      "freeMem": 0.25,
+      "balance": 0.25,
+      "consolidation": 0.25
+    },
+    "evaluatorPodCount": 0
+  },
+  "runs": [
+    {
+      "workload": "mixed-burst-holdout",
+      "path": "workloads/v2/mixed-burst-holdout.json",
+      "status": "completed",
+      "startedAt": "2026-08-28T23:51:28.337677081Z",
+      "finishedAt": "2026-08-29T00:08:14.83293821Z",
+      "expectedRows": 30,
+      "resultRows": 30,
+      "podCount": 720,
+      "outputs": [
+        {
+          "path": "results/2026-08-29-v2-official-holdout-baselines/mixed-burst-holdout.json",
+          "sha256": "f0065fb1cedc987cbff35893c572b717829ebd3a05bf41f5642f4b1e30d7a356"
+        },
+        {
+          "path": "results/2026-08-29-v2-official-holdout-baselines/mixed-burst-holdout.csv",
+          "sha256": "368902daafaa58e0978607eb29a0f51adc510abac73aad75f341e523d5e4f4b1"
+        }
+      ]
+    }
+  ],
+  "postflight": {
+    "capturedAt": "2026-08-29T00:08:18.39322992Z",
+    "workerCount": 4,
+    "workerCpuMilli": 16000,
+    "workerMemoryMiB": 31712,
+    "schedulerRolloutReady": true,
+    "schedulerIntervalSeconds": 2,
+    "schedulerCanonicalWeights": {
+      "freeCPU": 0.25,
+      "freeMem": 0.25,
+      "balance": 0.25,
+      "consolidation": 0.25
+    },
+    "evaluatorPodCount": 0
+  }
+}
