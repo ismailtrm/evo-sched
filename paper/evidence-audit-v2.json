@@ -1,11 +1,12 @@
 {
   "auditVersion": 2,
   "auditedAt": "2026-08-29T04:19:44Z",
-  "status": "blocking-findings",
+  "closedAt": "2026-08-29T04:35:19Z",
+  "status": "closed",
   "auditedPaper": {
     "path": "paper/main.tex",
-    "gitCommit": "3173ae984b9863e944f775b2c510e770685412a7",
-    "role": "v1 pilot manuscript awaiting official v2 evidence rewrite"
+    "gitCommit": "549e272546d0c6e5b8f2a1a7ae966a916256032d",
+    "role": "official v2 evidence manuscript"
   },
   "auditHead": "64168fac13ff4f40e0f14fe97a35985a7548d754",
   "officialEvidenceSources": [
@@ -39,8 +40,8 @@
     }
   ],
   "overallAssessment": {
-    "submissionEvidenceReady": false,
-    "reason": "The manuscript still describes the v1 policy, measurements, baseline matrix, and seed-42 pilot. Its optimizer-superiority claim is contradicted by the official repeated finalist validation. The official v2 evidence is complete enough for a rewrite, but the current manuscript cannot be submitted as the final study.",
+    "submissionEvidenceReady": true,
+    "reason": "The manuscript now uses only committed official v2 evidence for its policy definition, protocols, tables, figures, and conclusions. It reports the failed repeated validation as a negative result, treats default kube-scheduler as a placement-only external reference, and separates training, repeated validation, and holdout claims.",
     "preservationDecision": "Keep evidence-audit-v1.json and all v1 artifacts immutable as historical pilot evidence. Supersede the manuscript's claims and figures using only committed official v2 artifacts."
   },
   "findings": [
@@ -194,8 +195,49 @@
     "v1PaperEvidenceClass": "historical pilot",
     "v2EvidenceClass": "official",
     "rawArtifactsImmutable": true,
-    "paperRewriteRequired": true,
-    "paperSubmissionBlocked": true,
-    "nextAction": "Rewrite methods, tables, figures, abstract, discussion, and conclusion against official v2 evidence, then rerun this audit as a closure audit."
+    "paperRewriteRequired": false,
+    "paperSubmissionBlocked": false,
+    "nextAction": "Preserve this evidence-closed manuscript as the Gate 6 baseline; future claims require new versioned evidence and a new audit."
+  },
+  "closureAudit": {
+    "paperCommit": "549e272546d0c6e5b8f2a1a7ae966a916256032d",
+    "initialFindingCount": 10,
+    "resolvedFindingCount": 10,
+    "resolutions": [
+      {
+        "findingIds": ["V2-F-001", "V2-F-004", "V2-F-010"],
+        "resolution": "Replaced the v1 policy and terminology with normalized FreeCPU, FreeMem, Balance, and Consolidation; defined timestamp and occupancy semantics; removed wording that implied online workload adaptation."
+      },
+      {
+        "findingIds": ["V2-F-002", "V2-F-006", "V2-F-008"],
+        "resolution": "Separated provisional one-shot search from repeated validation and holdout evidence; reported that no optimizer finalist survived; included Student-t confidence intervals and the three-point holdout baseline front."
+      },
+      {
+        "findingIds": ["V2-F-003", "V2-F-005", "V2-F-007"],
+        "resolution": "Replaced all v1 result tables and plots with official v2 baseline, repeated-validation, and holdout artifacts; documented seeds, repetitions, cadence, versions, and default kube-scheduler's placement-only role."
+      },
+      {
+        "findingIds": ["V2-F-009"],
+        "resolution": "Added a dedicated related-work section with verified primary cluster-scheduling and evolutionary-optimization sources plus official Kubernetes documentation."
+      }
+    ],
+    "checks": {
+      "latexBuild": "latexmk -pdf -interaction=nonstopmode -halt-on-error main.tex",
+      "pdfPages": 6,
+      "paperSize": "US Letter",
+      "undefinedCitationsOrReferences": 0,
+      "overfullBoxes": 0,
+      "pdfStructure": "qpdf --check passed",
+      "fonts": "all embedded Type 1",
+      "visualInspection": "all six pages rendered at 150 dpi and inspected; no clipping, overlap, or broken figures; final references balanced with IEEEtriggeratref",
+      "numericAudit": "paper values and percentages cross-checked against the four official summary JSON artifacts"
+    },
+    "residualLimitations": [
+      "kind workers are homogeneous containers on one physical host",
+      "workloads are synthetic and short",
+      "default kube-scheduler lacks the custom decision timestamp and is not a latency baseline",
+      "holdout evaluates baselines only because no optimizer finalist passed training validation",
+      "latency confidence intervals overlap and do not support superiority claims"
+    ]
   }
 }
