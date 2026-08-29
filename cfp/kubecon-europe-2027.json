@@ -1,0 +1,144 @@
+{
+  "schemaVersion": "cfp-draft-v1",
+  "status": "draft",
+  "event": {
+    "name": "KubeCon + CloudNativeCon Europe 2027",
+    "location": "Barcelona, Spain",
+    "dates": "2027-03-15/2027-03-18",
+    "submissionDeadline": "2026-10-11T23:59:00+02:00",
+    "notificationDate": "2026-12-07",
+    "scheduleAnnouncementDate": "2026-12-09",
+    "officialSources": {
+      "cfp": "https://events.linuxfoundation.org/kubecon-cloudnativecon-europe/program/cfp/",
+      "reviewerGuidelines": "https://events.linuxfoundation.org/kubecon-cloudnativecon-europe/program/submission-reviewer-guidelines/",
+      "submissionPortal": "https://sessionize.com/kubecon-cloudnativecon-europe-2027/"
+    },
+    "verifiedOn": "2026-08-29"
+  },
+  "positioning": {
+    "primaryTrack": "Emerging + Advanced",
+    "alternateTrack": "Operations + Performance",
+    "primaryFormat": "Session Presentation",
+    "durationMinutes": 30,
+    "fallbackFormat": "Poster Session",
+    "experienceLevel": "Intermediate",
+    "caseStudy": false,
+    "caseStudyRationale": "This is reproducible experimental systems research on a live Kubernetes control-plane path, not a report about an organization's production deployment.",
+    "decisionRationale": "The primary track explicitly welcomes cloud native research, academic papers, proof-of-concept projects, and advanced niche topics. A 30-minute session can turn the negative validation result into a practical measurement and experimentation lesson; the poster remains a suitable fallback for the research artifact."
+  },
+  "proposal": {
+    "title": "Searching the Kubernetes Scheduler Policy Space: Lessons From Noisy Live Optimization",
+    "sessionDescription": "When an optimizer reports a better Kubernetes scheduling policy, did it improve placement or learn the timing noise of the control plane? This session follows an end-to-end experiment that exposed a four-weight custom scheduler policy to NSGA-II-style search on a live four-worker kind cluster. Every candidate triggered a scheduler deployment rollout, real Pod bindings, and three resource-pressure workload replays.\n\nThe first result looked compelling: all three search seeds produced apparently novel Pareto points beyond hand-designed policies. The experiment then separated scheduler-decision timestamps from Kubernetes API observation time, removed equivalent dimensions from the policy representation, and re-evaluated five finalists ten times per workload. None remained nondominated. An unseen holdout workload still revealed a reproducible consolidation tradeoff: spread, balanced, and consolidation-heavy policies occupied four, three, and two workers, while their latency confidence intervals overlapped.\n\nThe session presents the architecture, the misleading result, the validation protocol that overturned it, and the engineering changes that made the conclusion auditable. Attendees will leave with a concrete checklist for parameterizing scheduler policies, instrumenting live decisions, preserving experiment provenance, and preventing expensive black-box search from optimizing measurement noise.",
+    "benefitsToEcosystem": "Kubernetes operators and platform engineers increasingly automate tuning decisions around scheduling, autoscaling, and other control loops. A search algorithm can exploit timing jitter, coarse observations, equivalent parameters, or incomplete runs just as easily as it can exploit a useful policy signal. This session contributes a reusable failure analysis and an open, reproducible experiment path rather than claiming a universally superior scheduler. It shows how to separate feasibility from scoring, make a policy space identifiable, compare tradeoffs with Pareto analysis, and require repeated validation before promoting an automatically discovered configuration.",
+    "targetAudience": "Kubernetes platform engineers, SREs, scheduler and controller developers, performance engineers, and researchers who evaluate or tune policies against live clusters.",
+    "prerequisites": "Attendees should understand basic Kubernetes Pod scheduling and be comfortable reading latency and resource-usage metrics. No prior evolutionary-computation knowledge is required.",
+    "takeaways": [
+      "How to expose a Kubernetes scheduler scoring policy to search without retaining scale-equivalent or linearly redundant weight dimensions.",
+      "How to distinguish scheduler decision latency, Kubernetes timestamp resolution, and evaluator observation lag in a live experiment.",
+      "Why one evaluation per candidate can create convincing but non-reproducible Pareto improvements, and how repeated finalist validation changes the conclusion.",
+      "How to interpret latency-versus-consolidation fronts conservatively when placement differences are clear but latency confidence intervals overlap."
+    ],
+    "openSourceProjects": [
+      {
+        "name": "Kubernetes",
+        "relationship": "The custom scheduler uses the Kubernetes API, Pod binding, Deployments, RBAC, and the default kube-scheduler as an external placement reference."
+      },
+      {
+        "name": "kind",
+        "relationship": "The official experiments use a reproducible four-worker Kubernetes cluster created with kind."
+      },
+      {
+        "name": "client-go",
+        "relationship": "The scheduler, evaluator, and experiment runners are implemented in Go using the Kubernetes client libraries."
+      }
+    ],
+    "outline": [
+      {
+        "minutes": "0-3",
+        "topic": "The real question: policy improvement or measurement-noise optimization?"
+      },
+      {
+        "minutes": "3-8",
+        "topic": "A live custom scheduler, evaluator, and real Pod-binding loop"
+      },
+      {
+        "minutes": "8-13",
+        "topic": "Policy-space failure: scale equivalence, redundant packing, and the V2 repair"
+      },
+      {
+        "minutes": "13-18",
+        "topic": "Measurement repair: decision annotations, observation lag, hard validity gates, and provenance"
+      },
+      {
+        "minutes": "18-22",
+        "topic": "The apparently successful three-seed evolutionary search"
+      },
+      {
+        "minutes": "22-26",
+        "topic": "The repeated-validation failure and the holdout policy tradeoff"
+      },
+      {
+        "minutes": "26-30",
+        "topic": "A practical live-control-loop optimization checklist and questions"
+      }
+    ]
+  },
+  "evidenceBoundaries": {
+    "supportedClaims": [
+      "The official search evaluated 216 optimizer candidates across seeds 42, 123, and 999 on a four-worker kind cluster.",
+      "Each one-shot seed produced optimizer-only Pareto points relative to the per-seed baseline references.",
+      "None of the five optimizer finalists remained nondominated after ten repetitions per policy-workload pair.",
+      "The independent holdout produced a three-point baseline front occupying four, three, and two workload worker nodes.",
+      "The holdout latency confidence intervals overlap, so latency ordering is descriptive rather than a statistical superiority claim."
+    ],
+    "excludedClaims": [
+      "Evolutionary search found a scheduler that is superior to Kubernetes defaults.",
+      "The optimizer finalists generalize beyond the training workloads.",
+      "The kind results establish production-cluster performance.",
+      "Maximum workload-occupied workers is equivalent to powered-node cost.",
+      "The observed holdout latency means are statistically distinct."
+    ]
+  },
+  "speaker": {
+    "name": "Ismail Tarim",
+    "affiliation": "Izmir Katip Celebi University",
+    "location": "Izmir, Turkiye",
+    "email": "240401098@ogr.ikc.edu.tr",
+    "bio": "Ismail Tarim is a student at Izmir Katip Celebi University working at the intersection of Kubernetes systems and evolutionary computation. He built evo-sched as an end-to-end research system that connects a real custom scheduler, reproducible workload replay, experiment provenance, and multi-objective policy search.",
+    "previousSpeakingResource": null
+  },
+  "additionalResources": [
+    {
+      "label": "Open-source repository",
+      "url": "https://github.com/ismailtrm/evo-sched"
+    },
+    {
+      "label": "IEEE paper source",
+      "url": "https://github.com/ismailtrm/evo-sched/blob/research/policy-space-v2/paper/main.tex"
+    },
+    {
+      "label": "Machine-readable paper evidence audit",
+      "url": "https://github.com/ismailtrm/evo-sched/blob/research/policy-space-v2/paper/evidence-audit-v2.json"
+    }
+  ],
+  "submissionChecklist": {
+    "completed": [
+      "Track and format selected from the current official CFP.",
+      "Title uses title case and avoids an optimizer-superiority claim.",
+      "Session description is written in third person and states the problem, contribution, relevance, and audience benefit.",
+      "Claims are bounded by committed official V2 artifacts.",
+      "Relevant open-source projects and repository resources are listed."
+    ],
+    "requiresUserConfirmation": [
+      "Confirm whether a substantially similar talk was presented at a Linux Foundation or CNCF event during the previous year.",
+      "Confirm the Sessionize experience-level choices before selecting Intermediate.",
+      "Review the speaker bio for preferred wording and any additional relevant experience."
+    ],
+    "requiredBeforeSubmission": [
+      "Publish a stable public paper PDF URL, preferably a tagged GitHub release or preprint, and replace the source-only paper link if appropriate.",
+      "Provide a previous speaking recording or record a brief public or unlisted YouTube speaking sample.",
+      "Recheck all Sessionize fields, limits, and event dates immediately before submission.",
+      "Ensure the referenced branch or release is publicly accessible and contains the committed V2 evidence."
+    ]
+  }
+}
