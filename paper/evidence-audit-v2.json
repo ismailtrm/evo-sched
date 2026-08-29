@@ -1,0 +1,201 @@
+{
+  "auditVersion": 2,
+  "auditedAt": "2026-08-29T04:19:44Z",
+  "status": "blocking-findings",
+  "auditedPaper": {
+    "path": "paper/main.tex",
+    "gitCommit": "3173ae984b9863e944f775b2c510e770685412a7",
+    "role": "v1 pilot manuscript awaiting official v2 evidence rewrite"
+  },
+  "auditHead": "64168fac13ff4f40e0f14fe97a35985a7548d754",
+  "officialEvidenceSources": [
+    {
+      "name": "official-v2-baselines",
+      "path": "results/2026-08-28-v2-official-baselines/analysis-manifest.json",
+      "rawArtifactCommit": "244f4058397fd16002e59a2a5a24741a658d844d",
+      "analysisArtifactCommit": "f1902df4a341ad4a2cd4bd5ade49707599ce32a8",
+      "runClass": "official"
+    },
+    {
+      "name": "official-v2-multi-seed-search",
+      "path": "results/2026-08-28-v2-official-optimizer-3seed/analysis-manifest.json",
+      "rawArtifactCommit": "990d10a8c9cdb3da0fa7ec333a0c818b588e26ec",
+      "analysisArtifactCommit": "a203f50dd081942abb5fcc67fdc7c6a68248987e",
+      "runClass": "official"
+    },
+    {
+      "name": "official-v2-repeated-finalist-validation",
+      "path": "results/2026-08-28-v2-official-finalist-validation/analysis-manifest.json",
+      "rawArtifactCommit": "34670453e293ae8e3b39130e3775481efb4d0b2d",
+      "analysisArtifactCommit": "881500fda792ffd8948555c720b7007d285da556",
+      "runClass": "official"
+    },
+    {
+      "name": "official-v2-holdout",
+      "path": "results/2026-08-29-v2-official-holdout-baselines/analysis-manifest.json",
+      "rawArtifactCommit": "59dc049cc80a067ef90ce5d84b77cfd008a73746",
+      "analysisArtifactCommit": "937bd79ff32719efebba78ac6b901f0400e1c02c",
+      "runClass": "official"
+    }
+  ],
+  "overallAssessment": {
+    "submissionEvidenceReady": false,
+    "reason": "The manuscript still describes the v1 policy, measurements, baseline matrix, and seed-42 pilot. Its optimizer-superiority claim is contradicted by the official repeated finalist validation. The official v2 evidence is complete enough for a rewrite, but the current manuscript cannot be submitted as the final study.",
+    "preservationDecision": "Keep evidence-audit-v1.json and all v1 artifacts immutable as historical pilot evidence. Supersede the manuscript's claims and figures using only committed official v2 artifacts."
+  },
+  "findings": [
+    {
+      "id": "V2-F-001",
+      "severity": "blocking",
+      "title": "The manuscript describes the obsolete v1 policy surface",
+      "paperLines": [54, 64, 71, 81, 117, 120, 145, 158, 168, 170, 182, 199, 225],
+      "evidence": {
+        "codePaths": ["scheduler/main.go:240", "scheduler/pkg/policy/weights.go:8", "experiments/weights-v2.json"],
+        "observation": "Official v2 uses nonnegative L1-normalized FreeCPU, FreeMem, Balance, and Consolidation weights. The paper still presents FreeCPU, FreeMem, PodPenalty, and linearly dependent Packing with unnormalized v1 baseline vectors."
+      },
+      "requiredAction": "Replace the policy definition, equations, baseline names, baseline weights, optimizer representation, and architecture labels with the versioned v2 contract."
+    },
+    {
+      "id": "V2-F-002",
+      "severity": "blocking",
+      "title": "Optimizer superiority claims are contradicted by repeated validation",
+      "paperLines": [54, 73, 188, 242, 288, 300, 303, 307, 324, 332, 336, 341, 343, 345],
+      "evidence": {
+        "path": "results/2026-08-28-v2-official-finalist-validation/analysis-manifest.json",
+        "observation": "Across eight policies, three training workloads, and ten repetitions per policy-workload, none of the five optimizer finalists survived the repeated-mean Pareto front. All were dominated by balanced or consolidation-heavy baselines."
+      },
+      "requiredAction": "Remove claims that evolutionary search found a validated regime beyond the baselines. Report the single-evaluation three-seed search as a provisional stage and the failed reproduction as a negative validation result about live-cluster measurement noise."
+    },
+    {
+      "id": "V2-F-003",
+      "severity": "blocking",
+      "title": "The reported tables and figures are v1 pilot artifacts",
+      "paperLines": [241, 253, 274, 281, 288, 293, 309],
+      "evidence": {
+        "paths": ["paper/figures/baseline-pending.tex", "paper/figures/baseline-nodes.tex", "paper/figures/pareto-seed42.tex"],
+        "observation": "The displayed values come from March 2026 v1 pilot results. Official v2 baselines, repeated finalist validation, uncertainty intervals, requested-load variance, and the holdout Pareto front are not shown."
+      },
+      "requiredAction": "Regenerate result tables and figures from official v2 summary JSON or CSV. Distinguish single-evaluation search outputs from repeated validation and holdout evidence."
+    },
+    {
+      "id": "V2-F-004",
+      "severity": "major",
+      "title": "Metric names and timestamp semantics are stale",
+      "paperLines": [54, 66, 81, 86, 88, 173, 176, 177, 193, 203, 217, 259, 316, 339],
+      "evidence": {
+        "path": "results/2026-08-28-v2-official-baselines/cpu-tight-custom.json",
+        "observation": "Official v2 primary latency is high-resolution submission-to-scheduler-decision latency. The consolidation objective is maximum workload-occupied worker nodes, not powered or active infrastructure nodes. Kubernetes condition time and evaluator observation lag are serialized separately."
+      },
+      "requiredAction": "Use p95 scheduling decision latency and max workload-occupied worker nodes consistently. Define every timestamp source and retain the node metric as a consolidation proxy only."
+    },
+    {
+      "id": "V2-F-005",
+      "severity": "major",
+      "title": "Experimental protocol status is obsolete",
+      "paperLines": [108, 188, 197, 199, 201, 203, 205, 213, 219, 220, 324, 332, 334, 345],
+      "evidence": {
+        "observation": "Seeds 42, 123, and 999 are complete; the default kube-scheduler external reference is measured; official workloads contain 24 Pods; official scheduler and evaluator intervals are 250 ms; repeated finalist validation uses n=10; load variance is available; and an independent n=10 holdout is complete."
+      },
+      "requiredAction": "Rewrite setup and protocol tables from official manifests, including run classes, repetitions, seeds, cadence, versions, and holdout separation."
+    },
+    {
+      "id": "V2-F-006",
+      "severity": "major",
+      "title": "Uncertainty and repeated-validation evidence are absent",
+      "paperLines": [203, 241, 244, 288, 300, 324, 327],
+      "evidence": {
+        "paths": ["results/2026-08-28-v2-official-finalist-validation/summary.json", "results/2026-08-29-v2-official-holdout-baselines/summary.json"],
+        "observation": "Official summaries report sample standard deviation, extrema, and 95 percent Student-t confidence intervals. Holdout latency intervals overlap substantially even though occupied-worker counts separate at four, three, and two."
+      },
+      "requiredAction": "Show uncertainty for latency, classify Pareto relations as point-estimate relations, and avoid statistical-superiority language where intervals overlap."
+    },
+    {
+      "id": "V2-F-007",
+      "severity": "major",
+      "title": "Default kube-scheduler is incorrectly described as unmeasured",
+      "paperLines": [66, 90, 199, 203, 334, 336, 345],
+      "evidence": {
+        "path": "results/2026-08-28-v2-official-baselines/analysis-manifest.json",
+        "observation": "The default kube-scheduler was measured for three workloads and three repetitions. It used four workload-occupied workers in all nine runs and completed all Pods, but lacks the custom scheduler's high-resolution decision timestamp."
+      },
+      "requiredAction": "Include it as an external placement reference. Do not compare custom decision latency directly with unavailable default-scheduler decision latency."
+    },
+    {
+      "id": "V2-F-008",
+      "severity": "major",
+      "title": "The paper does not report the independent holdout result",
+      "paperLines": [54, 201, 203, 241, 327, 338],
+      "evidence": {
+        "path": "results/2026-08-29-v2-official-holdout-baselines/analysis-manifest.json",
+        "observation": "The mixed-burst holdout produced three unique repeated-mean Pareto points: spread-heavy at 1.252656 s and four workers, balanced at 1.260228 s and three workers, and consolidation-heavy at 1.304153 s and two workers. Balanced is the preregistered geometric knee."
+      },
+      "requiredAction": "Make the holdout baseline tradeoff the principal validated Pareto result while stating that optimizer generalization was not evaluated because no optimizer finalist survived train validation."
+    },
+    {
+      "id": "V2-F-009",
+      "severity": "major",
+      "title": "Related-work coverage is too narrow",
+      "paperLines": [61, 76, 170, 327, 347],
+      "evidence": {
+        "observation": "The manuscript has six references and no dedicated related-work synthesis for Kubernetes scheduling frameworks, resource-aware placement, multi-objective cloud scheduling, or noisy expensive optimization."
+      },
+      "requiredAction": "Add a concise related-work section using verified primary papers and official Kubernetes documentation. Do not use discovery-tool metadata without primary-source verification."
+    },
+    {
+      "id": "V2-F-010",
+      "severity": "minor",
+      "title": "Workload-aware wording may imply online adaptation",
+      "paperLines": [30, 45, 48, 58, 66, 90, 180, 336, 345],
+      "evidence": {
+        "observation": "The system performs offline policy search over a fixed workload suite and does not adapt weights online from a detected workload class."
+      },
+      "requiredAction": "Define workload-aware as suite-conditioned offline evaluation or adopt a title that says live multi-objective policy search without implying online adaptation."
+    }
+  ],
+  "verifiedOfficialClaims": [
+    {
+      "id": "V2-C-001",
+      "claim": "The v2 policy uses four nonnegative weights normalized to the L1 simplex: FreeCPU, FreeMem, Balance, and Consolidation.",
+      "strength": "implemented and test-backed contract",
+      "evidence": "scheduler/pkg/policy/weights.go and scheduler/main.go"
+    },
+    {
+      "id": "V2-C-002",
+      "claim": "The official baseline protocol contains 36 result rows across three custom policies, default kube-scheduler, three workloads, and three repetitions, with zero unschedulable Pods.",
+      "strength": "official repeated baseline observation",
+      "evidence": "results/2026-08-28-v2-official-baselines/analysis-manifest.json"
+    },
+    {
+      "id": "V2-C-003",
+      "claim": "Three official optimizer seeds evaluated 216 optimizer candidates plus nine baseline evaluations, totaling 675 workload executions and 16,200 completed Pods.",
+      "strength": "official multi-seed single-evaluation observation",
+      "evidence": "results/2026-08-28-v2-official-optimizer-3seed/analysis-manifest.json"
+    },
+    {
+      "id": "V2-C-004",
+      "claim": "None of five optimizer finalists survived the n=10 repeated-mean train Pareto front.",
+      "strength": "official repeated finalist validation",
+      "evidence": "results/2026-08-28-v2-official-finalist-validation/analysis-manifest.json"
+    },
+    {
+      "id": "V2-C-005",
+      "claim": "The independent holdout produced three unique baseline Pareto points with four, three, and two workload-occupied workers; balanced is the interior knee.",
+      "strength": "official held-out repeated baseline validation",
+      "evidence": "results/2026-08-29-v2-official-holdout-baselines/analysis-manifest.json"
+    },
+    {
+      "id": "V2-C-006",
+      "claim": "Every official baseline, optimizer, repeated-finalist, and holdout workload execution completed without unschedulable Pods and retained protocol provenance in committed manifests.",
+      "strength": "cross-protocol official artifact audit",
+      "evidence": "the four official analysis manifests listed in officialEvidenceSources"
+    }
+  ],
+  "gate6Decision": {
+    "v1PaperEvidenceClass": "historical pilot",
+    "v2EvidenceClass": "official",
+    "rawArtifactsImmutable": true,
+    "paperRewriteRequired": true,
+    "paperSubmissionBlocked": true,
+    "nextAction": "Rewrite methods, tables, figures, abstract, discussion, and conclusion against official v2 evidence, then rerun this audit as a closure audit."
+  }
+}
