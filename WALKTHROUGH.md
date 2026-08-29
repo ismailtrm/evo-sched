@@ -2829,6 +2829,97 @@ Gate 6'nın repo giriş, lisans, pinned-version ve reproduction alt-fazı tamaml
 Aktif kalan iş, aynı conservative claim setinden KubeCon CFP başlık, abstract,
 audience outcome ve session-outline metnini üretmektir.
 
+### 3.62. KubeCon Europe 2027 CFP anlatısını official V2 kanıtına bağladık
+
+CFP taslağı yazılmadan önce 29 Ağustos 2026 tarihinde güncel resmi kaynaklar
+yeniden kontrol edildi:
+
+- [KubeCon + CloudNativeCon Europe 2027 CFP](https://events.linuxfoundation.org/kubecon-cloudnativecon-europe/program/cfp/)
+- [Submission Reviewer Guidelines](https://events.linuxfoundation.org/kubecon-cloudnativecon-europe/program/submission-reviewer-guidelines/)
+- [Sessionize submission portal](https://sessionize.com/kubecon-cloudnativecon-europe-2027/)
+
+Resmi takvimde CFP kapanışı `11 Ekim 2026 23:59 CEST`, bildirim tarihi
+`7 Aralık 2026`, program ilanı `9 Aralık 2026` ve etkinlik tarihleri
+`15-18 Mart 2027` olarak doğrulandı. Resmi formatlar arasında 30 dakikalık
+`Session Presentation` ve dijital `Poster Session` bulunuyor. `Emerging +
+Advanced` track'i cloud-native araştırma, akademik paper, proof-of-concept ve
+ileri/niche teknik konuları açıkça kabul ediyor. Reviewer yönergesi içerik,
+özgünlük, relevance ve speaker yeterliliğini; breakout oturumlarında ayrıca hedef
+kitle uyumu, yazım kalitesi ve advertorial olmamayı değerlendiriyor.
+
+Bu bilgilerle şu positioning kararı sabitlendi:
+
+- primary track: `Emerging + Advanced`
+- alternate track: `Operations + Performance`
+- primary format: 30 dakikalık `Session Presentation`
+- fallback format: `Poster Session`
+- experience level taslağı: `Intermediate`; Sessionize seçenekleri kullanıcı
+  tarafından son kez görülmeden nihai kabul edilmeyecek
+- case study: `false`; çalışma bir organizasyonun production implementation
+  raporu değil, gerçek Kubernetes control-plane yolu üzerinde tekrarlanabilir
+  experimental-systems araştırmasıdır
+
+Poster araştırma ve novel-solution işleri için resmi olarak önerilen güvenli bir
+format olsa da primary format yapılmadı. Çalışmanın practitioner değeri yalnızca
+Pareto figürünü göstermekten daha geniştir: canlı bir optimizer'ın measurement
+noise'u optimize edebilmesi, policy-space identifiability, timestamp-source
+ayrımı, hard validity gate'leri ve repeated validation birlikte 30 dakikalık
+teknik bir failure-analysis anlatısını destekliyor.
+
+Başlık şu şekilde seçildi:
+
+> Searching the Kubernetes Scheduler Policy Space: Lessons From Noisy Live Optimization
+
+CFP'nin ana sorusu paper'ın sonuç cümlesinden practitioner diline çevrildi:
+
+> When an optimizer reports a better Kubernetes scheduling policy, did it
+> improve placement or learn the timing noise of the control plane?
+
+Anlatı şu sırayı izler:
+
+1. gerçek custom scheduler, rollout, workload replay ve Pod binding döngüsü
+2. V1'deki scale-equivalent/redundant policy-space problemi ve V2 onarımı
+3. scheduler decision timestamp, Kubernetes time ve evaluator observation lag
+   kaynaklarının ayrıştırılması
+4. üç seed'in ilk bakışta başarılı görünen optimizer-only Pareto sonuçları
+5. beş finalistin `n=10` repeated validation'da nondominated kalamaması
+6. unseen holdout üzerinde `4/3/2` occupied-worker baseline tradeoff'u ve
+   çakışan latency confidence interval'ları
+7. live control-loop tuning için tekrar kullanılabilir deney checklist'i
+
+Bu seçimle özellikle şu güçlü ama desteklenmeyen iddialar reddedildi:
+
+- evolutionary search Kubernetes default scheduler'ını geçti
+- optimizer finalistleri workload'lar dışında genellendi
+- kind sonuçları production performansını kanıtladı
+- workload-occupied worker sayısı powered-node maliyetine eşittir
+- holdout latency ortalamaları istatistiksel olarak birbirinden farklıdır
+
+Versioned taslak
+[`cfp/kubecon-europe-2027.json`](./cfp/kubecon-europe-2027.json) içinde tutulur.
+Dosya yalnızca form metnini değil, track/format gerekçesini, 30 dakikalık akışı,
+supported/excluded claim setini, ilgili open-source projeleri, konuşmacı bilgisini
+ve submission checklist'ini de taşır. JSON `jq empty` ile doğrulandı. Session
+description `179`, ecosystem benefit metni `89` kelimedir. CFP artefact'i paper ve
+README ile aynı official V2 claim setine bağlandı ve ayrı commitlendi:
+
+- `b15d964 docs: draft KubeCon Europe 2027 proposal`
+
+Submission öncesinde insan veya dış platform gerektiren işler kasıtlı olarak açık
+bırakıldı:
+
+- son bir yıl içinde benzer bir Linux Foundation/CNCF konuşması yapılıp
+  yapılmadığı kullanıcı tarafından teyit edilecek
+- speaker bio ve Sessionize experience level kullanıcı tarafından onaylanacak
+- önceki konuşma kaydı yoksa birkaç dakikalık YouTube speaking sample üretilecek
+- tagged GitHub release veya preprint üzerinden stabil public paper PDF URL'si
+  sağlanacak
+- submission anında Sessionize alan ve limitleri yeniden kontrol edilecek
+
+Bu nedenle Gate 6'nın repo-içi CFP drafting alt-fazı tamamlandı; başvurunun kendisi
+henüz gönderilmiş sayılmıyor. Sıradaki kapı, dış submission artefact'lerini
+tamamlayıp Sessionize formunu kullanıcı onayıyla doldurmaktır.
+
 ## 4. Şu Anki Durum
 
 Şu anda proje durumu şöyledir:
@@ -2900,7 +2991,8 @@ audience outcome ve session-outline metnini üretmektir.
 - Public İngilizce README, Apache-2.0 lisansı ve pinned tested-version bilgisi eklenmiştir
 - `make verify` Go test/vet, official summary regeneration, evidence audit ve paper PDF kontrollerini tek komutta geçmiştir
 - Functional live smoke ve kind resource lifecycle komutları Makefile entrypoint'leri olarak eklenmiştir
-- Gate 6'nın aktif kalan işi KubeCon CFP metnidir
+- Gate 6 CFP taslağı official V2 claim setine bağlı ve commitlidir; public paper
+  PDF, speaking sample, kullanıcı teyitleri ve Sessionize gönderimi açıktır
 - Scheduler interval testli admin komutuyla canonical `2s` değerine restore edilmiştir
 - `evo-sched` kind container'ları Gate 5 search postflight sonrasında silinmeden durdurulmuştur
 - Scheduler experiment preflight skill'i V2 contract, canonical weights ve exact worker-count kontrolüyle güncellenmiştir
@@ -2926,7 +3018,8 @@ audience outcome ve session-outline metnini üretmektir.
 - Üç V2 train workload üzerinde üç custom policy ve default kube-scheduler için üç tekrarlı official baseline protokolü tamamlanmıştır
 - Official baseline artifactleri, manifestleri ve mean/sample-SD/worst-case özetleri commitlenmiştir
 - Clean/tag/preflight hard gate'li ve interruption recovery destekli repo-içi official multi-seed runner tamamlanmıştır
-- Sıradaki iş official V2 claim setinden KubeCon CFP anlatısını üretmektir
+- Sıradaki iş stabil public paper PDF ve speaking sample hazırlayıp CFP taslağını
+  kullanıcı onayıyla Sessionize'a aktarmaktır
 
 Başka bir ifadeyle:
 
@@ -3099,11 +3192,15 @@ Sonuç:
 - [x] Official V2 uncertainty, baseline, repeated-validation ve holdout bilgisini grafiklerde görünür yap
 - [x] Final PDF'yi derle, altı sayfayı görsel incele ve evidence audit'i commit SHA ile kapat
 - [x] README, lisans, pinned sürümler ve tek komutlu reproduction akışı ekle
-- CFP anlatısını "evrensel en iyi scheduler" yerine canlı cluster üzerinde policy-space search sırasında öğrenilen tradeoff ve metodoloji dersleri üzerine kur
+- [x] CFP anlatısını "evrensel en iyi scheduler" yerine canlı cluster üzerinde policy-space search sırasında öğrenilen tradeoff ve metodoloji dersleri üzerine kur
+- [ ] Stabil public paper PDF, speaking sample ve kullanıcı teyitlerini tamamla
+- [ ] Sessionize formunu son resmi gereksinim kontrolünden sonra gönder
 
 Çıkış koşulu:
 
 - Repo, paper ve CFP metni aynı commitlenmiş kanıt setini referans göstermeli
+- Dış submission artefact'leri tamamlanmalı ve gönderim kullanıcı tarafından
+  onaylanmalı
 
 ## 6. Bu Dosya Nasıl Kullanılmalı
 
