@@ -51,7 +51,7 @@ Izmir, Turkiye \\
 \maketitle
 
 \begin{abstract}
-Kubernetes node placement couples scheduling delay, resource balance, and workload consolidation. We present a live custom scheduler whose scoring policy is represented by four nonnegative, normalized weights: \texttt{FreeCPU}, \texttt{FreeMem}, \texttt{Balance}, and \texttt{Consolidation}. Candidate policies are evaluated by patching a running scheduler deployment, replaying 24-Pod synthetic workloads, and measuring high-resolution scheduling-decision latency and maximum workload-occupied worker count. An NSGA-II-style search evaluated 216 candidates across three seeds on a 4-worker kind cluster. Although each single-evaluation search produced apparently novel Pareto points, none of five finalists survived a preregistered validation with ten repetitions per policy--workload pair. This negative result shows that live-cluster timing noise can mislead expensive black-box search when each candidate is measured once. An independent ten-repeat holdout nevertheless produced a stable three-point baseline tradeoff: spread-heavy, balanced, and consolidation-heavy policies occupied four, three, and two workers, with mean p95 decision latencies of $1.253$, $1.260$, and $1.304$ s, respectively. The latency confidence intervals overlap, so the ordering is descriptive rather than a significance claim. The study contributes a reproducible live-cluster search method, an identifiable policy representation, and evidence that repeated validation is essential when optimizing scheduler measurements.
+Kubernetes node placement couples scheduling delay, resource balance, and workload consolidation. We present a live custom scheduler whose scoring policy is represented by four nonnegative, normalized weights: \texttt{FreeCPU}, \texttt{FreeMem}, \texttt{Balance}, and \texttt{Consolidation}. Candidate policies are evaluated by patching a running scheduler deployment, replaying 24-Pod synthetic workloads, and measuring high-resolution scheduling-decision latency and maximum workload-occupied worker count. An NSGA-II-style search evaluated 216 candidates across three seeds on a 4-worker kind cluster. Although each single-evaluation search produced apparently novel Pareto points, none of five finalists remained nondominated under repeated-mean evaluation using a ten-repeat validation protocol pre-specified and committed before execution. This negative result shows that live-cluster timing noise can mislead expensive black-box search when each candidate is measured once. An independent ten-repeat holdout nevertheless produced a stable three-point baseline tradeoff: spread-heavy, balanced, and consolidation-heavy policies occupied four, three, and two workers, with mean p95 decision latencies of $1.253$, $1.260$, and $1.304$ s, respectively. The latency confidence intervals overlap, so the ordering is descriptive rather than a significance claim. The study contributes a reproducible live-cluster search method, an identifiable policy representation, and evidence that repeated validation is essential when optimizing scheduler measurements.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -69,7 +69,7 @@ The main contributions of the paper are as follows:
 \begin{itemize}
 \item A real custom scheduler and evaluator that perform feasibility filtering, Pod binding, deployment reconfiguration, workload replay, cleanup, and provenance capture on a live Kubernetes cluster.
 \item A versioned four-feature policy whose nonnegative weights are normalized to remove positive-scale equivalence and whose signals independently affect representative node rankings.
-\item An official three-seed search and preregistered repeated-validation protocol covering 16,200 search Pods and 5,760 validation Pods, with the default Kubernetes scheduler retained as an external placement reference.
+\item An official three-seed search and repeated-validation protocol, pre-specified and committed before execution, covering 16,200 search Pods and 5,760 validation Pods, with the default Kubernetes scheduler retained as an external placement reference.
 \item An empirical result showing both a held-out three-point baseline tradeoff and the failure of one-shot optimizer improvements to survive repeated evaluation.
 \end{itemize}
 
@@ -164,7 +164,7 @@ Seeds 42, 123, and 999 each evaluate 72 optimizer candidates plus three baseline
 
 Every 250 ms, the evaluator counts workers hosting non-terminal managed Pods and computes requested-load support metrics from Pod requests divided by run-start allocatable capacity. Dominant requested load on a worker is the larger CPU or memory requested fraction; the reported load variance is the population variance of that value across the four workers, averaged over samples. It is a placement-balance measure, not hardware utilization. Completion and unschedulable counts are safety checks.
 
-\textit{Protocols.} Official baselines use three repetitions for each of three custom policies and the default kube-scheduler on each training workload. The evolutionary stage evaluates each candidate once per training workload for three seeds. Repeated validation then evaluates five optimizer finalists and all three baselines ten times per training workload. Finally, a preregistered selection rule carries repeated-front representatives plus baselines to the holdout; because no optimizer finalist survives, deduplication leaves the three baselines. Latency uncertainty is summarized with sample standard deviation, extrema, and 95\% Student-$t$ confidence intervals. Pareto relations use repeated-mean point estimates and are not significance tests.
+\textit{Protocols.} Official baselines use three repetitions for each of three custom policies and the default kube-scheduler on each training workload. The evolutionary stage evaluates each candidate once per training workload for three seeds. Repeated validation then evaluates five optimizer finalists and all three baselines ten times per training workload. Finally, a selection rule pre-specified and committed before execution carries repeated-front representatives plus baselines to the holdout; because no optimizer finalist remains nondominated, deduplication leaves the three baselines. Latency uncertainty is summarized with sample standard deviation, extrema, and 95\% Student-$t$ confidence intervals. Pareto relations use repeated-mean point estimates and are not significance tests.
 
 \begin{table}[t]
 \caption{Official V2 experimental setup.}
@@ -250,7 +250,7 @@ None of the five optimizer finalists remains nondominated. The closest, \texttt{
 \end{figure}
 
 \subsection{Independent Holdout}
-The holdout contains 30 observations and 720 completed Pods. All three baselines are now nondominated (Table~\ref{tab:holdout}). Spread-heavy is pending-best and uses four workers; consolidation-heavy uses two; balanced lies between them. Relative to spread-heavy, balanced reduces occupied workers by 25\% for a 0.60\% point-estimate latency increase. Consolidation-heavy halves occupied workers for a 4.11\% increase. The preregistered normalized line-distance rule selects balanced as the interior knee.
+The holdout contains 30 observations and 720 completed Pods. All three baselines lie on the point-estimate Pareto front (Table~\ref{tab:holdout}). Spread-heavy is pending-best and uses four workers; consolidation-heavy uses two; balanced lies between them. Relative to spread-heavy, balanced reduces occupied workers by 25\% for a 0.60\% point-estimate latency increase. Consolidation-heavy halves occupied workers for a 4.11\% increase. The normalized line-distance rule, pre-specified and committed before execution, selects balanced as the interior knee.
 
 \begin{table}[t]
 \caption{Ten-repeat mixed-burst holdout. CI is a 95\% Student-$t$ interval for mean p95 decision latency.}
@@ -271,16 +271,18 @@ Consolidation & 1.304 [1.184, 1.424] & 2 & 0.1650 \\
 \begin{figure}[t]
 \centering
 \input{figures/holdout-pareto}
-\caption{Holdout Pareto front with 95\% confidence intervals on mean p95 latency. Intervals overlap; worker counts separate deterministically. The star marks the balanced knee.}
+\caption{Holdout point-estimate Pareto front with 95\% confidence intervals on mean p95 latency. Intervals overlap; worker counts separate deterministically. The star marks the balanced knee.}
 \label{fig:holdout-pareto}
 \end{figure}
 
-The holdout validates the policy tradeoff, not optimizer generalization. The preregistered rule excluded all optimizer finalists after they failed repeated training validation. The change from a two-point training front to a three-point holdout front also demonstrates workload-dependent Pareto geometry.
+The holdout validates the policy tradeoff, not optimizer generalization. The pre-specified rule carried no optimizer finalist to holdout because none remained nondominated under repeated-mean training evaluation. The change from a two-point training front to a point-estimate holdout front with three points also demonstrates workload-dependent Pareto geometry.
 
 \section{Discussion and Limitations}
 The strongest result is methodological. A one-shot evaluator made every seed appear to improve upon the baselines, yet shared repeated validation removed every optimizer finalist. The search was functioning as implemented; its fitness estimate was insufficiently robust. Re-evaluation is therefore not a cosmetic reporting step but part of the optimization design for live systems. Future search should use repeated or adaptive resampling during selection, confidence-aware dominance, or a two-stage low-cost screening and high-confidence promotion protocol.
 
 The holdout establishes a real policy tradeoff but not statistically distinct latency means. Its confidence intervals overlap, while occupied-worker counts and requested-load variance separate strongly. The responsible interpretation is that placement character changes reliably and latency point estimates move modestly. Larger repeated samples would be required to resolve those latency differences.
+
+Each workload run contains only 24 Pods. With that sample size, the linearly interpolated p95 lies between the 22nd and 23rd ordered latency observations and is therefore sensitive to perturbations in only a few upper-tail samples. Repetition and interval reporting expose, but do not eliminate, this limitation.
 
 External validity is limited. kind preserves the Kubernetes API, rollout, and binding path, but all four workers are homogeneous containers on one host. Workloads are synthetic, short, request-driven, and run without unrelated background demand or autoscaling. Maximum workload-occupied workers is not active infrastructure cost; requested-load variance is not measured CPU or memory utilization. Trace-derived workloads, heterogeneous workers, longer durations, and multi-host clusters remain future work.
 
@@ -291,7 +293,7 @@ Finally, optimizer hyperparameters were fixed rather than tuned, and the holdout
 \section{Conclusion}
 We built a versioned, parameterized scheduler and coupled multi-objective evolutionary search to real Kubernetes rollout, replay, measurement, and binding operations. The V2 representation removes scale redundancy and replaces a dependent packing feature with explicit balance and consolidation signals.
 
-Three search seeds generated promising one-shot Pareto candidates, but ten-repeat validation rejected all five finalists. This negative result is the central lesson: live-cluster policy search can optimize measurement noise unless uncertainty is included in evaluation and selection. Separately, the independent holdout produced a three-point baseline front spanning four, three, and two occupied workers, with balanced selected as the geometric knee. Thus, policy weights materially alter placement, but the best tradeoff remains workload-dependent.
+Three search seeds generated promising one-shot Pareto candidates, but none of the five finalists remained nondominated under repeated-mean evaluation. This negative result is the central lesson: live-cluster policy search can optimize measurement noise unless uncertainty is included in evaluation and selection. Separately, the independent holdout produced a point-estimate baseline front with three points spanning four, three, and two occupied workers, with balanced selected as the geometric knee. Thus, policy weights materially alter placement, but the best tradeoff remains workload-dependent.
 
 The project demonstrates both why live evaluation matters and why it is not enough by itself. Reproducible manifests, repeated validation, held-out workloads, timestamp-source separation, and conservative claims are necessary parts of scheduler optimization. Code, workloads, commands, manifests, and raw results are available at \url{https://github.com/ismailtrm/evo-sched}.
 
