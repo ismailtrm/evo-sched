@@ -2985,6 +2985,80 @@ small-sample p95 limitation ve nearest-neighbor literature düzeltmeleri yapıla
 ardından V2 public artifact release hazırlanacak. Noise-aware V3 extension ancak
 ayrı, budget-matched ve sonuçtan önce sabitlenmiş protokolle açılacaktır.
 
+### 3.64. Paper claim dilini ve en yakın literatür konumlandırmasını kapattık
+
+V2 paper bağımsız tekrar değerlendirmesinde bilimsel sonucu değiştirmeyen, fakat
+claim gücünü ve özgünlük sınırını etkileyen iki risk bulundu:
+
+- Pareto dominance sonucunun `rejected` veya `survived` gibi istatistiksel test
+  çağrışımı yapan kelimelerle özetlenmesi
+- Kubernetes scheduling'de NSGA-II kullanımının kendisinin yenilik gibi
+  algılanabilmesi
+
+İlk risk için paper'da şu terminoloji sözleşmesi uygulandı:
+
+- ana repeated-validation sonucu `none of the five finalists remained
+  nondominated under repeated-mean evaluation` olarak yazıldı
+- public preregistration kanıtı bulunmadığı için `preregistered` yerine
+  `pre-specified and committed before execution` kullanıldı
+- holdout front her yerde `point-estimate Pareto front` olarak adlandırıldı;
+  Pareto dominance'ın significance test olmadığı korunmaya devam etti
+- her run'ın yalnızca `24` Pod içermesi nedeniyle linear-interpolation p95'in 22.
+  ve 23. sıralı latency gözlemleri arasında kaldığı ve birkaç upper-tail örneğe
+  duyarlı olduğu limitation'a eklendi
+
+İkinci risk için nearest-neighbor audit discovery sonucu değil primary/canonical
+kaynaklar üzerinden kapatıldı:
+
+- Di Cicco vd., Kubernetes replica scheduling ve resource allocation'ı
+  heterogeneous multi-cluster düzeyinde MO-ILP olarak kurup NSGA-II, NSGA-III ve
+  multi-swarm PSO ile latency, cost ve interruption objective'lerini araştırır:
+  <https://doi.org/10.23919/CNSM62983.2024.10814307>
+- Gouaouri vd., TOPSIS ile centralized/distributed NSGA-II'yi online
+  power-aware Kubernetes scheduler plugin'ine bağlayıp power, utilization ve
+  load balancing objective'lerini optimize eder:
+  <https://doi.org/10.1109/TNSM.2025.3630045>
+- Branke, noisy multi-objective estimate'lerin decision-maker selection error
+  üretebildiğini ve conventional performance metric'lerin bunu kaçırabildiğini
+  gösterir:
+  <https://doi.org/10.1109/TEVC.2024.3438115>
+
+2026 KU-NSGA-II çalışması yalnızca under-review preprint olarak bulunabildiği ve
+altı sayfalık paper'da yukarıdaki peer-reviewed en yakın çalışmalar yeterli
+konumlandırmayı sağladığı için bibliography'ye alınmadı. Bu bir "literatürde yok"
+iddiası değildir; publication status ve sayfa bütçesine dayalı inclusion kararıdır.
+
+Paper'ın savunulabilir özgünlük ekseni şu şekilde daraltıldı:
+
+> Existing work primarily asks whether multi-objective or evolutionary
+> scheduling can improve placement objectives. This study instead examines
+> whether apparent improvements remain valid when fitness is obtained from
+> noisy, repeated live-cluster measurements.
+
+Bibliography yeni üç kaynakla `15` girdiye çıktı, ilk citation sırasına göre
+yeniden düzenlendi ve `IEEEtriggeratref{2}` ile son sayfa sütunları dengelendi.
+Paper altı sayfada kaldı; tüm fontlar embedded Type 1, `qpdf --check` temiz ve
+undefined citation/reference veya overfull box yoktur.
+
+Bu faz üç atomik commit ile kapatıldı:
+
+- `bc1f5c4 docs: tighten paper claim language`
+- `b9636e1 docs: position paper against nearest work`
+- `0f2fd52 docs: refresh v2 paper evidence closure`
+
+Son commit'teki [evidence audit](paper/evidence-audit-v2.json), closure paper
+SHA'sını `b9636e1f31a5c5dbf755d0e26aa51fd11a4c59b9` olarak sabitler ve 24-Pod
+p95 riskini residual limitation olarak taşır. Ardından `make verify`; Go test,
+`go vet`, dört official analysis ailesinin regeneration/comparison'ı,
+paper--audit SHA kontrolü, LaTeX build, `qpdf`, sayfa ve font kontrollerinin
+tamamında geçti.
+
+Bu kapanıştan sonra local/committed V2 evidence hazırdır; public/released durumu
+henüz iddia edilmemektedir. Sıradaki aktif iş `research-artifact-release` audit'i
+ile branch/tag/remote farkını çıkarmak, sonra kullanıcı onayıyla stabil V2 release
+ve public paper PDF oluşturmaktır. Killer figure bu public evidence setinden sonra
+üretilecek; V3 bu iki işi bloklamayacaktır.
+
 ## 4. Şu Anki Durum
 
 Şu anda proje durumu şöyledir:
@@ -3256,6 +3330,9 @@ Sonuç:
 - [x] Abstract, methods, results, discussion ve conclusion'ı yalnızca final protokol sonuçlarıyla güncelle
 - [x] Official V2 uncertainty, baseline, repeated-validation ve holdout bilgisini grafiklerde görünür yap
 - [x] Final PDF'yi derle, altı sayfayı görsel incele ve evidence audit'i commit SHA ile kapat
+- [x] Statistical-test çağrışımlı claim dilini point-estimate Pareto sözleşmesine göre düzelt
+- [x] Small-sample p95 limitation'ını ve pre-specified protocol dilini paper ile evidence audit'e ekle
+- [x] En yakın multi-objective Kubernetes scheduling çalışmalarını primary kaynaklarla doğrula ve novelty claim'ini noisy live fitness validation eksenine daralt
 - [x] README, lisans, pinned sürümler ve tek komutlu reproduction akışı ekle
 - [x] CFP anlatısını "evrensel en iyi scheduler" yerine canlı cluster üzerinde policy-space search sırasında öğrenilen tradeoff ve metodoloji dersleri üzerine kur
 - [ ] Stabil public paper PDF, speaking sample ve kullanıcı teyitlerini tamamla
