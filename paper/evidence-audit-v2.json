@@ -1,7 +1,7 @@
 {
   "auditVersion": 2,
   "auditedAt": "2026-08-29T04:19:44Z",
-  "closedAt": "2026-08-29T04:35:19Z",
+  "closedAt": "2026-08-30T21:02:04Z",
   "status": "closed",
   "auditedPaper": {
     "path": "paper/main.tex",
@@ -63,7 +63,7 @@
       "paperLines": [54, 73, 188, 242, 288, 300, 303, 307, 324, 332, 336, 341, 343, 345],
       "evidence": {
         "path": "results/2026-08-28-v2-official-finalist-validation/analysis-manifest.json",
-        "observation": "Across eight policies, three training workloads, and ten repetitions per policy-workload, none of the five optimizer finalists survived the repeated-mean Pareto front. All were dominated by balanced or consolidation-heavy baselines."
+        "observation": "Across eight policies, three training workloads, and ten repetitions per policy-workload, none of the five optimizer finalists remained nondominated on the repeated-mean point-estimate Pareto front. All were dominated by balanced or consolidation-heavy baselines."
       },
       "requiredAction": "Remove claims that evolutionary search found a validated regime beyond the baselines. Report the single-evaluation three-seed search as a provisional stage and the failed reproduction as a negative validation result about live-cluster measurement noise."
     },
@@ -128,9 +128,9 @@
       "paperLines": [54, 201, 203, 241, 327, 338],
       "evidence": {
         "path": "results/2026-08-29-v2-official-holdout-baselines/analysis-manifest.json",
-        "observation": "The mixed-burst holdout produced three unique repeated-mean Pareto points: spread-heavy at 1.252656 s and four workers, balanced at 1.260228 s and three workers, and consolidation-heavy at 1.304153 s and two workers. Balanced is the preregistered geometric knee."
+        "observation": "The mixed-burst holdout produced three unique repeated-mean point-estimate Pareto points: spread-heavy at 1.252656 s and four workers, balanced at 1.260228 s and three workers, and consolidation-heavy at 1.304153 s and two workers. Balanced is the geometric knee selected by the normalized line-distance rule pre-specified and committed before execution."
       },
-      "requiredAction": "Make the holdout baseline tradeoff the principal validated Pareto result while stating that optimizer generalization was not evaluated because no optimizer finalist survived train validation."
+      "requiredAction": "Make the holdout baseline tradeoff the principal validated point-estimate Pareto result while stating that optimizer generalization was not evaluated because no optimizer finalist remained nondominated under repeated-mean training evaluation."
     },
     {
       "id": "V2-F-009",
@@ -174,13 +174,13 @@
     },
     {
       "id": "V2-C-004",
-      "claim": "None of five optimizer finalists survived the n=10 repeated-mean train Pareto front.",
+      "claim": "None of five optimizer finalists remained nondominated on the n=10 repeated-mean point-estimate training Pareto front.",
       "strength": "official repeated finalist validation",
       "evidence": "results/2026-08-28-v2-official-finalist-validation/analysis-manifest.json"
     },
     {
       "id": "V2-C-005",
-      "claim": "The independent holdout produced three unique baseline Pareto points with four, three, and two workload-occupied workers; balanced is the interior knee.",
+      "claim": "The independent holdout produced three unique baseline point-estimate Pareto points with four, three, and two workload-occupied workers; balanced is the interior knee.",
       "strength": "official held-out repeated baseline validation",
       "evidence": "results/2026-08-29-v2-official-holdout-baselines/analysis-manifest.json"
     },
@@ -200,7 +200,7 @@
     "nextAction": "Preserve this evidence-closed manuscript as the Gate 6 baseline; future claims require new versioned evidence and a new audit."
   },
   "closureAudit": {
-    "paperCommit": "549e272546d0c6e5b8f2a1a7ae966a916256032d",
+    "paperCommit": "b9636e1f31a5c5dbf755d0e26aa51fd11a4c59b9",
     "initialFindingCount": 10,
     "resolvedFindingCount": 10,
     "resolutions": [
@@ -210,7 +210,7 @@
       },
       {
         "findingIds": ["V2-F-002", "V2-F-006", "V2-F-008"],
-        "resolution": "Separated provisional one-shot search from repeated validation and holdout evidence; reported that no optimizer finalist survived; included Student-t confidence intervals and the three-point holdout baseline front."
+        "resolution": "Separated provisional one-shot search from repeated validation and holdout evidence; reported that no optimizer finalist remained nondominated under repeated-mean evaluation; included Student-t confidence intervals and the three-point point-estimate holdout baseline front."
       },
       {
         "findingIds": ["V2-F-003", "V2-F-005", "V2-F-007"],
@@ -218,7 +218,7 @@
       },
       {
         "findingIds": ["V2-F-009"],
-        "resolution": "Added a dedicated related-work section with verified primary cluster-scheduling and evolutionary-optimization sources plus official Kubernetes documentation."
+        "resolution": "Added a dedicated related-work section with verified primary cluster-scheduling sources, the nearest multi-objective Kubernetes scheduling studies, noisy-optimization evidence, and official Kubernetes documentation."
       }
     ],
     "checks": {
@@ -236,8 +236,9 @@
       "kind workers are homogeneous containers on one physical host",
       "workloads are synthetic and short",
       "default kube-scheduler lacks the custom decision timestamp and is not a latency baseline",
-      "holdout evaluates baselines only because no optimizer finalist passed training validation",
-      "latency confidence intervals overlap and do not support superiority claims"
+      "holdout evaluates baselines only because no optimizer finalist remained nondominated under repeated-mean training evaluation",
+      "latency confidence intervals overlap and do not support superiority claims",
+      "each 24-Pod run's linearly interpolated p95 depends on the 22nd and 23rd ordered observations and is sensitive to a few upper-tail samples"
     ]
   }
 }
