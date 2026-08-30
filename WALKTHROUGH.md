@@ -2920,6 +2920,71 @@ Bu nedenle Gate 6'nın repo-içi CFP drafting alt-fazı tamamlandı; başvurunun
 henüz gönderilmiş sayılmıyor. Sıradaki kapı, dış submission artefact'lerini
 tamamlayıp Sessionize formunu kullanıcı onayıyla doldurmaktır.
 
+### 3.63. Research release, literature ve noisy-optimization skill yüzeyini güçlendirdik
+
+V1 ile V2'yi karşılaştıran bağımsız bir değerlendirme, V2'nin merkezi negatif
+sonucunu doğru okurken üç tekrar eden agent-workflow sürtünmesini görünür hale
+getirdi:
+
+- local checkout'ta tamamlanmış kanıt ile public remote/release durumunun
+  karıştırılması
+- en yakın Kubernetes + multi-objective optimization çalışmalarının genel
+  related work içinden güvenilir publication metadata'sıyla ayrılması
+- point-estimate Pareto dominance, statistical rejection, pre-specified protocol
+  ve public preregistration kavramlarının aynı dilde kullanılabilmesi
+
+Bu boşluklar için `~/.codex/skills` altında üç otomatik keşfedilebilir skill
+oluşturuldu:
+
+- `research-artifact-release`: local, committed, public ve released durumlarını
+  ayrı denetler; branch/tag/PDF/raw evidence/checksum/release zincirini doğrular
+  ve push/release gibi dış mutation'ları explicit kullanıcı onayına bağlar
+- `nearest-neighbor-literature-audit`: novelty claim'ini yöntem bileşenlerine
+  ayırır, aggregator'ları yalnızca discovery için kullanır, primary/canonical
+  kaynaktan DOI/venue/publication status doğrular ve defensible novelty matrix'i
+  üretir
+- `noisy-live-optimization-protocol`: live fitness için estimand, noise source,
+  p95 sample support, budget accounting, resampling/promotion/stopping rule ve
+  point-estimate Pareto yorumunu official koşudan önce sabitler
+
+Mevcut research skill'leri de yalnızca bu çalışmada gözlenen somut hatalara göre
+audit edildi. Beş dar güncelleme yapıldı:
+
+- `research-experiment-ledger`: local/committed/public/released ayrımı ve local
+  annotated tag'in tek başına public preregistration olmadığı eklendi
+- `paper-evidence-audit`: küçük örneklem tail percentile kontrolü,
+  point-estimate Pareto dili, `rejected/significant/preregistered` terminoloji
+  gate'leri ve public availability doğrulaması eklendi
+- `policy-space-audit`: optimizer'ın normalize edilmiş phenotype'i population,
+  crossover, mutation ve dedup boyunca canonical saklayıp saklamadığı denetime
+  eklendi
+- `multi-seed-experiment-runner`: repo-içi provenance-gated runner varsa ona
+  öncelik verildi; generic helper output'unun tek başına official evidence
+  sayılamayacağı açıklandı
+- `pareto-experiment-analysis`: V1 ve V2 objective schema ayrımı, one-shot
+  sonuçların provisional statüsü ve repeated-mean point-estimate dili eklendi
+
+Audit sırasında `pareto-experiment-analysis/scripts/pareto_summary.py` helper'ının
+V2 `result.json` üzerinde eski `averageP95Pending` alanını bekleyip `KeyError` ile
+çöktüğü yeniden üretildi. Helper iki objective contract'ını otomatik tanıyacak
+şekilde güncellendi:
+
+- V1: `averageP95Pending`, `averageMaxActiveNodes`
+- V2: `averageP95SchedulingDecisionLatencySeconds`,
+  `averageMaxWorkloadOccupiedWorkerNodes`
+
+Güncellenmiş helper V1 seed-42 artifact'inde eski sayıları korudu; official V2
+seed-42 artifact'inde `72` optimizer adayı, `3` baseline, `2` combined Pareto
+üyesi ve `2` unique objective point üretti. Üç yeni ve beş güncel skill kurulu
+konumlarında `quick_validate.py` kontrolünden geçti. Repo dışındaki global skill
+dosyaları Git'e eklenmedi; bu bölüm karar ve doğrulama provenance'ını repo içinde
+korur.
+
+Bu bakım turundan sonra sıradaki research gate değişmedi. Önce paper terminoloji,
+small-sample p95 limitation ve nearest-neighbor literature düzeltmeleri yapılacak;
+ardından V2 public artifact release hazırlanacak. Noise-aware V3 extension ancak
+ayrı, budget-matched ve sonuçtan önce sabitlenmiş protokolle açılacaktır.
+
 ## 4. Şu Anki Durum
 
 Şu anda proje durumu şöyledir:
