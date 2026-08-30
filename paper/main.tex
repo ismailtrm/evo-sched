@@ -101,7 +101,9 @@ Large-scale cluster schedulers expose several ways to trade placement quality, r
 
 Kubernetes itself provides configurable profiles and score plugins, including resource-fit, topology, affinity, and taint-related plugins \cite{ref-k8s-config}. The platform also permits multiple named schedulers in one cluster. We use that mechanism to run a separate custom scheduler and retain the unmodified \texttt{default-scheduler} profile as an external placement reference.
 
-NSGA-II supplies the nondominated sorting, crowding, and elitist selection used in our optimizer \cite{ref-nsga2}. However, live systems create uncertain fitness through timing jitter and environmental variation. Prior evolutionary-computation literature identifies re-evaluation and other uncertainty-handling measures as necessary when fitness is noisy \cite{ref-noisy-ea}. Our experiment gives a concrete Kubernetes instance of that warning: apparent one-shot improvements disappear under repeated validation.
+Multi-objective Kubernetes scheduling is itself established. Di Cicco et al. formulate offline scheduling and replica allocation across heterogeneous Kubernetes clusters as a multi-objective integer program, then apply NSGA-II, NSGA-III, and multi-swarm particle swarm optimization to latency, cost, and interruption objectives \cite{ref-dicicco}. Gouaouri et al. integrate TOPSIS and centralized and distributed NSGA-II into an online, power-aware Kubernetes scheduler for power consumption, resource utilization, and load balancing \cite{ref-gouaouri}. Existing work primarily asks whether multi-objective or evolutionary scheduling can improve placement objectives. This study instead examines whether apparent improvements remain valid when fitness is obtained from noisy, repeated live-cluster measurements.
+
+NSGA-II supplies the nondominated sorting, crowding, and elitist selection used in our optimizer \cite{ref-nsga2}. However, live systems create uncertain fitness through timing jitter and environmental variation. Prior evolutionary-computation literature identifies re-evaluation and other uncertainty-handling measures as necessary when fitness is noisy \cite{ref-noisy-ea}. More recent analysis shows that inaccurate multi-objective estimates can cause selection errors that conventional performance metrics fail to represent \cite{ref-noisy-moo-metrics}. Our experiment gives a concrete Kubernetes instance of that warning: apparent one-shot improvements disappear under repeated validation.
 
 \section{System Design}
 The platform is a kind cluster with one control-plane node and four homogeneous workers \cite{ref-kind}. It preserves the Kubernetes API server, scheduler coexistence, deployment rollout, and Pod binding path while remaining reproducible on one host. Official manifests record the clean Git commit, annotated protocol tag, workload and deployment checksums, cluster topology, server and client versions, scheduler image identity, preflight state, and postflight restoration.
@@ -298,13 +300,29 @@ Three search seeds generated promising one-shot Pareto candidates, but none of t
 The project demonstrates both why live evaluation matters and why it is not enough by itself. Reproducible manifests, repeated validation, held-out workloads, timestamp-source separation, and conservative claims are necessary parts of scheduler optimization. Code, workloads, commands, manifests, and raw results are available at \url{https://github.com/ismailtrm/evo-sched}.
 
 \bibliographystyle{IEEEtran}
-\IEEEtriggeratref{6}
+\IEEEtriggeratref{2}
 \begin{thebibliography}{00}
 \bibitem{ref-borg}
 A. Verma, L. Pedrosa, M. R. Korupolu, D. Oppenheimer, E. Tune, and J. Wilkes,
 ``Large-scale cluster management at Google with Borg,''
 in \emph{Proc. 10th Eur. Conf. Comput. Syst.}, 2015, pp. 1--17,
 doi: 10.1145/2741948.2741964.
+
+\bibitem{ref-k8s-framework}
+Kubernetes Documentation, ``Scheduling Framework,'' accessed Aug. 29, 2026.
+[Online]. Available: \url{https://kubernetes.io/docs/concepts/scheduling-eviction/scheduling-framework/}
+
+\bibitem{ref-k8s-node-status}
+Kubernetes Documentation,
+``Node Status,''
+accessed Aug. 29, 2026.
+[Online]. Available: \url{https://kubernetes.io/docs/reference/node/node-status/}
+
+\bibitem{ref-k8s-taints}
+Kubernetes Documentation,
+``Taints and Tolerations,''
+accessed Aug. 29, 2026.
+[Online]. Available: \url{https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/}
 
 \bibitem{ref-omega}
 M. Schwarzkopf, A. Konwinski, M. Abd-El-Malek, and J. Wilkes,
@@ -328,31 +346,23 @@ R. Grandl, G. Ananthanarayanan, S. Kandula, S. Rao, and A. Akella,
 in \emph{Proc. ACM SIGCOMM}, 2014, pp. 455--466,
 doi: 10.1145/2619239.2626334.
 
-\bibitem{ref-k8s-framework}
-Kubernetes Documentation, ``Scheduling Framework,'' accessed Aug. 29, 2026.
-[Online]. Available: \url{https://kubernetes.io/docs/concepts/scheduling-eviction/scheduling-framework/}
-
 \bibitem{ref-k8s-config}
 Kubernetes Documentation, ``Scheduler Configuration,'' accessed Aug. 29, 2026.
 [Online]. Available: \url{https://kubernetes.io/docs/reference/scheduling/config/}
 
-\bibitem{ref-k8s-node-status}
-Kubernetes Documentation,
-``Node Status,''
-accessed Aug. 29, 2026.
-[Online]. Available: \url{https://kubernetes.io/docs/reference/node/node-status/}
+\bibitem{ref-dicicco}
+N. Di Cicco, F. Poltronieri, J. Santos, M. Zaccarini, M. Tortonesi,
+C. Stefanelli, and F. De Turck,
+``Multi-objective scheduling and resource allocation of Kubernetes replicas
+across the compute continuum,'' in \emph{Proc. 20th Int. Conf. Network and
+Service Management (CNSM)}, 2024,
+doi: 10.23919/CNSM62983.2024.10814307.
 
-\bibitem{ref-k8s-taints}
-Kubernetes Documentation,
-``Taints and Tolerations,''
-accessed Aug. 29, 2026.
-[Online]. Available: \url{https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/}
-
-\bibitem{ref-kind}
-kind Documentation,
-``kind: Kubernetes IN Docker,''
-accessed Aug. 29, 2026.
-[Online]. Available: \url{https://kind.sigs.k8s.io/}
+\bibitem{ref-gouaouri}
+M. D. E. Gouaouri, S. Ouahouah, M. Bagaa, M. A. Ouameur, and A. Ksentini,
+``A multi-objective framework for power-aware scheduling in Kubernetes,''
+\emph{IEEE Trans. Netw. Service Manag.}, vol. 23, pp. 28--46, 2026,
+doi: 10.1109/TNSM.2025.3630045.
 
 \bibitem{ref-nsga2}
 K. Deb, A. Pratap, S. Agarwal, and T. Meyarivan,
@@ -365,6 +375,18 @@ Y. Jin and J. Branke,
 ``Evolutionary optimization in uncertain environments---A survey,''
 \emph{IEEE Trans. Evol. Comput.}, vol. 9, no. 3, pp. 303--317, 2005,
 doi: 10.1109/TEVC.2005.846356.
+
+\bibitem{ref-noisy-moo-metrics}
+J. Branke,
+``Performance metrics for multi-objective optimisation under noise,''
+\emph{IEEE Trans. Evol. Comput.}, vol. 29, no. 4, pp. 1449--1455, 2025,
+doi: 10.1109/TEVC.2024.3438115.
+
+\bibitem{ref-kind}
+kind Documentation,
+``kind: Kubernetes IN Docker,''
+accessed Aug. 29, 2026.
+[Online]. Available: \url{https://kind.sigs.k8s.io/}
 \end{thebibliography}
 
 \end{document}
