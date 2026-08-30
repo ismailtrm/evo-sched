@@ -2459,7 +2459,7 @@ Kod ve analiz değişiklikleri:
 - `9138699 feat: add v2 validation finalist policies`
 - `99d4038 feat: add official repeated validation runner`
 
-Ön-kayıtlı train validation bütçesi:
+Önceden sabitlenen train validation bütçesi:
 
 - `8` policy
 - `3` train workload
@@ -2489,7 +2489,7 @@ go run ./cmd/repeated-validation-runner \
 ```
 
 Holdout'a taşınacak temsilciler train validation sonucunu gördükten sonra keyfi
-seçilmeyecektir. Ön-kayıtlı seçim kuralı:
+seçilmeyecektir. Önceden sabitlenen seçim kuralı:
 
 - repeated mean objective'lerle bütün sekiz policy'nin nondominated front'unu kur
 - pending-best: nondominated sette en düşük mean p95; eşitlikte daha az worker
@@ -2523,7 +2523,7 @@ geçti:
 
 Ham artefaktlar `3467045 results: record official v2 finalist validation`
 commitinde tutulmaktadır. Mean, sample SD, min/max ve yüzde `95` Student-t CI
-özetine repeated-mean nondominated sort ve ön-kayıtlı pending/node/knee seçimi
+özetine repeated-mean nondominated sort ve önceden sabitlenen pending/node/knee seçimi
 eklendi:
 
 - `a7676d0 feat: add repeated mean Pareto analysis`
@@ -2570,14 +2570,14 @@ Araştırma kararı:
   noise dersi olarak yeniden çerçevelenecektir
 - iki unique nokta bulunduğu için strict interior knee yine yoktur
 
-Ön-kayıtlı holdout kuralı repeated train front temsilcilerini üç baseline ile
+Önceden sabitlenen holdout kuralı repeated train front temsilcilerini üç baseline ile
 birleştirip duplicate'leri kaldırıyordu. Front temsilcileri zaten balanced ve
 consolidation-heavy olduğundan holdout policy seti mevcut
 `experiments/weights-v2.json` içindeki üç baseline'a çöker. Sıradaki official run,
 `mixed-burst-holdout` üzerinde üç policy x `10` tekrar, toplam `30` execution ve
 `720` Pod olacaktır.
 
-Ön-kayıtlı holdout komutu:
+Önceden sabitlenen holdout komutu:
 
 ```bash
 go run ./cmd/repeated-validation-runner \
@@ -2600,7 +2600,7 @@ korunup korunmadığını değerlendirecektir.
 
 ### 3.59. Official holdout üç noktalı baseline tradeoff'unu doğruladı
 
-Ön-kayıtlı holdout, clean source commit
+Önceden sabitlenen holdout, clean source commit
 `9de2178716eb11f4ec0df10faa3fb599ac251d50` ve annotated
 `protocol-v2-holdout-2026-08-29` tag'i üzerinden çalıştırıldı. Run yaklaşık
 `16 dakika 50 saniye` sürdü ve acceptance koşullarının tamamını geçti:
@@ -2656,7 +2656,7 @@ Araştırma kararı:
   tradeoff'unu ve dengeli bir knee noktasını doğruladı
 - train repeated front iki, holdout front üç unique noktadan oluştu; Pareto şekli
   workload'a duyarlıdır ve evrensel policy sıralaması iddia edilmeyecektir
-- ön-kayıtlı seçim kuralı optimizer finalistlerini holdout'a taşımadığı için bu
+- önceden sabitlenen seçim kuralı optimizer finalistlerini holdout'a taşımadığı için bu
   koşu optimizer genellemesini test etmez
 - repeated train validation'ın negatif optimizer sonucu değişmez: bu kanıt seti
   optimizer'ın baseline'ı geçtiği iddiasını desteklemez
@@ -3059,6 +3059,69 @@ ile branch/tag/remote farkını çıkarmak, sonra kullanıcı onayıyla stabil V
 ve public paper PDF oluşturmaktır. Killer figure bu public evidence setinden sonra
 üretilecek; V3 bu iki işi bloklamayacaktır.
 
+### 3.65. Public V2 release paketini doğrulanabilir ve mutasyonsuz hazırladık
+
+Paper ve official evidence local olarak kapanmış olsa da bunun GitHub'da public
+ve stabil bir release olduğu varsayılmadı. `research-artifact-release` audit'i
+local, committed, public ve released durumlarını ayrı ayrı kontrol etti.
+
+Audit anındaki ref durumu şuydu:
+
+- local branch `research/policy-space-v2`, clean worktree ve HEAD `32f8baa`
+- local protocol tag'leri:
+  - `protocol-v2-baselines-2026-08-27` -> `278ab9bc`
+  - `protocol-v2-optimizer-2026-08-28` -> `9bc7e5aa`
+  - `protocol-v2-finalist-validation-2026-08-28` -> `3cfef4c4`
+  - `protocol-v2-holdout-2026-08-29` -> `9de21787`
+- GitHub repository public durumdaydı, ancak remote üzerinde yalnızca eski
+  `main` branch'i vardı; V2 branch, protocol tag veya release bulunmuyordu
+
+Dolayısıyla o anda durum matrisi şuydu:
+
+| Durum | Sonuç | Kanıt |
+| --- | --- | --- |
+| Local complete | Evet | Dört official evidence ailesi ve paper `make verify` geçiyor |
+| Committed | Evet | Evidence, audit ve paper source V2 branch geçmişinde erişilebilir |
+| Public | Hayır | Remote V2 branch ve protocol tag'leri yok |
+| Released | Hayır | GitHub release ve stabil PDF asset'i yok |
+
+Release işleminin elle seçilmiş dosyalara veya kirli worktree'ye bağlı kalmaması
+için `32f8baa chore: add reproducible v2 release packaging` commit'i oluşturuldu.
+Bu commit:
+
+- `scripts/package-v2-release.sh` ile clean worktree ve doğru branch'i zorunlu
+  tutar
+- dört protocol tag'in HEAD ancestor'ı olduğunu doğrular
+- yeniden `make verify` çalıştırır
+- generated `paper/main.pdf` dosyasını release PDF asset'ine kopyalar
+- yalnızca dört official result dizini ve `paper/evidence-audit-v2.json` için
+  Git-tracked archive üretir
+- branch, HEAD, protocol tag target'ları, evidence source'ları, paper source SHA,
+  known limitations, boyut ve SHA-256 değerlerini JSON manifestte saklar
+- `SHA256SUMS`, JSON contract ve tar archive integrity kontrollerini çalıştırır
+
+`make release-package RELEASE_OUTPUT=/tmp/evo-sched-v2-release-32f8baa`
+komutu clean `32f8baa` checkout'unda çalıştırıldı. Tam `make verify` tekrar geçti
+ve yerel paket şu asset'lerle üretildi:
+
+| Asset | Boyut | SHA-256 |
+| --- | ---: | --- |
+| `evo-sched-v2-paper.pdf` | 249468 byte | `915b405a999c481625d35cbf777e387a17c10e042aca2a37245cecfbca8f90ba` |
+| `evo-sched-v2-official-evidence.tar.gz` | 2621821 byte | `bed81af4105151309f913f4e61ca9da0af8e3653306fe746633dd5745e79496e` |
+| `evo-sched-v2-release-manifest.json` | generated manifest | `6f6f863c6175d4b3e6bf367c3fa94ad3992ff682e4570b9cb6420dbd9436fa91` |
+
+Paketin intended tag'i `v2-evidence-2026-08-31` olarak kaydedildi. Bu işlem
+yalnızca local release preparation'dır; push, tag publication, GitHub release
+creation veya asset upload yapılmadı. README'ye aynı mutasyonsuz paketleme akışı
+ve dört asset sözleşmesi eklendi.
+
+Sıradaki kapı, bu dokümantasyon commit'inden sonra final clean HEAD üzerinden
+paketi yeniden üretmektir. Ardından branch, dört protocol tag, annotated release
+tag ve GitHub release asset'leri için dış mutation komutları kullanıcıya açıkça
+gösterilecek ve çalıştırılmadan hemen önce onay alınacaktır. Public URL'ler ancak
+push/upload sonrası bağımsız doğrulama geçerse paper/CFP kaynağı olarak kabul
+edilecektir.
+
 ## 4. Şu Anki Durum
 
 Şu anda proje durumu şöyledir:
@@ -3119,7 +3182,7 @@ ve public paper PDF oluşturmaktır. Killer figure bu public evidence setinden s
 - Tek-koşu optimizer kazanımı repeated-mean front'ta yeniden üretilememiş; beş optimizer finalistinin tamamı baseline'lar tarafından domine edilmiştir
 - Repeated-mean Pareto front balanced pending-best ve consolidation-heavy node-best noktalarından oluşmaktadır
 - Pooled confidence interval'lar çakıştığı için point-estimate dominance istatistiksel üstünlük olarak yorumlanmamaktadır
-- Ön-kayıtlı holdout seti duplicate removal sonrası üç V2 baseline'a indirgenmiştir
+- Önceden sabitlenen holdout seti duplicate removal sonrası üç V2 baseline'a indirgenmiştir
 - Official holdout üç baseline x on tekrar ve 720/720 tamamlanan Pod ile acceptance'ı geçmiştir
 - Holdout repeated-mean front'u spread-heavy, balanced ve consolidation-heavy için sırasıyla 4, 3 ve 2 occupied-worker kullanan üç unique noktadan oluşmuştur
 - Holdout interior knee point'i `evok8s-v2-balanced` olarak seçilmiştir

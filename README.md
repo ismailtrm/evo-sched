@@ -6,13 +6,13 @@ policies are deployed into a running kind cluster, evaluated through real Pod
 bindings, and compared using scheduling-decision latency and workload
 consolidation.
 
-The central result is deliberately negative: all five optimizer finalists that
-looked Pareto-optimal after one live evaluation were dominated when the same
-policies were evaluated ten times per training workload. An independent holdout
-still produced a stable hand-designed policy tradeoff spanning four, three, and
-two workload-occupied workers. The project therefore demonstrates both a real
-policy surface and the need to model measurement uncertainty during live-cluster
-optimization.
+The central result is deliberately negative: none of the five optimizer
+finalists that looked Pareto-optimal after one live evaluation remained
+nondominated when the same policies were evaluated ten times per training
+workload. An independent holdout still produced a stable hand-designed policy
+tradeoff spanning four, three, and two workload-occupied workers. The project
+therefore demonstrates both a real policy surface and the need to model
+measurement uncertainty during live-cluster optimization.
 
 ## Research status
 
@@ -171,10 +171,11 @@ go run ./cmd/multi-seed-runner \
 ```
 
 Repeated validation and holdout use
-`scheduler/cmd/repeated-validation-runner`. Exact preregistered commands,
-acceptance rules, run durations, interruption recovery, and postflight behavior
-are recorded in `WALKTHROUGH.md`. A full optimizer reproduction is expensive:
-each candidate triggers scheduler rollout and three real workload replays.
+`scheduler/cmd/repeated-validation-runner`. Exact commands, acceptance rules,
+run durations, interruption recovery, and postflight behavior were pre-specified,
+committed before execution, and are recorded in `WALKTHROUGH.md`. A full
+optimizer reproduction is expensive: each candidate triggers scheduler rollout
+and three real workload replays.
 
 ## Evidence and paper
 
@@ -188,6 +189,28 @@ The four official evidence directories are:
 Build the six-page paper with `make paper`. The generated `paper/main.pdf` is
 ignored; the LaTeX source, figures, IEEE class file, raw artifacts, and closure
 audit are versioned.
+
+## Package release artifacts
+
+Create a locally verified release bundle from a clean
+`research/policy-space-v2` checkout:
+
+```bash
+make release-package RELEASE_OUTPUT=/tmp/evo-sched-v2-release
+```
+
+This reruns `make verify`, checks that the four annotated protocol tags are
+ancestors of `HEAD`, and produces:
+
+- `evo-sched-v2-paper.pdf`
+- `evo-sched-v2-official-evidence.tar.gz`
+- `evo-sched-v2-release-manifest.json`
+- `SHA256SUMS`
+
+The evidence archive contains only the four official result directories and
+`paper/evidence-audit-v2.json`; pilot and debug artifacts are excluded. Packaging
+does not push refs, create a GitHub release, or upload assets. Public availability
+must be verified separately against the intended remote release.
 
 ## Limitations
 
