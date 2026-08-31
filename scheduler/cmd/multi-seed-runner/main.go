@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"crypto/sha256"
+	"encoding/csv"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -30,28 +31,35 @@ import (
 )
 
 type options struct {
-	runName                   string
-	seeds                     string
-	workloads                 string
-	baselineFile              string
-	provenanceFiles           string
-	outputRoot                string
-	protocolTag               string
-	schedulerNamespace        string
-	schedulerDeployment       string
-	evaluatorNamespace        string
-	image                     string
-	population                int
-	generations               int
-	mutationRate              float64
-	mutationSigma             float64
-	minWeight                 float64
-	maxWeight                 float64
-	pollInterval              time.Duration
-	timeout                   time.Duration
-	expectedWorkers           int
-	expectedSchedulerInterval time.Duration
-	expectedWeights           string
+	runName                       string
+	seeds                         string
+	workloads                     string
+	baselineFile                  string
+	provenanceFiles               string
+	outputRoot                    string
+	protocolTag                   string
+	schedulerNamespace            string
+	schedulerDeployment           string
+	evaluatorNamespace            string
+	image                         string
+	population                    int
+	generations                   int
+	mutationRate                  float64
+	mutationSigma                 float64
+	minWeight                     float64
+	maxWeight                     float64
+	pollInterval                  time.Duration
+	timeout                       time.Duration
+	expectedWorkers               int
+	expectedSchedulerInterval     time.Duration
+	expectedWeights               string
+	class                         string
+	protocolVersion               string
+	searchMode                    optimizer.SearchMode
+	offspringPerGeneration        int
+	promotionsPerGeneration       int
+	additionalSamplesPerPromotion int
+	optimizerSampleBudget         int
 }
 
 type gitMetadata struct {
@@ -90,35 +98,62 @@ type outputArtifact struct {
 }
 
 type seedRun struct {
-	Seed                 int64            `json:"seed"`
-	Status               string           `json:"status"`
-	StartedAt            time.Time        `json:"startedAt"`
-	FinishedAt           *time.Time       `json:"finishedAt,omitempty"`
-	Command              []string         `json:"command"`
-	ExitCode             *int             `json:"exitCode,omitempty"`
-	ExpectedCandidates   int              `json:"expectedCandidates"`
-	ExpectedWorkloadRuns int              `json:"expectedWorkloadRuns"`
-	LogPath              string           `json:"logPath"`
-	Outputs              []outputArtifact `json:"outputs,omitempty"`
-	Postflight           *clusterSnapshot `json:"postflight,omitempty"`
-	Error                string           `json:"error,omitempty"`
+	Seed                     int64            `json:"seed"`
+	Status                   string           `json:"status"`
+	StartedAt                time.Time        `json:"startedAt"`
+	FinishedAt               *time.Time       `json:"finishedAt,omitempty"`
+	Command                  []string         `json:"command"`
+	ExitCode                 *int             `json:"exitCode,omitempty"`
+	ExpectedCandidates       int              `json:"expectedCandidates"`
+	ExpectedWorkloadRuns     int              `json:"expectedWorkloadRuns"`
+	ExpectedOptimizerSamples int              `json:"expectedOptimizerSamples,omitempty"`
+	ExpectedBaselineSamples  int              `json:"expectedBaselineSamples,omitempty"`
+	ExpectedPromotionEvents  int              `json:"expectedPromotionEvents,omitempty"`
+	ExpectedPolicySamples    int              `json:"expectedPolicySamples,omitempty"`
+	ExpectedPods             int              `json:"expectedPods,omitempty"`
+	LogPath                  string           `json:"logPath"`
+	Outputs                  []outputArtifact `json:"outputs,omitempty"`
+	Postflight               *clusterSnapshot `json:"postflight,omitempty"`
+	Error                    string           `json:"error,omitempty"`
 }
 
 type searchConfig struct {
-	Seeds                     []int64       `json:"seeds"`
-	Workloads                 []string      `json:"workloads"`
-	BaselineFile              string        `json:"baselineFile"`
-	Population                int           `json:"population"`
-	Generations               int           `json:"generations"`
-	MutationRate              float64       `json:"mutationRate"`
-	MutationSigma             float64       `json:"mutationSigma"`
-	MinWeight                 float64       `json:"minWeight"`
-	MaxWeight                 float64       `json:"maxWeight"`
-	PollInterval              time.Duration `json:"pollIntervalNanoseconds"`
-	Timeout                   time.Duration `json:"timeoutNanoseconds"`
-	Image                     string        `json:"image"`
-	ExpectedCandidatesPerSeed int           `json:"expectedCandidatesPerSeed"`
-	ExpectedWorkloadRuns      int           `json:"expectedWorkloadRunsPerSeed"`
+	Seeds                         []int64              `json:"seeds"`
+	Workloads                     []string             `json:"workloads"`
+	BaselineFile                  string               `json:"baselineFile"`
+	Population                    int                  `json:"population"`
+	Generations                   int                  `json:"generations"`
+	MutationRate                  float64              `json:"mutationRate"`
+	MutationSigma                 float64              `json:"mutationSigma"`
+	MinWeight                     float64              `json:"minWeight"`
+	MaxWeight                     float64              `json:"maxWeight"`
+	PollInterval                  time.Duration        `json:"pollIntervalNanoseconds"`
+	Timeout                       time.Duration        `json:"timeoutNanoseconds"`
+	Image                         string               `json:"image"`
+	ExpectedCandidatesPerSeed     int                  `json:"expectedCandidatesPerSeed"`
+	ExpectedWorkloadRuns          int                  `json:"expectedWorkloadRunsPerSeed"`
+	SearchMode                    optimizer.SearchMode `json:"searchMode,omitempty"`
+	OffspringPerGeneration        int                  `json:"offspringPerGeneration,omitempty"`
+	PromotionsPerGeneration       int                  `json:"promotionsPerGeneration,omitempty"`
+	AdditionalSamplesPerPromotion int                  `json:"additionalSamplesPerPromotion,omitempty"`
+	OptimizerSampleBudget         int                  `json:"optimizerSampleBudget,omitempty"`
+	ExpectedOptimizerSamples      int                  `json:"expectedOptimizerSamplesPerSeed,omitempty"`
+	ExpectedBaselineSamples       int                  `json:"expectedBaselineSamplesPerSeed,omitempty"`
+	ExpectedPromotionEvents       int                  `json:"expectedPromotionEventsPerSeed,omitempty"`
+	ExpectedPolicySamples         int                  `json:"expectedPolicySamplesPerSeed,omitempty"`
+	PodsPerPolicySample           int                  `json:"podsPerPolicySample,omitempty"`
+	ExpectedPods                  int                  `json:"expectedPodsPerSeed,omitempty"`
+}
+
+type runExpectations struct {
+	ExpectedCandidates       int
+	ExpectedOptimizerSamples int
+	ExpectedBaselineSamples  int
+	ExpectedPromotionEvents  int
+	ExpectedWorkloadRuns     int
+	ExpectedPolicySamples    int
+	PodsPerPolicySample      int
+	ExpectedPods             int
 }
 
 type experimentManifest struct {
@@ -174,6 +209,16 @@ func parseFlags() options {
 	flag.IntVar(&opts.expectedWorkers, "expect-workers", 4, "Required ready worker count")
 	flag.DurationVar(&opts.expectedSchedulerInterval, "expect-scheduler-interval", 250*time.Millisecond, "Required custom scheduler interval")
 	flag.StringVar(&opts.expectedWeights, "expect-weights", "0.25,0.25,0.25,0.25", "Required canonical deployment weights")
+	flag.StringVar(&opts.class, "class", "official", "Experiment class: official or pilot")
+	flag.StringVar(&opts.protocolVersion, "protocol-version", "v2-official-optimizer", "Protocol version written to the manifest")
+	flag.Func("search-mode", "Optional V3 search mode: budget-one-shot or budget-two-stage", func(value string) error {
+		opts.searchMode = optimizer.SearchMode(value)
+		return nil
+	})
+	flag.IntVar(&opts.offspringPerGeneration, "offspring-per-generation", 0, "Fresh offspring candidates per generation in a budgeted search")
+	flag.IntVar(&opts.promotionsPerGeneration, "promotions-per-generation", 0, "Candidates promoted for resampling per generation")
+	flag.IntVar(&opts.additionalSamplesPerPromotion, "additional-samples-per-promotion", 0, "Additional fresh samples collected per promoted candidate")
+	flag.IntVar(&opts.optimizerSampleBudget, "optimizer-sample-budget", 0, "Exact fresh optimizer sample budget")
 	flag.Parse()
 	return opts
 }
@@ -199,6 +244,12 @@ func run(ctx context.Context, opts options) error {
 	}
 	if opts.protocolTag == "" {
 		return fmt.Errorf("--protocol-tag is required")
+	}
+	if opts.class != "official" && opts.class != "pilot" {
+		return fmt.Errorf("--class must be official or pilot")
+	}
+	if strings.TrimSpace(opts.protocolVersion) == "" {
+		return fmt.Errorf("--protocol-version is required")
 	}
 	if opts.population <= 0 || opts.generations < 0 {
 		return fmt.Errorf("population must be positive and generations non-negative")
@@ -240,6 +291,10 @@ func run(ctx context.Context, opts options) error {
 	if err != nil {
 		return fmt.Errorf("load baseline file: %w", err)
 	}
+	expectations, err := buildRunExpectations(opts, len(baselineSpec.Runs), len(workloads))
+	if err != nil {
+		return err
+	}
 
 	clientset, err := evaluator.NewClientset()
 	if err != nil {
@@ -252,16 +307,21 @@ func run(ctx context.Context, opts options) error {
 	if err := validateClusterSnapshot(preflight, opts, expectedWeights); err != nil {
 		return fmt.Errorf("preflight failed: %w", err)
 	}
+	podsPerPolicySample, err := countPodsPerPolicySample(schedulerDir, workloads, preflight)
+	if err != nil {
+		return err
+	}
+	expectations.PodsPerPolicySample = podsPerPolicySample
+	expectations.ExpectedPods = expectations.ExpectedPolicySamples * podsPerPolicySample
 
 	if err := os.MkdirAll(runRoot, 0o755); err != nil {
 		return fmt.Errorf("create run directory: %w", err)
 	}
 	manifestPath := filepath.Join(runRoot, "manifest.json")
-	expectedCandidates := opts.population*(opts.generations+1) + len(baselineSpec.Runs)
 	manifest := experimentManifest{
 		SchemaVersion:         "v1",
-		ProtocolVersion:       "v2-official-optimizer",
-		Class:                 "official",
+		ProtocolVersion:       opts.protocolVersion,
+		Class:                 opts.class,
 		PaperEvidenceEligible: false,
 		RunName:               opts.runName,
 		Status:                "running",
@@ -271,20 +331,31 @@ func run(ctx context.Context, opts options) error {
 		Git:                   git,
 		Inputs:                inputs,
 		Search: searchConfig{
-			Seeds:                     seeds,
-			Workloads:                 workloads,
-			BaselineFile:              opts.baselineFile,
-			Population:                opts.population,
-			Generations:               opts.generations,
-			MutationRate:              opts.mutationRate,
-			MutationSigma:             opts.mutationSigma,
-			MinWeight:                 opts.minWeight,
-			MaxWeight:                 opts.maxWeight,
-			PollInterval:              opts.pollInterval,
-			Timeout:                   opts.timeout,
-			Image:                     opts.image,
-			ExpectedCandidatesPerSeed: expectedCandidates,
-			ExpectedWorkloadRuns:      expectedCandidates * len(workloads),
+			Seeds:                         seeds,
+			Workloads:                     workloads,
+			BaselineFile:                  opts.baselineFile,
+			Population:                    opts.population,
+			Generations:                   opts.generations,
+			MutationRate:                  opts.mutationRate,
+			MutationSigma:                 opts.mutationSigma,
+			MinWeight:                     opts.minWeight,
+			MaxWeight:                     opts.maxWeight,
+			PollInterval:                  opts.pollInterval,
+			Timeout:                       opts.timeout,
+			Image:                         opts.image,
+			ExpectedCandidatesPerSeed:     expectations.ExpectedCandidates,
+			ExpectedWorkloadRuns:          expectations.ExpectedWorkloadRuns,
+			SearchMode:                    opts.searchMode,
+			OffspringPerGeneration:        opts.offspringPerGeneration,
+			PromotionsPerGeneration:       opts.promotionsPerGeneration,
+			AdditionalSamplesPerPromotion: opts.additionalSamplesPerPromotion,
+			OptimizerSampleBudget:         opts.optimizerSampleBudget,
+			ExpectedOptimizerSamples:      expectations.ExpectedOptimizerSamples,
+			ExpectedBaselineSamples:       expectations.ExpectedBaselineSamples,
+			ExpectedPromotionEvents:       expectations.ExpectedPromotionEvents,
+			ExpectedPolicySamples:         expectations.ExpectedPolicySamples,
+			PodsPerPolicySample:           expectations.PodsPerPolicySample,
+			ExpectedPods:                  expectations.ExpectedPods,
 		},
 		Preflight: preflight,
 		Runs:      make([]seedRun, 0, len(seeds)),
@@ -302,13 +373,18 @@ func run(ctx context.Context, opts options) error {
 		logPath := filepath.Join(seedDir, "run.log")
 		args := buildOptimizerArgs(opts, seed, outputPath)
 		runInfo := seedRun{
-			Seed:                 seed,
-			Status:               "running",
-			StartedAt:            time.Now().UTC(),
-			Command:              append([]string{"go"}, args...),
-			ExpectedCandidates:   expectedCandidates,
-			ExpectedWorkloadRuns: expectedCandidates * len(workloads),
-			LogPath:              relativePath(repoRoot, logPath),
+			Seed:                     seed,
+			Status:                   "running",
+			StartedAt:                time.Now().UTC(),
+			Command:                  append([]string{"go"}, args...),
+			ExpectedCandidates:       expectations.ExpectedCandidates,
+			ExpectedWorkloadRuns:     expectations.ExpectedWorkloadRuns,
+			ExpectedOptimizerSamples: expectations.ExpectedOptimizerSamples,
+			ExpectedBaselineSamples:  expectations.ExpectedBaselineSamples,
+			ExpectedPromotionEvents:  expectations.ExpectedPromotionEvents,
+			ExpectedPolicySamples:    expectations.ExpectedPolicySamples,
+			ExpectedPods:             expectations.ExpectedPods,
+			LogPath:                  relativePath(repoRoot, logPath),
 		}
 		manifest.Runs = append(manifest.Runs, runInfo)
 		if err := writeManifest(manifestPath, manifest); err != nil {
@@ -344,6 +420,7 @@ func run(ctx context.Context, opts options) error {
 		current.ExitCode = &exitCode
 
 		if ctx.Err() != nil {
+			current.Outputs, _ = inspectAvailableSeedOutputs(repoRoot, outputPath, logPath, opts.searchMode)
 			recovery, recoveryErr := recoverClusterState(clientset, opts, expectedWeights)
 			if recoveryErr == nil {
 				current.Postflight = &recovery
@@ -360,6 +437,7 @@ func run(ctx context.Context, opts options) error {
 			return ctx.Err()
 		}
 		if runErr != nil {
+			current.Outputs, _ = inspectAvailableSeedOutputs(repoRoot, outputPath, logPath, opts.searchMode)
 			recovery, recoveryErr := recoverClusterState(clientset, opts, expectedWeights)
 			if recoveryErr == nil {
 				current.Postflight = &recovery
@@ -376,6 +454,7 @@ func run(ctx context.Context, opts options) error {
 			return fmt.Errorf("seed %d optimizer failed: %w", seed, runErr)
 		}
 		if closeErr != nil {
+			current.Outputs, _ = inspectAvailableSeedOutputs(repoRoot, outputPath, logPath, opts.searchMode)
 			current.Status = "failed"
 			current.Error = closeErr.Error()
 			manifest.Status = "failed"
@@ -385,7 +464,7 @@ func run(ctx context.Context, opts options) error {
 			return fmt.Errorf("seed %d log close failed: %w", seed, closeErr)
 		}
 
-		outputs, err := inspectSeedOutputs(repoRoot, outputPath, logPath, seed, expectedCandidates)
+		outputs, err := inspectSeedOutputs(repoRoot, outputPath, logPath, seed, expectations, opts.searchMode)
 		if err != nil {
 			recovery, recoveryErr := recoverClusterState(clientset, opts, expectedWeights)
 			if recoveryErr == nil {
@@ -425,13 +504,98 @@ func run(ctx context.Context, opts options) error {
 
 	finishedAt := time.Now().UTC()
 	manifest.Status = "completed"
-	manifest.PaperEvidenceEligible = true
+	manifest.PaperEvidenceEligible = paperEvidenceEligibleAtCompletion(opts)
 	manifest.FinishedAt = &finishedAt
 	if err := writeManifest(manifestPath, manifest); err != nil {
 		return err
 	}
 	fmt.Printf("completed multi-seed experiment: %s\n", runRoot)
 	return nil
+}
+
+func buildRunExpectations(opts options, baselineCount, workloadCount int) (runExpectations, error) {
+	if baselineCount < 0 || workloadCount <= 0 {
+		return runExpectations{}, fmt.Errorf("baseline count must be non-negative and workload count positive")
+	}
+	if opts.searchMode == "" {
+		if opts.offspringPerGeneration != 0 || opts.promotionsPerGeneration != 0 ||
+			opts.additionalSamplesPerPromotion != 0 || opts.optimizerSampleBudget != 0 {
+			return runExpectations{}, fmt.Errorf("budgeted search flags require --search-mode")
+		}
+		candidateCount := opts.population*(opts.generations+1) + baselineCount
+		return runExpectations{
+			ExpectedCandidates:    candidateCount,
+			ExpectedWorkloadRuns:  candidateCount * workloadCount,
+			ExpectedPolicySamples: candidateCount,
+		}, nil
+	}
+
+	if opts.offspringPerGeneration < 0 || opts.optimizerSampleBudget <= 0 {
+		return runExpectations{}, fmt.Errorf("budgeted search requires non-negative offspring and a positive optimizer sample budget")
+	}
+	switch opts.searchMode {
+	case optimizer.SearchModeBudgetOneShot:
+		if opts.promotionsPerGeneration != 0 || opts.additionalSamplesPerPromotion != 0 {
+			return runExpectations{}, fmt.Errorf("one-shot search cannot configure promotions")
+		}
+	case optimizer.SearchModeBudgetTwoStage:
+		if opts.promotionsPerGeneration <= 0 || opts.additionalSamplesPerPromotion <= 0 {
+			return runExpectations{}, fmt.Errorf("two-stage search requires positive promotion counts and additional samples")
+		}
+	default:
+		return runExpectations{}, fmt.Errorf("unsupported search mode %q", opts.searchMode)
+	}
+
+	expectedOptimizerSamples := opts.population + opts.generations*(opts.offspringPerGeneration+
+		opts.promotionsPerGeneration*opts.additionalSamplesPerPromotion)
+	if opts.optimizerSampleBudget != expectedOptimizerSamples {
+		return runExpectations{}, fmt.Errorf(
+			"optimizer sample budget %d does not match configured search cost %d",
+			opts.optimizerSampleBudget,
+			expectedOptimizerSamples,
+		)
+	}
+	uniqueCandidates := opts.population + opts.generations*opts.offspringPerGeneration
+	return runExpectations{
+		ExpectedCandidates:       uniqueCandidates + baselineCount,
+		ExpectedOptimizerSamples: expectedOptimizerSamples,
+		ExpectedBaselineSamples:  baselineCount,
+		ExpectedPromotionEvents:  opts.generations * opts.promotionsPerGeneration,
+		ExpectedWorkloadRuns:     (expectedOptimizerSamples + baselineCount) * workloadCount,
+		ExpectedPolicySamples:    expectedOptimizerSamples + baselineCount,
+	}, nil
+}
+
+func countPodsPerPolicySample(
+	schedulerDir string,
+	workloadPaths []string,
+	snapshot clusterSnapshot,
+) (int, error) {
+	base := evaluator.WorkloadBase{
+		WorkerCount:     snapshot.WorkerCount,
+		WorkerCPUMilli:  snapshot.WorkerCPUMilli,
+		WorkerMemoryMiB: snapshot.WorkerMemoryMiB,
+	}
+	total := 0
+	for _, path := range workloadPaths {
+		absolute := path
+		if !filepath.IsAbs(absolute) {
+			absolute = filepath.Join(schedulerDir, path)
+		}
+		workload, err := evaluator.LoadWorkloadWithBase(filepath.Clean(absolute), &base)
+		if err != nil {
+			return 0, fmt.Errorf("load workload %s for Pod budget: %w", path, err)
+		}
+		total += len(workload)
+	}
+	if total == 0 {
+		return 0, fmt.Errorf("resolved workloads contain no Pods")
+	}
+	return total, nil
+}
+
+func paperEvidenceEligibleAtCompletion(opts options) bool {
+	return opts.class == "official" && opts.searchMode == ""
 }
 
 func parseSeeds(raw string) ([]int64, error) {
@@ -472,7 +636,7 @@ func splitPaths(raw string) ([]string, error) {
 }
 
 func buildOptimizerArgs(opts options, seed int64, outputPath string) []string {
-	return []string{
+	args := []string{
 		"run", "./cmd/optimizer",
 		"--workloads", opts.workloads,
 		"--baseline-file", opts.baselineFile,
@@ -488,6 +652,16 @@ func buildOptimizerArgs(opts options, seed int64, outputPath string) []string {
 		"--image", opts.image,
 		"--output", outputPath,
 	}
+	if opts.searchMode != "" {
+		args = append(args,
+			"--search-mode", string(opts.searchMode),
+			"--offspring-per-generation", strconv.Itoa(opts.offspringPerGeneration),
+			"--promotions-per-generation", strconv.Itoa(opts.promotionsPerGeneration),
+			"--additional-samples-per-promotion", strconv.Itoa(opts.additionalSamplesPerPromotion),
+			"--optimizer-sample-budget", strconv.Itoa(opts.optimizerSampleBudget),
+		)
+	}
+	return args
 }
 
 func inspectGit(protocolTag string) (string, string, gitMetadata, error) {
@@ -708,7 +882,14 @@ func weightSetsClose(left, right evaluator.WeightSet) bool {
 		math.Abs(left.Consolidation-right.Consolidation) < epsilon
 }
 
-func inspectSeedOutputs(repoRoot, resultPath, logPath string, seed int64, expectedCandidates int) ([]outputArtifact, error) {
+func inspectSeedOutputs(
+	repoRoot string,
+	resultPath string,
+	logPath string,
+	seed int64,
+	expectations runExpectations,
+	searchMode optimizer.SearchMode,
+) ([]outputArtifact, error) {
 	data, err := os.ReadFile(resultPath)
 	if err != nil {
 		return nil, fmt.Errorf("read optimizer result: %w", err)
@@ -723,8 +904,8 @@ func inspectSeedOutputs(repoRoot, resultPath, logPath string, seed int64, expect
 	if result.Config.Seed != seed {
 		return nil, fmt.Errorf("result seed=%d, want %d", result.Config.Seed, seed)
 	}
-	if len(result.Baselines)+len(result.Evaluated) != expectedCandidates {
-		return nil, fmt.Errorf("candidate count=%d, want %d", len(result.Baselines)+len(result.Evaluated), expectedCandidates)
+	if len(result.Baselines)+len(result.Evaluated) != expectations.ExpectedCandidates {
+		return nil, fmt.Errorf("candidate count=%d, want %d", len(result.Baselines)+len(result.Evaluated), expectations.ExpectedCandidates)
 	}
 	if result.FinishedAt.IsZero() {
 		return nil, fmt.Errorf("optimizer result has no finish timestamp")
@@ -732,6 +913,19 @@ func inspectSeedOutputs(repoRoot, resultPath, logPath string, seed int64, expect
 
 	base := strings.TrimSuffix(resultPath, filepath.Ext(resultPath))
 	paths := []string{resultPath, base + "-pareto.csv", base + "-all.csv", logPath}
+	if searchMode != "" {
+		if result.Config.SearchMode != searchMode {
+			return nil, fmt.Errorf("result search mode=%q, want %q", result.Config.SearchMode, searchMode)
+		}
+		if err := validateBudgetedResult(result, expectations); err != nil {
+			return nil, err
+		}
+		samplesPath := base + "-samples.csv"
+		if err := validateSamplesCSV(samplesPath, result); err != nil {
+			return nil, err
+		}
+		paths = append(paths, samplesPath)
+	}
 	outputs := make([]outputArtifact, 0, len(paths))
 	for _, path := range paths {
 		digest, err := sha256File(path)
@@ -741,6 +935,151 @@ func inspectSeedOutputs(repoRoot, resultPath, logPath string, seed int64, expect
 		outputs = append(outputs, outputArtifact{Path: relativePath(repoRoot, path), SHA256: digest})
 	}
 	return outputs, nil
+}
+
+func inspectAvailableSeedOutputs(
+	repoRoot string,
+	resultPath string,
+	logPath string,
+	searchMode optimizer.SearchMode,
+) ([]outputArtifact, error) {
+	base := strings.TrimSuffix(resultPath, filepath.Ext(resultPath))
+	paths := []string{resultPath, base + "-pareto.csv", base + "-all.csv", logPath}
+	if searchMode != "" {
+		paths = append(paths, base+"-samples.csv")
+	}
+	artifacts := make([]outputArtifact, 0, len(paths))
+	for _, path := range paths {
+		if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
+			continue
+		} else if err != nil {
+			return artifacts, fmt.Errorf("inspect partial output %s: %w", path, err)
+		}
+		digest, err := sha256File(path)
+		if err != nil {
+			return artifacts, fmt.Errorf("checksum partial output %s: %w", path, err)
+		}
+		artifacts = append(artifacts, outputArtifact{Path: relativePath(repoRoot, path), SHA256: digest})
+	}
+	return artifacts, nil
+}
+
+func validateBudgetedResult(result optimizer.Result, expectations runExpectations) error {
+	if result.Budget == nil {
+		return fmt.Errorf("budgeted optimizer result has no budget summary")
+	}
+	wantOptimizer := expectations.ExpectedOptimizerSamples
+	wantBaseline := expectations.ExpectedBaselineSamples
+	wantWorkloads := expectations.ExpectedWorkloadRuns
+	if result.Budget.ExpectedOptimizerSamples != wantOptimizer ||
+		result.Budget.AttemptedOptimizerSamples != wantOptimizer ||
+		result.Budget.ActualOptimizerSamples != wantOptimizer {
+		return fmt.Errorf("optimizer sample budget mismatch: %+v, want %d", result.Budget, wantOptimizer)
+	}
+	if result.Budget.ExpectedBaselineSamples != wantBaseline ||
+		result.Budget.AttemptedBaselineSamples != wantBaseline ||
+		result.Budget.ActualBaselineSamples != wantBaseline {
+		return fmt.Errorf("baseline sample budget mismatch: %+v, want %d", result.Budget, wantBaseline)
+	}
+	if result.Budget.ExpectedWorkloadExecutions != wantWorkloads ||
+		result.Budget.AttemptedWorkloadExecutions != wantWorkloads ||
+		result.Budget.ActualWorkloadExecutions != wantWorkloads {
+		return fmt.Errorf("workload execution budget mismatch: %+v, want %d", result.Budget, wantWorkloads)
+	}
+	wantUniqueOptimizer := expectations.ExpectedCandidates - expectations.ExpectedBaselineSamples
+	if result.Budget.UniqueOptimizerCandidates != wantUniqueOptimizer {
+		return fmt.Errorf("unique optimizer candidates=%d, want %d", result.Budget.UniqueOptimizerCandidates, wantUniqueOptimizer)
+	}
+	if result.Budget.PromotionEvents != expectations.ExpectedPromotionEvents {
+		return fmt.Errorf("promotion events=%d, want %d", result.Budget.PromotionEvents, expectations.ExpectedPromotionEvents)
+	}
+
+	sampleCount := 0
+	podCount := 0
+	seenEvaluationIDs := make(map[string]struct{}, wantOptimizer+wantBaseline)
+	allCandidates := append(append([]optimizer.Candidate(nil), result.Baselines...), result.Evaluated...)
+	for _, candidate := range allCandidates {
+		if candidate.EvaluationCount != len(candidate.EvaluationSamples) {
+			return fmt.Errorf(
+				"candidate %s evaluation count=%d, samples=%d",
+				candidate.ID,
+				candidate.EvaluationCount,
+				len(candidate.EvaluationSamples),
+			)
+		}
+		for _, sample := range candidate.EvaluationSamples {
+			if sample.EvaluationID == "" {
+				return fmt.Errorf("candidate %s has an empty evaluation ID", candidate.ID)
+			}
+			if _, exists := seenEvaluationIDs[sample.EvaluationID]; exists {
+				return fmt.Errorf("duplicate evaluation ID %q", sample.EvaluationID)
+			}
+			seenEvaluationIDs[sample.EvaluationID] = struct{}{}
+			sampleCount++
+			for _, workload := range sample.Data.Workloads {
+				podCount += workload.PodCount
+			}
+		}
+	}
+	if want := wantOptimizer + wantBaseline; sampleCount != want {
+		return fmt.Errorf("fresh sample count=%d, want %d", sampleCount, want)
+	}
+	if expectations.ExpectedPods > 0 && podCount != expectations.ExpectedPods {
+		return fmt.Errorf("fresh sample Pod count=%d, want %d", podCount, expectations.ExpectedPods)
+	}
+	return nil
+}
+
+func validateSamplesCSV(path string, result optimizer.Result) error {
+	f, err := os.Open(path)
+	if err != nil {
+		return fmt.Errorf("open samples CSV: %w", err)
+	}
+	defer f.Close()
+	records, err := csv.NewReader(f).ReadAll()
+	if err != nil {
+		return fmt.Errorf("read samples CSV: %w", err)
+	}
+	if len(records) == 0 {
+		return fmt.Errorf("samples CSV is empty")
+	}
+	evaluationIDColumn := -1
+	for index, name := range records[0] {
+		if name == "evaluation_id" {
+			evaluationIDColumn = index
+			break
+		}
+	}
+	if evaluationIDColumn < 0 {
+		return fmt.Errorf("samples CSV has no evaluation_id column")
+	}
+	wantIDs := make(map[string]struct{})
+	allCandidates := append(append([]optimizer.Candidate(nil), result.Baselines...), result.Evaluated...)
+	for _, candidate := range allCandidates {
+		for _, sample := range candidate.EvaluationSamples {
+			wantIDs[sample.EvaluationID] = struct{}{}
+		}
+	}
+	gotIDs := make(map[string]struct{}, len(records)-1)
+	for rowIndex, record := range records[1:] {
+		if evaluationIDColumn >= len(record) {
+			return fmt.Errorf("samples CSV row %d has no evaluation ID", rowIndex+2)
+		}
+		id := record[evaluationIDColumn]
+		if _, exists := gotIDs[id]; exists {
+			return fmt.Errorf("samples CSV contains duplicate evaluation ID %q", id)
+		}
+		gotIDs[id] = struct{}{}
+	}
+	if len(gotIDs) != len(wantIDs) {
+		return fmt.Errorf("samples CSV rows=%d, want %d", len(gotIDs), len(wantIDs))
+	}
+	for id := range wantIDs {
+		if _, exists := gotIDs[id]; !exists {
+			return fmt.Errorf("samples CSV is missing evaluation ID %q", id)
+		}
+	}
+	return nil
 }
 
 func writeManifest(path string, manifest experimentManifest) error {
