@@ -228,6 +228,10 @@ artifacts used for every plotted coordinate. The released V2 paper remains
 immutable; this presentation asset is derived separately from the same committed
 evidence.
 
+The 25-minute talk plan, 5-minute question window, claim boundaries, and
+time-coded four-minute English speaking sample are stored in
+`presentation/kubecon-europe-2027/talk-package.json`.
+
 ## Limitations
 
 - kind workers are homogeneous containers on one physical host.

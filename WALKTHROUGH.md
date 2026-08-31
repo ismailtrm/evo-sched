@@ -3247,6 +3247,71 @@ KubeCon sunum işi bu figürü merkez alan 30 dakikalık talk outline'ı ve 3--5
 dakikalık İngilizce speaking sample script'idir. Public artifact visibility kararı
 ayrı gate olarak açık kalır; V3 bu sunum paketini bloklamaz.
 
+### 3.68. KubeCon talk omurgasını ve speaking sample script'ini sabitledik
+
+Killer figure tamamlandıktan sonra CFP'deki yedi satırlık high-level outline,
+sunum üretimine doğrudan girdi olacak slide-level pakete dönüştürüldü. Paper
+abstract'ını slaytlara bölmek yerine practitioner odaklı bir reversal anlatısı
+seçildi:
+
+1. daha iyi policy bulduğumuzu sandık
+2. live evaluation loop ve gerçek Pod binding yolunu gösterdik
+3. V1 policy-space ve measurement risklerini audit ettik
+4. identifiable V2 policy ve timestamp provenance'ını kurduk
+5. üç seed'in one-shot sonucunu olumlu görünen provisional aşama olarak sunduk
+6. ten-repeat validation ile beş finalistin front'ta kalmadığını gösterdik
+7. holdout baseline tradeoff'u ile optimizer failure ve gerçek policy surface'i
+   birbirinden ayırdık
+8. sonucu live-control-loop tuning checklist'ine çevirdik
+
+Sunum zaman bütçesi `25` dakika içerik ve `5` dakika audience questions olarak
+kilitlendi. CFP JSON outline'ı bu bütçeye göre güncellendi; son içerik slide'ı
+`23:30-25:00`, soru bölümü `25:00-30:00` aralığındadır. Mevcut CFP başlığı
+`Searching the Kubernetes Scheduler Policy Space: Lessons From Noisy Live
+Optimization` korundu. `When the Optimizer Learns the Noise: Lessons From Live
+Kubernetes Scheduler Tuning` sunum/video için daha hikaye odaklı alternatif
+olarak pakette tutuldu, fakat CFP başlığı sessizce değiştirilmedi.
+
+[Talk package](presentation/kubecon-europe-2027/talk-package.json) şu sözleşmeyi
+taşır:
+
+- `11` slide için süre, amaç, visual ve speaker point
+- official optimizer, repeated-validation, holdout ve paper-audit source path'leri
+- universal superiority, statistical significance, powered-node cost ve
+  production generalization iddialarını engelleyen claim boundaries
+- `4:00` hedefli, yedi segment ve `423` kelimelik İngilizce speaking sample
+- camera -> architecture -> killer figure -> measurement -> holdout -> camera
+  recording akışı
+- video, anonymous artifact visibility, speaker bio/experience ve final
+  Sessionize check için açık gate'ler
+
+Speaking sample paper özeti gibi yazılmadı. İlk `25` saniyede deneysel reversal
+verilir; one-shot panel `216` aday ve beş provisional point ile açıklanır;
+repeated panelde sekiz policy, ten-repeat/workload protokolü, overlapping yüzde
+`95` interval'lar ve `0/5` optimizer-front sonucu belirtilir. Sonuç scheduler'a
+özgü bir başarı iddiası yerine identifiable policy, timestamp provenance, hard
+validity gate, repeated promotion ve immutable artifact checklist'ine bağlanır.
+
+Repository private kaldığı için CFP `additionalResources` girdileri silinmedi,
+fakat üçü de `availability: private-pending-public-release` ve
+`submissionReady: false` olarak işaretlendi. Böylece owner hesabında çalışan URL,
+reviewer için erişilebilir public resource gibi yanlış raporlanmayacaktır.
+
+Doğrulama:
+
+- CFP ve talk package `jq empty` kontrolünden geçti
+- talk package `11` slide, `25+5=30` dakika ve `7` speaking segment raporladı
+- script word-count sanity check'i `423` ile tanımlı `420-470` aralığında geçti
+- üç additional resource girdisinin tamamı `submissionReady=false`
+- `git diff --check` temiz
+
+Paket `d57bf17 docs: add KubeCon talk package` commit'inde sabitlendi. README'ye
+talk-package yolu eklendi. Bu noktada automated olarak hazırlanabilecek sunum
+metni tamamdır; sıradaki gerçek kullanıcı gate'i İngilizce videoyu kaydetmek,
+izlemek ve anonim erişilebilir unlisted/public URL üretmektir. Public repo/paper
+visibility kararı da CFP submission'dan önce ayrıca kapanmalıdır. V3 hâlâ CFP
+paketinin ön koşulu değildir.
+
 ## 4. Şu Anki Durum
 
 Şu anda proje durumu şöyledir:
@@ -3320,6 +3385,7 @@ ayrı gate olarak açık kalır; V3 bu sunum paketini bloklamaz.
 - V2 branch, dört protocol tag ve checksum doğrulamalı official evidence release'i private GitHub reposunda yayımlanmıştır
 - Repository private olduğu için release PDF henüz CFP'de anonim erişilebilir stabil public kaynak değildir
 - One-shot provisional front ile ten-repeat validation çöküşünü yan yana gösteren standalone KubeCon vector figure hazırdır
+- 25 dakikalık içerik, 5 dakikalık soru bölümü ve 4 dakikalık İngilizce speaking sample script'i içeren KubeCon talk package hazırdır
 - Functional live smoke ve kind resource lifecycle komutları Makefile entrypoint'leri olarak eklenmiştir
 - Gate 6 CFP taslağı official V2 claim setine bağlı ve commitlidir; public paper
   PDF, speaking sample, kullanıcı teyitleri ve Sessionize gönderimi açıktır
@@ -3528,6 +3594,7 @@ Sonuç:
 - [x] CFP anlatısını "evrensel en iyi scheduler" yerine canlı cluster üzerinde policy-space search sırasında öğrenilen tradeoff ve metodoloji dersleri üzerine kur
 - [x] V2 branch, protocol tag'leri, paper ve official evidence asset'lerini private release olarak yayımla ve remote checksum doğrulaması yap
 - [x] One-shot apparent gains ile repeated-validation sonucunu aynı evidence figure'da karşılaştır
+- [x] 30 dakikalık KubeCon talk outline'ı ve 3--5 dakikalık speaking sample script'i hazırla
 - [ ] Stabil public paper PDF, speaking sample ve kullanıcı teyitlerini tamamla
 - [ ] Sessionize formunu son resmi gereksinim kontrolünden sonra gönder
 
