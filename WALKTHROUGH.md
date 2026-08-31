@@ -3179,6 +3179,74 @@ bir paper artifact'ini public hale getirmek ve anonim HTTP erişimini doğrulama
 Killer figure private official evidence üzerinden üretilebilir; bu public erişim
 kararını ve V3 deneyini bloklamaz.
 
+### 3.67. One-shot kazanımın repeated validation'da kaybolmasını tek figürde gösterdik
+
+KubeCon anlatısının ana görseli paper release'inden ayrı bir presentation asset'i
+olarak tasarlandı. Amaç yeni bir sonuç üretmek değil, iki farklı evaluation
+derinliğinde elde edilen point-estimate sonuçları aynı görsel dilde karşılaştırmak
+ve neden one-shot optimizer sonucunun doğrulanmış kazanım sayılamayacağını tek
+bakışta göstermektir.
+
+Figürün veri sözleşmesi şöyledir:
+
+- sol panel official üç-seed optimizer summary ve her seed'in `result-all.csv`
+  baseline satırlarını kullanır
+- sol panelde üç seed, toplam `216` optimizer adayı ve seçilen beş optimizer-only
+  provisional front noktası temsil edilir; hiçbir baseline one-shot front'ta
+  kalmamıştır
+- sağ panel official finalist-validation `summary.json` dosyasındaki üç baseline
+  ve beş optimizer finalistinin üç-workload aggregate repeated means değerlerini
+  kullanır
+- sağ panel yatay error bar olarak yüzde `95` Student-t mean-p95 confidence
+  interval'larını taşır
+- repeated-mean point-estimate front yalnızca balanced ve consolidation-heavy
+  baseline noktalarından oluşur; beş optimizer finalistinden hiçbiri
+  nondominated kalmaz
+- paneller farklı latency x-range kullanır; bu fark figür üzerinde açıkça yazılır
+  ve right-side confidence interval overlap'i claim sınırı olarak korunur
+
+Figür presentation için ayrı tutuldu:
+
+- source wrapper:
+  `presentation/kubecon-europe-2027/killer-figure.tex`
+- reusable plot:
+  `presentation/kubecon-europe-2027/figures/search-validation-collapse.tex`
+- build command: `make killer-figure`
+- generated vector PDF:
+  `presentation/kubecon-europe-2027/killer-figure.pdf` (Git ignored)
+
+Bu ayrım bilinçlidir. `v2-evidence-2026-08-31` release paper'ı immutable kalır;
+KubeCon figürü aynı committed official evidence'tan türetilen sonraki bir sunum
+artifact'idir. Paper source veya release asset'i sessizce değiştirilmemiştir.
+
+İlk render'da üç görsel hata bulundu ve source commit öncesinde düzeltildi:
+
+- Pareto çizgi katmanları legend sequence'ine sızdığı için seed marker/label
+  eşleşmesi kaymıştı; bu çizgiler `forget plot` ile legend'den çıkarıldı
+- sağ paneldeki in-axis count annotation y=3 error bar'larıyla çakışıyordu;
+  sayılar kısa panel başlıklarına taşındı
+- `addplot+` cycle style error-cap renklerine sızıyordu; explicit `addplot` ile
+  baseline ve optimizer interval'ları tutarlı nötr/semantic renklere çekildi
+
+Son render görsel olarak original resolution'da incelendi. Başlık, legend, eksen,
+marker, interval ve alt mesaj kutusunda çakışma bulunmadı. Teknik doğrulamalar:
+
+- `make killer-figure` geçti
+- standalone PDF tek sayfa ve `qpdf --check` temiz
+- bütün fontlar embedded Type 1
+- LaTeX log'da warning, undefined reference veya overfull/underfull box yok
+- official JSON sanity sorgusu `3` seed, `216` candidate, `5` provisional point,
+  `0` seed with baseline survival ve `5` finalist değerlerini yeniden üretti
+- repeated summary sanity sorgusu `8` policy, `5` optimizer policy, `2` front
+  point ve `0` optimizer front member değerlerini yeniden üretti
+- genel `make verify` yeniden geçti
+
+Figür kaynakları `9691136 docs: add noisy-fitness collapse figure` commit'inde
+sabitlendi. README'ye build komutu ve immutable-release ayrımı eklendi. Sıradaki
+KubeCon sunum işi bu figürü merkez alan 30 dakikalık talk outline'ı ve 3--5
+dakikalık İngilizce speaking sample script'idir. Public artifact visibility kararı
+ayrı gate olarak açık kalır; V3 bu sunum paketini bloklamaz.
+
 ## 4. Şu Anki Durum
 
 Şu anda proje durumu şöyledir:
@@ -3251,6 +3319,7 @@ kararını ve V3 deneyini bloklamaz.
 - `make verify` Go test/vet, official summary regeneration, evidence audit ve paper PDF kontrollerini tek komutta geçmiştir
 - V2 branch, dört protocol tag ve checksum doğrulamalı official evidence release'i private GitHub reposunda yayımlanmıştır
 - Repository private olduğu için release PDF henüz CFP'de anonim erişilebilir stabil public kaynak değildir
+- One-shot provisional front ile ten-repeat validation çöküşünü yan yana gösteren standalone KubeCon vector figure hazırdır
 - Functional live smoke ve kind resource lifecycle komutları Makefile entrypoint'leri olarak eklenmiştir
 - Gate 6 CFP taslağı official V2 claim setine bağlı ve commitlidir; public paper
   PDF, speaking sample, kullanıcı teyitleri ve Sessionize gönderimi açıktır
@@ -3458,6 +3527,7 @@ Sonuç:
 - [x] README, lisans, pinned sürümler ve tek komutlu reproduction akışı ekle
 - [x] CFP anlatısını "evrensel en iyi scheduler" yerine canlı cluster üzerinde policy-space search sırasında öğrenilen tradeoff ve metodoloji dersleri üzerine kur
 - [x] V2 branch, protocol tag'leri, paper ve official evidence asset'lerini private release olarak yayımla ve remote checksum doğrulaması yap
+- [x] One-shot apparent gains ile repeated-validation sonucunu aynı evidence figure'da karşılaştır
 - [ ] Stabil public paper PDF, speaking sample ve kullanıcı teyitlerini tamamla
 - [ ] Sessionize formunu son resmi gereksinim kontrolünden sonra gönder
 

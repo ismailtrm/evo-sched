@@ -212,6 +212,22 @@ The evidence archive contains only the four official result directories and
 does not push refs, create a GitHub release, or upload assets. Public availability
 must be verified separately against the intended remote release.
 
+## Build the KubeCon evidence figure
+
+The standalone two-panel figure contrasts provisional one-shot Pareto points
+with the shared ten-repeat validation result:
+
+```bash
+make killer-figure
+```
+
+The vector PDF is written to
+`presentation/kubecon-europe-2027/killer-figure.pdf` and is intentionally
+ignored. Its LaTeX source names the official optimizer and repeated-validation
+artifacts used for every plotted coordinate. The released V2 paper remains
+immutable; this presentation asset is derived separately from the same committed
+evidence.
+
 ## Limitations
 
 - kind workers are homogeneous containers on one physical host.
