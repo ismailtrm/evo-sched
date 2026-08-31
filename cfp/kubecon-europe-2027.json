@@ -54,32 +54,36 @@
     ],
     "outline": [
       {
-        "minutes": "0-3",
+        "minutes": "0-2",
         "topic": "The real question: policy improvement or measurement-noise optimization?"
       },
       {
-        "minutes": "3-8",
+        "minutes": "2-7",
         "topic": "A live custom scheduler, evaluator, and real Pod-binding loop"
       },
       {
-        "minutes": "8-13",
+        "minutes": "7-12",
         "topic": "Policy-space failure: scale equivalence, redundant packing, and the V2 repair"
       },
       {
-        "minutes": "13-18",
+        "minutes": "12-16",
         "topic": "Measurement repair: decision annotations, observation lag, hard validity gates, and provenance"
       },
       {
-        "minutes": "18-22",
+        "minutes": "16-19",
         "topic": "The apparently successful three-seed evolutionary search"
       },
       {
-        "minutes": "22-26",
+        "minutes": "19-23",
         "topic": "The repeated-validation failure and the holdout policy tradeoff"
       },
       {
-        "minutes": "26-30",
-        "topic": "A practical live-control-loop optimization checklist and questions"
+        "minutes": "23-25",
+        "topic": "A practical live-control-loop optimization checklist"
+      },
+      {
+        "minutes": "25-30",
+        "topic": "Audience questions"
       }
     ]
   },
@@ -109,16 +113,22 @@
   },
   "additionalResources": [
     {
-      "label": "Open-source repository",
-      "url": "https://github.com/ismailtrm/evo-sched"
+      "label": "Project repository",
+      "url": "https://github.com/ismailtrm/evo-sched",
+      "availability": "private-pending-public-release",
+      "submissionReady": false
     },
     {
       "label": "IEEE paper source",
-      "url": "https://github.com/ismailtrm/evo-sched/blob/research/policy-space-v2/paper/main.tex"
+      "url": "https://github.com/ismailtrm/evo-sched/blob/research/policy-space-v2/paper/main.tex",
+      "availability": "private-pending-public-release",
+      "submissionReady": false
     },
     {
       "label": "Machine-readable paper evidence audit",
-      "url": "https://github.com/ismailtrm/evo-sched/blob/research/policy-space-v2/paper/evidence-audit-v2.json"
+      "url": "https://github.com/ismailtrm/evo-sched/blob/research/policy-space-v2/paper/evidence-audit-v2.json",
+      "availability": "private-pending-public-release",
+      "submissionReady": false
     }
   ],
   "submissionChecklist": {
