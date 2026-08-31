@@ -3312,6 +3312,90 @@ izlemek ve anonim erişilebilir unlisted/public URL üretmektir. Public repo/pap
 visibility kararı da CFP submission'dan önce ayrıca kapanmalıdır. V3 hâlâ CFP
 paketinin ön koşulu değildir.
 
+### 3.69. Noise-aware V3 için budget-matched protokolü implementation'dan önce yazdık
+
+V2'nin ana negatif sonucu, one-shot search fitness'ının shared repeated
+validation altında güvenilir promotion sağlamadığını gösterdi. Bundan sonraki
+yüksek değerli fakat CFP'yi bloklamayan araştırma sorusu, aynı live-evaluation
+bütçesinin bir bölümünü search-time resampling'e ayırmanın false Pareto discovery
+oranını düşürüp düşürmediğidir.
+
+V2 evidence geçmişini değiştirmemek için yeni branch
+`research/noise-aware-resampling-v3`, güncel V2/KubeCon commit'i `cc26a0f`
+üzerinden açıldı. V2 protocol tag'leri, raw results, paper ve
+`v2-evidence-2026-08-31` release asset'leri immutable kalacaktır. V3 kodu,
+protocol tag'leri ve result dizinleri ayrı olacaktır.
+
+Source audit sırasında kritik implementation engeli bulundu: mevcut
+`clusterEvaluator`, normalized weight key'ini cache'liyor. Aynı policy tekrar
+çağrıldığında live workload replay yerine cached `EvaluationData` dönüyor. Bu V2
+one-shot phenotype dedup davranışı için uygundur, fakat V3 resampling değildir.
+Bu nedenle V3 fresh-sample semantiği cache bypass, unique evaluation ID, sample
+ordinal, timestamps ve cumulative budget provenance'ı olmadan uygulanmayacaktır.
+
+[V3 protocol](experiments/protocol-v3-budget-matched-resampling.json) şu
+official search bütçesini sabitler:
+
+- one-shot control: `12 + 5 x 12 = 72` optimizer sample
+- two-stage treatment: `12 + 5 x (6 yeni + 2 promoted x 3 ek) = 72` optimizer
+  sample
+- iki arm için ayrıca aynı üç one-shot baseline reference
+- her sample aynı üç train workload'u içerir
+- arm/seed başına `75` total policy sample, `225` workload execution ve `5,400`
+  Pod
+- üç seed ve iki arm için official search toplamı `1,350` workload execution ve
+  `32,400` Pod
+
+Eşit bütçenin doğal tradeoff'u açık tutuldu: one-shot arm en çok `72`, two-stage
+arm en çok `42` unique candidate keşfeder. Treatment her generation altı yeni
+offspring üretir; current population ve offspring pool'unda lower rank, higher
+crowding ve creation ordinal sırasıyla seçilen daha önce promote edilmemiş iki
+candidate üç ek fresh sample alır. Candidate fitness dört sample-level objective
+point estimate'in aritmetik ortalamasıyla yeniden hesaplanır; rank/crowding daha
+sonra tekrar kurulur. Eligible candidate sayısı yetersizse bütçe başka yere
+kaydırılmaz, arm fail olarak korunur.
+
+Pilot paper evidence değildir ve daha küçük budget kullanır:
+
+- one-shot: `population=4`, `generation=1`, `4+4=8` optimizer sample
+- treatment: `4 + 2 yeni + 1 promoted x 2 ek = 8` optimizer sample
+- her arm üç baseline ile birlikte `11` policy sample, `33` workload execution
+  ve `792` Pod
+- acceptance exact budget, promoted candidate'ta üç distinct live evaluation,
+  mean aggregation, cache bypass ve clean postflight'i doğrular
+
+Official primary outcome
+`falseParetoDiscoveryProportion` olarak tanımlandı: shared ten-repeat validation'a
+alınan provisional optimizer finalistlerinden repeated-mean point-estimate
+front'ta kalmayanların oranı. Treatment ancak eşit search sample bütçesinde bu
+oran control'den düşükse ve safety metric'ler geçerse descriptively desteklenmiş
+sayılacaktır. Eşit/yüksek oran, iki arm'da da aday çıkmaması veya hiçbir finalistin
+kalmaması geçerli negatif sonuçtur. Üç seed ile hypothesis-test iddiası
+yapılmayacaktır.
+
+Shared validation arm başına en çok beş exact-phenotype-deduplicated finalisti ve
+üç baseline'ı on fresh repeat/workload ile ölçer. Candidate sayısı outcome'a bağlı
+olduğu için validation bütçesi search bütçesinden ayrı raporlanacaktır. V3
+protocol holdout içermez; nondominated kalan yeni bir optimizer policy çıkarsa
+genelleme testi için ayrıca committed holdout protocol gerekir.
+
+Protocol JSON kontrolleri:
+
+- `jq empty` geçti
+- official control ve treatment bütçeleri yeniden hesaplandığında `72/72`
+- arm/seed workload ve Pod hesabı `225` ve `5,400`
+- pilot arm bütçeleri `8/8`, workload ve Pod hesabı `33` ve `792`
+- valid-negative, fresh-validation, V2 immutability ve pilot-not-evidence
+  sözleşmeleri machine-readable olarak doğrulandı
+
+Protocol `462c443 docs: define budget-matched V3 protocol` commit'inde,
+implementation başlamadan önce kaydedildi. Statüsü official freeze değildir;
+pilot manifest alanları implementation sonrasında gözden geçirilebilir. Ancak
+official arm sample bütçeleri, primary outcome ve valid-negative kuralları sonuç
+görüldükten sonra değiştirilmeyecektir. Sıradaki adım test-first fresh evaluation,
+sample aggregation, deterministic promotion ve budget accounting kodudur; cluster
+pilot ancak bu kod clean commit ve acceptance testlerinden sonra açılacaktır.
+
 ## 4. Şu Anki Durum
 
 Şu anda proje durumu şöyledir:
@@ -3386,6 +3470,8 @@ paketinin ön koşulu değildir.
 - Repository private olduğu için release PDF henüz CFP'de anonim erişilebilir stabil public kaynak değildir
 - One-shot provisional front ile ten-repeat validation çöküşünü yan yana gösteren standalone KubeCon vector figure hazırdır
 - 25 dakikalık içerik, 5 dakikalık soru bölümü ve 4 dakikalık İngilizce speaking sample script'i içeren KubeCon talk package hazırdır
+- V3 noise-aware search için V2'den ayrılmış research branch ve budget-matched machine-readable protocol hazırdır
+- V3 implementation ve pilot henüz başlamamıştır; cluster kapalıdır
 - Functional live smoke ve kind resource lifecycle komutları Makefile entrypoint'leri olarak eklenmiştir
 - Gate 6 CFP taslağı official V2 claim setine bağlı ve commitlidir; public paper
   PDF, speaking sample, kullanıcı teyitleri ve Sessionize gönderimi açıktır
@@ -3603,6 +3689,30 @@ Sonuç:
 - Repo, paper ve CFP metni aynı commitlenmiş kanıt setini referans göstermeli
 - Dış submission artefact'leri tamamlanmalı ve gönderim kullanıcı tarafından
   onaylanmalı
+
+### Gate 7 - Optional noise-aware V3
+
+- [x] V2 release ve result immutability sınırını sabitle
+- [x] One-shot ve two-stage arm'lar için eşit fresh-sample bütçesini tanımla
+- [x] Primary false-discovery outcome, valid-negative ve finalist cap kurallarını yaz
+- [x] Küçük pilot bütçesi ve acceptance koşullarını machine-readable protocol'e koy
+- [ ] V2 one-shot yolunu bozmadan fresh evaluation API ve sample provenance ekle
+- [ ] Test-first deterministic promotion, mean aggregation ve exact budget accounting uygula
+- [ ] Pilot runner'ın clean/tag/checksum/preflight/postflight hard gate'lerini ekle
+- [ ] Clean pilot protocol commit/tag oluştur
+- [ ] İki arm'lı pilotu koştur ve acceptance'ı kapat
+- [ ] Pilot sonucuna göre yalnızca implementation-derived manifest alanlarını gözden geçir
+- [ ] Official protocol tag ve yeni result dizinlerini sabitle
+- [ ] Counterbalanced üç-seed, iki-arm official search'ü koştur
+- [ ] Shared ten-repeat finalist validation ve false-discovery analizini tamamla
+
+Çıkış koşulu:
+
+- iki arm aynı live search sample budget'ını tüketmeli
+- every repeated sample gerçek cluster replay'i olmalı; cache hit sample sayılmamalı
+- pilot çıktıları official evidence olarak etiketlenmemeli
+- mitigation işe yaramasa bile sonuç ve partial artifact zinciri korunmalı
+- V3 hiçbir aşamada KubeCon CFP submission gate'ini bloklamamalı
 
 ## 6. Bu Dosya Nasıl Kullanılmalı
 
