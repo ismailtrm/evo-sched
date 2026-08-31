@@ -1,0 +1,244 @@
+{
+  "schemaVersion": "research-protocol-v1",
+  "protocolVersion": "v3-budget-matched-resampling-draft",
+  "status": "design-committed-before-implementation",
+  "createdAt": "2026-08-31",
+  "base": {
+    "branch": "research/noise-aware-resampling-v3",
+    "v2SourceCommit": "cc26a0f",
+    "v2EvidenceReleaseTag": "v2-evidence-2026-08-31",
+    "preservationRule": "V2 raw results, protocol tags, paper, and release assets remain immutable. V3 uses new code, tags, and result directories."
+  },
+  "researchQuestion": "Under an equal live-evaluation budget, does deterministic two-stage resampling reduce the proportion of provisional optimizer-only Pareto discoveries that fail shared repeated validation compared with one-shot evolutionary search?",
+  "validNegativeResults": [
+    "Two-stage resampling has the same or a higher false Pareto discovery proportion than one-shot search.",
+    "Neither arm produces an optimizer-only provisional point.",
+    "Neither arm produces a policy that remains nondominated under shared repeated-mean validation.",
+    "Two-stage resampling reduces exploration without improving promotion precision."
+  ],
+  "estimand": {
+    "experimentalUnit": "One fresh policy sample: one normalized policy evaluated once on each fixed training workload using real scheduler rollouts and Pod bindings.",
+    "independentRepetition": "One fresh policy-workload replay after scheduler rollout convergence and namespace cleanup.",
+    "sampleObjectives": [
+      "Average p95 scheduler-decision latency across the three training workloads.",
+      "Average maximum workload-occupied worker nodes across the three training workloads."
+    ],
+    "multiSampleAggregation": "Arithmetic mean of the sample-level objective point estimates for each promoted candidate.",
+    "tailMetricLimitation": "Each workload replay contains 24 Pods; linearly interpolated p95 depends on the 22nd and 23rd ordered observations and remains sensitive to a few upper-tail samples.",
+    "measurementSources": [
+      "Evaluator submission timestamp immediately before Pod creation request.",
+      "Custom scheduler decision annotation immediately before Binding submission.",
+      "Kubernetes PodScheduled condition timestamp retained as a separate coarse source.",
+      "Evaluator observation timestamp retained as observation lag, not optimizer latency."
+    ],
+    "safetyMetrics": [
+      "unschedulableCount must be zero",
+      "scheduledCount and completedCount must match Pod count",
+      "decision timestamp coverage must be complete",
+      "measurement protocol, scheduler interval, polling interval, worker topology, and canonical deployment weights must not drift"
+    ]
+  },
+  "trainingWorkloads": [
+    "workloads/v2/cpu-tight-train.json",
+    "workloads/v2/mem-tight-train.json",
+    "workloads/v2/fragmenting-mix-train.json"
+  ],
+  "baselines": "experiments/weights-v2.json",
+  "commonSearchParameters": {
+    "population": 12,
+    "generations": 5,
+    "mutationRate": 0.8,
+    "mutationSigma": 0.25,
+    "minRawGene": 0.0,
+    "maxRawGene": 2.0,
+    "policyNormalization": "Nonnegative L1 simplex before every live evaluation.",
+    "schedulerInterval": "250ms",
+    "evaluatorPollInterval": "250ms",
+    "perWorkloadTimeout": "90s",
+    "workerCount": 4,
+    "podsPerWorkload": 24,
+    "baselineReferenceSamplesPerArm": 3
+  },
+  "budgetDefinition": {
+    "unit": "fresh policy sample",
+    "workloadExecutionsPerUnit": 3,
+    "podsPerUnit": 72,
+    "optimizerSampleBudgetPerArmSeed": 72,
+    "baselineSampleBudgetPerArmSeed": 3,
+    "totalPolicySamplesPerArmSeed": 75,
+    "totalWorkloadExecutionsPerArmSeed": 225,
+    "totalPodsPerArmSeed": 5400,
+    "armSeedCount": 6,
+    "officialSearchWorkloadExecutions": 1350,
+    "officialSearchPods": 32400,
+    "exclusions": "Post-search shared validation is reported separately and is not charged to either search arm."
+  },
+  "arms": [
+    {
+      "name": "one-shot-control",
+      "searchMode": "budget-one-shot",
+      "initialCandidates": 12,
+      "offspringPerGeneration": 12,
+      "promotionsPerGeneration": 0,
+      "additionalSamplesPerPromotion": 0,
+      "optimizerBudgetEquation": "12 + 5 * 12 = 72",
+      "maximumUniqueCandidates": 72,
+      "selectionFitness": "One fresh sample per candidate."
+    },
+    {
+      "name": "two-stage-resampling",
+      "searchMode": "budget-two-stage",
+      "initialCandidates": 12,
+      "offspringPerGeneration": 6,
+      "promotionsPerGeneration": 2,
+      "additionalSamplesPerPromotion": 3,
+      "samplesPerPromotedCandidate": 4,
+      "optimizerBudgetEquation": "12 + 5 * (6 + 2 * 3) = 72",
+      "maximumUniqueCandidates": 42,
+      "selectionFitness": "Arithmetic mean over all fresh samples held by the candidate after deterministic promotion."
+    }
+  ],
+  "promotionRule": {
+    "timing": "After one-shot evaluation of the generation's new offspring and before environmental selection.",
+    "pool": "Current population plus new offspring.",
+    "eligible": "Candidates with exactly one fresh sample that have not previously been promoted.",
+    "ordering": [
+      "lower nondomination rank",
+      "higher crowding distance",
+      "lower candidate creation ordinal as deterministic tie-break"
+    ],
+    "count": 2,
+    "action": "Collect three additional fresh policy samples for each promoted candidate, recompute objectives from four sample-level estimates, recompute ranks and crowding, then select the next population.",
+    "insufficientEligibleAction": "Fail the arm and preserve partial artifacts; do not reallocate or silently reduce the fixed budget."
+  },
+  "freshEvaluationContract": {
+    "cachePolicy": "Every V3 optimizer, promotion, and baseline sample invokes real workload replay. The V2 phenotype cache must be bypassed.",
+    "requiredProvenance": [
+      "candidate ID and canonical weights",
+      "arm, seed, generation, and candidate creation ordinal",
+      "sample ordinal and whether it is screening or promotion",
+      "fresh evaluation ID and start/finish timestamps",
+      "three workload-level raw metrics",
+      "sample-level objective point estimate",
+      "candidate aggregate objective after the sample",
+      "cumulative optimizer sample and workload-execution budget"
+    ],
+    "duplicatePhenotypeRule": "Distinct candidate IDs with equal canonical weights still consume independent fresh samples and remain separately traceable. Exact phenotype duplicates are reported."
+  },
+  "pilot": {
+    "class": "pilot",
+    "paperEvidenceEligible": false,
+    "seed": 20260831,
+    "workloads": "Use all three training workloads so sample aggregation and budget accounting match official semantics.",
+    "arms": [
+      {
+        "name": "one-shot-control",
+        "population": 4,
+        "generations": 1,
+        "offspringPerGeneration": 4,
+        "promotionsPerGeneration": 0,
+        "additionalSamplesPerPromotion": 0,
+        "optimizerSampleBudget": 8
+      },
+      {
+        "name": "two-stage-resampling",
+        "population": 4,
+        "generations": 1,
+        "offspringPerGeneration": 2,
+        "promotionsPerGeneration": 1,
+        "additionalSamplesPerPromotion": 2,
+        "samplesPerPromotedCandidate": 3,
+        "optimizerSampleBudget": 8
+      }
+    ],
+    "baselineSamplesPerArm": 3,
+    "expectedPolicySamplesPerArm": 11,
+    "expectedWorkloadExecutionsPerArm": 33,
+    "expectedPodsPerArm": 792,
+    "acceptance": [
+      "Both arms complete exactly eight optimizer fresh samples and three baseline fresh samples.",
+      "The promoted treatment candidate contains exactly three distinct evaluation IDs and sample timestamps.",
+      "Candidate aggregate objectives equal the arithmetic mean of retained sample objectives.",
+      "No cache hit substitutes for a fresh live replay.",
+      "Result and manifest expose exact sample, rollout, workload, Pod, and wall-time budgets.",
+      "Postflight restores canonical weights, scheduler cadence, clean evaluator namespace, and healthy deployment."
+    ]
+  },
+  "official": {
+    "class": "official",
+    "paperEvidenceEligibleAtRunCompletion": false,
+    "seeds": [42, 123, 999],
+    "armExecutionOrder": [
+      {
+        "seed": 42,
+        "order": ["one-shot-control", "two-stage-resampling"]
+      },
+      {
+        "seed": 123,
+        "order": ["two-stage-resampling", "one-shot-control"]
+      },
+      {
+        "seed": 999,
+        "order": ["one-shot-control", "two-stage-resampling"]
+      }
+    ],
+    "runGate": [
+      "Pilot acceptance is complete and committed.",
+      "Implementation, tests, workloads, baselines, analysis schema, and this protocol are committed in a clean tree.",
+      "An annotated official V3 protocol tag points exactly at HEAD.",
+      "Input checksums, image identity, versions, cluster topology, scheduler cadence, and canonical weights pass preflight.",
+      "Output directory is new and manifest starts in running state."
+    ],
+    "failureRule": "Any invalid, failed, or interrupted fresh sample fails the arm. Preserve partial outputs and the denominator; do not replace candidates or reduce the budget silently.",
+    "postflightRule": "After every arm and seed, verify deployment health, canonical weights, 250ms measurement cadence during the experiment, clean evaluator namespace, and eventual restoration to the normal 2s idle cadence."
+  },
+  "sharedValidation": {
+    "candidatePoolPerArm": "Collect optimizer-only members of each seed's combined provisional point-estimate Pareto front.",
+    "deduplication": "Deduplicate exact canonical weight phenotypes within and across seeds while retaining all arm and seed provenance.",
+    "maximumFinalistsPerArm": 5,
+    "capRule": [
+      "retain pending-best and node-best when distinct",
+      "fill remaining slots by descending crowding distance on the pooled unique provisional front",
+      "break exact ties by canonical weight key"
+    ],
+    "commonReferences": "Add the three hand-designed V2 baselines and merge exact phenotype duplicates across arms.",
+    "repetitionsPerPolicyWorkload": 10,
+    "freshSamplesOnly": true,
+    "validationBudget": "Report separately after finalist selection because the candidate count is outcome-dependent.",
+    "noProvisionalCandidateRule": "Report zero promoted finalists and an undefined false discovery proportion for that arm; do not invent a replacement candidate.",
+    "holdout": "No V3 holdout is part of this protocol. Any surviving optimizer policy requires a separate committed holdout protocol before a generalization claim."
+  },
+  "analysis": {
+    "primaryOutcome": {
+      "name": "falseParetoDiscoveryProportion",
+      "definition": "Number of validated provisional optimizer finalists that do not remain nondominated on the shared repeated-mean point-estimate front divided by the number of provisional optimizer finalists evaluated for that arm.",
+      "interpretation": "Descriptive arm comparison under equal search sample budget; not a hypothesis test with three seeds."
+    },
+    "secondaryOutcomes": [
+      "number and proportion of finalists that remain nondominated",
+      "unique canonical candidates explored",
+      "fresh policy samples, workload executions, Pods, rollouts, and wall time",
+      "baseline survival and exact duplicate objective points",
+      "repeated-mean objective coordinates and 95% Student-t confidence intervals",
+      "unschedulable and invalid evaluation counts"
+    ],
+    "paretoLanguage": "All fronts derived from sample means are point-estimate Pareto fronts. Dominance is not a statistical significance test.",
+    "mitigationSupportRule": "Two-stage mitigation is descriptively supported only if its false Pareto discovery proportion is lower than the one-shot control under the fixed search budget and all safety metrics pass.",
+    "falsificationRule": "If the treatment proportion is equal, higher, or undefined while the control is defined, the experiment does not support the mitigation claim.",
+    "optimizerImprovementRule": "A new policy improvement may be discussed only if an optimizer finalist remains nondominated against shared repeated baselines. Overlapping marginal confidence intervals still preclude a statistical superiority claim."
+  },
+  "implementationAcceptance": [
+    "The existing V2 one-shot Run path and output remain backward compatible.",
+    "Deterministic unit tests prove exact budget accounting for both arms.",
+    "Unit tests prove promotion ordering, fresh sample collection, objective aggregation, rank recomputation, and failure on insufficient eligible candidates.",
+    "Cluster evaluator tests prove cached V2 evaluation and fresh V3 evaluation are distinct operations.",
+    "JSON and CSV outputs include mode, sample count, evaluation IDs, sample objectives, and cumulative budgets.",
+    "Pilot runner preserves clean/tag/checksum/preflight/postflight provenance and never labels pilot output as official evidence."
+  ],
+  "openBeforeOfficialFreeze": [
+    "Review implementation-derived manifest fields after the pilot without changing the fixed official arm budgets or primary outcome.",
+    "Measure pilot wall time and publish an official duration estimate.",
+    "Select the final official protocol tag and run directory names.",
+    "Decide whether arm order should be randomized from a committed order seed instead of the fixed counterbalanced order."
+  ]
+}
