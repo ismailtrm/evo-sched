@@ -1,12 +1,14 @@
 package optimizer
 
 import (
+	"encoding/csv"
 	"math"
 	"math/rand"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"evok8s-scheduler/pkg/evaluator"
 )
@@ -154,4 +156,98 @@ func TestWriteCandidatesCSVIncludesMeasurementContract(t *testing.T) {
 	if !strings.Contains(content, "v2,v2,0.500000,0.250000,"+evaluator.WorkloadRequestedResourceMetricSource+",candidate-1") {
 		t.Fatalf("missing measurement contract row: %s", content)
 	}
+}
+
+func TestWriteSamplesCSVIncludesFreshEvaluationProvenance(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "samples.csv")
+	protocol := evaluator.MeasurementProtocol{
+		Version:                      evaluator.MeasurementVersion,
+		WorkloadResourceMetricSource: evaluator.WorkloadRequestedResourceMetricSource,
+		SchedulerIntervalSeconds:     0.25,
+		PodPollIntervalSeconds:       0.25,
+	}
+	candidates := []Candidate{{
+		ID:              "offspring-gen-01-001",
+		Name:            "gen-01-001",
+		Source:          "offspring",
+		Generation:      1,
+		CreationOrdinal: 5,
+		Weights: evaluator.WeightSet{
+			FreeCPU:       0.1,
+			FreeMem:       0.2,
+			Balance:       0.3,
+			Consolidation: 0.4,
+		},
+		EvaluationSamples: []EvaluationSample{{
+			EvaluationID:                          "budget-two-stage-seed-42-offspring-gen-01-001-promotion-002",
+			SampleKind:                            SampleKindPromotion,
+			SampleOrdinal:                         2,
+			BudgetClass:                           BudgetClassOptimizer,
+			BudgetOrdinal:                         7,
+			CumulativeOptimizerSamplesAttempted:   7,
+			CumulativeWorkloadExecutionsAttempted: 30,
+			CandidateObjectivesAfterSample: Objectives{
+				AverageP95SchedulingDecisionLatency:   0.75,
+				AverageMaxWorkloadOccupiedWorkerNodes: 3,
+			},
+			StartedAt:  time.Date(2026, 8, 31, 12, 0, 0, 0, time.UTC),
+			FinishedAt: time.Date(2026, 8, 31, 12, 1, 0, 0, time.UTC),
+			Data: EvaluationData{
+				Objectives: Objectives{
+					AverageP95SchedulingDecisionLatency:   0.5,
+					AverageMaxWorkloadOccupiedWorkerNodes: 2,
+				},
+				Workloads: []WorkloadMetrics{{
+					Workload:                       "cpu-tight",
+					P95SchedulingDecisionLatency:   0.5,
+					MaxWorkloadOccupiedWorkerNodes: 2,
+				}},
+			},
+		}},
+	}}
+
+	cfg := Config{SearchMode: SearchModeBudgetTwoStage, Seed: 42}
+	if err := WriteSamplesCSV(path, protocol, cfg, candidates); err != nil {
+		t.Fatalf("WriteSamplesCSV() error = %v", err)
+	}
+	f, err := os.Open(path)
+	if err != nil {
+		t.Fatalf("open samples CSV: %v", err)
+	}
+	defer f.Close()
+	records, err := csv.NewReader(f).ReadAll()
+	if err != nil {
+		t.Fatalf("read samples CSV: %v", err)
+	}
+	if len(records) != 2 {
+		t.Fatalf("samples CSV rows = %d, want header plus one sample", len(records))
+	}
+	row := csvRecordMap(records[0], records[1])
+	want := map[string]string{
+		"search_mode":                            string(SearchModeBudgetTwoStage),
+		"seed":                                   "42",
+		"candidate_id":                           "offspring-gen-01-001",
+		"evaluation_id":                          "budget-two-stage-seed-42-offspring-gen-01-001-promotion-002",
+		"sample_kind":                            string(SampleKindPromotion),
+		"sample_ordinal":                         "2",
+		"cumulative_optimizer_samples_attempted": "7",
+		"cumulative_workload_executions_attempted":              "30",
+		"sample_avg_p95_scheduling_decision_latency_seconds":    "0.500000",
+		"aggregate_avg_p95_scheduling_decision_latency_seconds": "0.750000",
+	}
+	for key, value := range want {
+		if row[key] != value {
+			t.Fatalf("samples CSV %s = %q, want %q; row=%v", key, row[key], value, row)
+		}
+	}
+}
+
+func csvRecordMap(header, record []string) map[string]string {
+	out := make(map[string]string, len(header))
+	for i, key := range header {
+		if i < len(record) {
+			out[key] = record[i]
+		}
+	}
+	return out
 }

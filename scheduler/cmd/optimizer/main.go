@@ -19,26 +19,32 @@ import (
 )
 
 type options struct {
-	workloads           string
-	baselineFile        string
-	namespace           string
-	schedulerNamespace  string
-	schedulerDeployment string
-	schedulerName       string
-	image               string
-	outputPath          string
-	csvOutputPath       string
-	allCSVOutputPath    string
-	pollInterval        time.Duration
-	timeout             time.Duration
-	cleanup             bool
-	populationSize      int
-	generations         int
-	mutationRate        float64
-	mutationSigma       float64
-	minWeight           float64
-	maxWeight           float64
-	seed                int64
+	workloads                     string
+	baselineFile                  string
+	namespace                     string
+	schedulerNamespace            string
+	schedulerDeployment           string
+	schedulerName                 string
+	image                         string
+	outputPath                    string
+	csvOutputPath                 string
+	allCSVOutputPath              string
+	samplesCSVOutputPath          string
+	pollInterval                  time.Duration
+	timeout                       time.Duration
+	cleanup                       bool
+	populationSize                int
+	generations                   int
+	mutationRate                  float64
+	mutationSigma                 float64
+	minWeight                     float64
+	maxWeight                     float64
+	seed                          int64
+	searchMode                    string
+	offspringPerGeneration        int
+	promotionsPerGeneration       int
+	additionalSamplesPerPromotion int
+	optimizerSampleBudget         int
 }
 
 func main() {
@@ -61,6 +67,7 @@ func parseFlags() options {
 	flag.StringVar(&opts.outputPath, "output", "", "Optional optimizer JSON output path")
 	flag.StringVar(&opts.csvOutputPath, "csv-output", "", "Optional combined Pareto CSV output path")
 	flag.StringVar(&opts.allCSVOutputPath, "all-csv-output", "", "Optional all-candidates CSV output path")
+	flag.StringVar(&opts.samplesCSVOutputPath, "samples-csv-output", "", "Optional fresh evaluation samples CSV output path")
 	flag.DurationVar(&opts.pollInterval, "poll-interval", time.Second, "Polling interval for pod state collection")
 	flag.DurationVar(&opts.timeout, "timeout", 0, "Per-workload timeout; defaults from workload length")
 	flag.BoolVar(&opts.cleanup, "cleanup", true, "Delete evaluator pods after each run")
@@ -71,6 +78,11 @@ func parseFlags() options {
 	flag.Float64Var(&opts.minWeight, "min-weight", 0.0, "Lower raw-gene clamp before L1 normalization")
 	flag.Float64Var(&opts.maxWeight, "max-weight", 2.0, "Upper raw-gene clamp before L1 normalization")
 	flag.Int64Var(&opts.seed, "seed", defaultSeed, "Random seed")
+	flag.StringVar(&opts.searchMode, "search-mode", "", "Optional V3 search mode: budget-one-shot or budget-two-stage")
+	flag.IntVar(&opts.offspringPerGeneration, "offspring-per-generation", 0, "Fresh offspring candidates per generation in a budgeted search")
+	flag.IntVar(&opts.promotionsPerGeneration, "promotions-per-generation", 0, "Candidates promoted for resampling per generation")
+	flag.IntVar(&opts.additionalSamplesPerPromotion, "additional-samples-per-promotion", 0, "Additional fresh samples collected per promoted candidate")
+	flag.IntVar(&opts.optimizerSampleBudget, "optimizer-sample-budget", 0, "Exact fresh optimizer sample budget")
 	flag.Parse()
 	return opts
 }
@@ -112,18 +124,29 @@ func run(opts options) error {
 	measurementProtocol := evaluator.MeasurementProtocolFor(runnerOpts, schedulerInterval)
 
 	cfg := optimizer.Config{
-		PopulationSize: opts.populationSize,
-		Generations:    opts.generations,
-		MutationRate:   opts.mutationRate,
-		MutationSigma:  opts.mutationSigma,
-		MinWeight:      opts.minWeight,
-		MaxWeight:      opts.maxWeight,
-		Seed:           opts.seed,
-		Workloads:      append([]string(nil), workloadPaths...),
+		PopulationSize:                opts.populationSize,
+		Generations:                   opts.generations,
+		MutationRate:                  opts.mutationRate,
+		MutationSigma:                 opts.mutationSigma,
+		MinWeight:                     opts.minWeight,
+		MaxWeight:                     opts.maxWeight,
+		Seed:                          opts.seed,
+		Workloads:                     append([]string(nil), workloadPaths...),
+		SearchMode:                    optimizer.SearchMode(opts.searchMode),
+		OffspringPerGeneration:        opts.offspringPerGeneration,
+		PromotionsPerGeneration:       opts.promotionsPerGeneration,
+		AdditionalSamplesPerPromotion: opts.additionalSamplesPerPromotion,
+		OptimizerSampleBudget:         opts.optimizerSampleBudget,
 	}
 
 	clusterEval := newClusterEvaluator(clientset, runnerOpts, workloadPaths)
-	result, runErr := optimizer.Run(cfg, baselines, clusterEval.Evaluate)
+	var result optimizer.Result
+	var runErr error
+	if cfg.SearchMode == "" {
+		result, runErr = optimizer.Run(cfg, baselines, clusterEval.Evaluate)
+	} else {
+		result, runErr = optimizer.RunBudgeted(cfg, baselines, clusterEval.EvaluateFresh)
+	}
 	result.MeasurementProtocol = measurementProtocol
 	if err := emitOutputs(result, opts); err != nil {
 		return err
@@ -131,19 +154,29 @@ func run(opts options) error {
 	return runErr
 }
 
+type evaluateWorkloadsFunc func(
+	context.Context,
+	kubernetes.Interface,
+	evaluator.RunnerOptions,
+	[]string,
+	evaluator.ExperimentRunSpec,
+) ([]evaluator.BatchResult, error)
+
 type clusterEvaluator struct {
-	clientset     kubernetes.Interface
-	runnerOpts    evaluator.RunnerOptions
-	workloadPaths []string
-	cache         map[string]optimizer.EvaluationData
+	clientset         kubernetes.Interface
+	runnerOpts        evaluator.RunnerOptions
+	workloadPaths     []string
+	cache             map[string]optimizer.EvaluationData
+	evaluateWorkloads evaluateWorkloadsFunc
 }
 
 func newClusterEvaluator(clientset kubernetes.Interface, runnerOpts evaluator.RunnerOptions, workloadPaths []string) *clusterEvaluator {
 	return &clusterEvaluator{
-		clientset:     clientset,
-		runnerOpts:    runnerOpts,
-		workloadPaths: append([]string(nil), workloadPaths...),
-		cache:         map[string]optimizer.EvaluationData{},
+		clientset:         clientset,
+		runnerOpts:        runnerOpts,
+		workloadPaths:     append([]string(nil), workloadPaths...),
+		cache:             map[string]optimizer.EvaluationData{},
+		evaluateWorkloads: evaluator.EvaluateWorkloads,
 	}
 }
 
@@ -153,18 +186,26 @@ func (e *clusterEvaluator) Evaluate(weights evaluator.WeightSet) (optimizer.Eval
 		return cloneEvaluationData(cached), nil
 	}
 
-	spec := evaluator.ExperimentRunSpec{Name: key, Weights: weights}
-	batches, err := evaluator.EvaluateWorkloads(context.Background(), e.clientset, e.runnerOpts, e.workloadPaths, spec)
-	if err != nil {
-		return optimizer.EvaluationData{}, err
-	}
-	data, err := aggregateEvaluationBatches(batches)
+	data, err := e.evaluate(key, weights)
 	if err != nil {
 		return optimizer.EvaluationData{}, err
 	}
 
 	e.cache[key] = cloneEvaluationData(data)
 	return cloneEvaluationData(data), nil
+}
+
+func (e *clusterEvaluator) EvaluateFresh(request optimizer.EvaluationRequest) (optimizer.EvaluationData, error) {
+	return e.evaluate(request.EvaluationID, request.Weights)
+}
+
+func (e *clusterEvaluator) evaluate(name string, weights evaluator.WeightSet) (optimizer.EvaluationData, error) {
+	spec := evaluator.ExperimentRunSpec{Name: name, Weights: weights}
+	batches, err := e.evaluateWorkloads(context.Background(), e.clientset, e.runnerOpts, e.workloadPaths, spec)
+	if err != nil {
+		return optimizer.EvaluationData{}, err
+	}
+	return aggregateEvaluationBatches(batches)
 }
 
 func aggregateEvaluationBatches(batches []evaluator.BatchResult) (optimizer.EvaluationData, error) {
@@ -382,6 +423,17 @@ func emitOutputs(result optimizer.Result, opts options) error {
 		}
 		log.Printf("wrote optimizer all-candidates csv to %s", allCSVPath)
 	}
+
+	samplesCSVPath := deriveSamplesCSVOutputPath(opts, result)
+	if samplesCSVPath != "" {
+		allCandidates := make([]optimizer.Candidate, 0, len(result.Baselines)+len(result.Evaluated))
+		allCandidates = append(allCandidates, result.Baselines...)
+		allCandidates = append(allCandidates, result.Evaluated...)
+		if err := optimizer.WriteSamplesCSV(samplesCSVPath, result.MeasurementProtocol, result.Config, allCandidates); err != nil {
+			return err
+		}
+		log.Printf("wrote optimizer fresh samples csv to %s", samplesCSVPath)
+	}
 	return nil
 }
 
@@ -429,4 +481,19 @@ func deriveAllCSVOutputPath(opts options) string {
 		base = strings.TrimSuffix(opts.outputPath, ext)
 	}
 	return base + "-all.csv"
+}
+
+func deriveSamplesCSVOutputPath(opts options, result optimizer.Result) string {
+	if opts.samplesCSVOutputPath != "" {
+		return opts.samplesCSVOutputPath
+	}
+	if result.Budget == nil || opts.outputPath == "" {
+		return ""
+	}
+	ext := filepath.Ext(opts.outputPath)
+	base := opts.outputPath
+	if ext != "" {
+		base = strings.TrimSuffix(opts.outputPath, ext)
+	}
+	return base + "-samples.csv"
 }

@@ -1,11 +1,16 @@
 package main
 
 import (
+	"context"
 	"math"
+	"slices"
 	"strings"
 	"testing"
 
+	"k8s.io/client-go/kubernetes"
+
 	"evok8s-scheduler/pkg/evaluator"
+	"evok8s-scheduler/pkg/optimizer"
 )
 
 func TestWeightKeyPreservesDistinctFloatValues(t *testing.T) {
@@ -15,6 +20,64 @@ func TestWeightKeyPreservesDistinctFloatValues(t *testing.T) {
 
 	if weightKey(a) == weightKey(b) {
 		t.Fatalf("distinct weights collapsed to one cache key: a=%+v b=%+v", a, b)
+	}
+}
+
+func TestClusterEvaluatorKeepsCachedAndFreshEvaluationPathsDistinct(t *testing.T) {
+	runnerOpts := evaluator.DefaultRunnerOptions()
+	clusterEval := newClusterEvaluator(nil, runnerOpts, []string{"cpu-tight.json"})
+	calls := 0
+	runNames := make([]string, 0)
+	clusterEval.evaluateWorkloads = func(
+		_ context.Context,
+		_ kubernetes.Interface,
+		_ evaluator.RunnerOptions,
+		_ []string,
+		spec evaluator.ExperimentRunSpec,
+	) ([]evaluator.BatchResult, error) {
+		calls++
+		runNames = append(runNames, spec.Name)
+		return []evaluator.BatchResult{validEvaluationBatch()}, nil
+	}
+
+	weights := evaluator.WeightSet{FreeCPU: 0.25, FreeMem: 0.25, Balance: 0.25, Consolidation: 0.25}
+	if _, err := clusterEval.Evaluate(weights); err != nil {
+		t.Fatalf("cached Evaluate() first call error = %v", err)
+	}
+	if _, err := clusterEval.Evaluate(weights); err != nil {
+		t.Fatalf("cached Evaluate() second call error = %v", err)
+	}
+	for _, evaluationID := range []string{"fresh-001", "fresh-002"} {
+		_, err := clusterEval.EvaluateFresh(optimizer.EvaluationRequest{
+			EvaluationID: evaluationID,
+			Weights:      weights,
+		})
+		if err != nil {
+			t.Fatalf("EvaluateFresh(%s) error = %v", evaluationID, err)
+		}
+	}
+
+	if calls != 3 {
+		t.Fatalf("live workload evaluations = %d, want 3 (one cached miss and two fresh calls)", calls)
+	}
+	if got, want := runNames[1:], []string{"fresh-001", "fresh-002"}; !slices.Equal(got, want) {
+		t.Fatalf("fresh run names = %v, want %v", got, want)
+	}
+}
+
+func TestDeriveSamplesCSVOutputPathOnlyDefaultsForBudgetedResults(t *testing.T) {
+	opts := options{outputPath: "/tmp/result.json"}
+	if got := deriveSamplesCSVOutputPath(opts, optimizer.Result{}); got != "" {
+		t.Fatalf("legacy samples path = %q, want empty", got)
+	}
+	result := optimizer.Result{Budget: &optimizer.BudgetSummary{}}
+	if got, want := deriveSamplesCSVOutputPath(opts, result), "/tmp/result-samples.csv"; got != want {
+		t.Fatalf("budgeted samples path = %q, want %q", got, want)
+	}
+
+	opts.samplesCSVOutputPath = "/tmp/explicit.csv"
+	if got, want := deriveSamplesCSVOutputPath(opts, optimizer.Result{}), opts.samplesCSVOutputPath; got != want {
+		t.Fatalf("explicit samples path = %q, want %q", got, want)
 	}
 }
 
