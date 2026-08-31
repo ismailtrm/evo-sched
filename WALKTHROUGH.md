@@ -3122,6 +3122,63 @@ gösterilecek ve çalıştırılmadan hemen önce onay alınacaktır. Public URL
 push/upload sonrası bağımsız doğrulama geçerse paper/CFP kaynağı olarak kabul
 edilecektir.
 
+### 3.66. V2 evidence release'i private GitHub reposunda yayımladık
+
+Kullanıcı external mutation kapısını onayladı, ancak çalışma henüz genel erişime
+açılmasın diye repository'nin şimdilik private tutulmasını istedi. Önce GitHub
+repository görünürlüğü `PRIVATE` yapıldı ve API üzerinden doğrulandı. Bu kararın
+sonucu olarak release stabil ve uzaktan doğrulanabilir durumdadır, fakat giriş
+gerektirdiği için CFP'de public Additional Resource olarak henüz kullanılamaz.
+
+Private remote'a şu ref'ler gönderildi:
+
+- `research/policy-space-v2` -> `84c9e8050549b4159fd744a36434fe24b1d3a2d5`
+- dört annotated protocol tag ve 3.65'te kaydedilen tarihsel commit target'ları
+- annotated release tag `v2-evidence-2026-08-31` -> `84c9e8050549b4159fd744a36434fe24b1d3a2d5`
+
+Ardından `EvoSched V2 Official Evidence` adlı non-draft, non-prerelease GitHub
+release oluşturuldu:
+
+<https://github.com/ismailtrm/evo-sched/releases/tag/v2-evidence-2026-08-31>
+
+Release'e final clean `84c9e80` paketinden şu dört asset yüklendi:
+
+- `evo-sched-v2-paper.pdf`
+- `evo-sched-v2-official-evidence.tar.gz`
+- `evo-sched-v2-release-manifest.json`
+- `SHA256SUMS`
+
+Yayın sonrası doğrulama yalnızca create komutunun başarı koduna dayanmadı:
+
+- `git ls-remote` ile branch ve beş annotated tag remote'dan tekrar okundu
+- annotated tag'lerin dereference edilmiş commit target'ları local provenance ile
+  eşleşti
+- `gh release view` dört asset'in `uploaded` durumunu, size ve SHA-256 digest'ini
+  doğruladı
+- dört asset yeni bir `/tmp` dizinine GitHub'dan tekrar indirildi
+- indirilen paper, evidence archive ve manifest için release içindeki
+  `SHA256SUMS` doğrulaması geçti
+- indirilen `SHA256SUMS` dosyasının kendi digest'i
+  `a7d50639519b28506789e595528da354c28bbabfcb1145b0f4912c5b5afe9820`
+  olup GitHub asset metadata'sıyla eşleşti
+- son kontrolde repository görünürlüğü hâlâ `PRIVATE` idi
+
+Bu doğrulamadan sonra durum matrisi şöyledir:
+
+| Durum | Sonuç | Sınır |
+| --- | --- | --- |
+| Local complete | Evet | Final package `/tmp/evo-sched-v2-release-84c9e80` altında doğrulandı |
+| Committed | Evet | Release tag `84c9e80` evidence-closed commit'ine bağlı |
+| Remote published | Evet | Branch, protocol tag'leri ve release private GitHub reposunda erişilebilir |
+| Public | Hayır | Repository private; anonim erişim yok |
+| Released | Evet, private | Dört asset remote'dan yeniden indirilip checksum ile doğrulandı |
+
+CFP JSON içindeki Additional Resources alanı bu aşamada release PDF URL'sine
+çevrilmedi. Sıradaki görünürlük kapısı kullanıcı kararıyla repository veya uygun
+bir paper artifact'ini public hale getirmek ve anonim HTTP erişimini doğrulamaktır.
+Killer figure private official evidence üzerinden üretilebilir; bu public erişim
+kararını ve V3 deneyini bloklamaz.
+
 ## 4. Şu Anki Durum
 
 Şu anda proje durumu şöyledir:
@@ -3192,6 +3249,8 @@ edilecektir.
 - V2 paper evidence audit `9b678f0` commit'inde `10/10` bulgu resolved ve submission evidence ready olarak kapatılmıştır
 - Public İngilizce README, Apache-2.0 lisansı ve pinned tested-version bilgisi eklenmiştir
 - `make verify` Go test/vet, official summary regeneration, evidence audit ve paper PDF kontrollerini tek komutta geçmiştir
+- V2 branch, dört protocol tag ve checksum doğrulamalı official evidence release'i private GitHub reposunda yayımlanmıştır
+- Repository private olduğu için release PDF henüz CFP'de anonim erişilebilir stabil public kaynak değildir
 - Functional live smoke ve kind resource lifecycle komutları Makefile entrypoint'leri olarak eklenmiştir
 - Gate 6 CFP taslağı official V2 claim setine bağlı ve commitlidir; public paper
   PDF, speaking sample, kullanıcı teyitleri ve Sessionize gönderimi açıktır
@@ -3398,6 +3457,7 @@ Sonuç:
 - [x] En yakın multi-objective Kubernetes scheduling çalışmalarını primary kaynaklarla doğrula ve novelty claim'ini noisy live fitness validation eksenine daralt
 - [x] README, lisans, pinned sürümler ve tek komutlu reproduction akışı ekle
 - [x] CFP anlatısını "evrensel en iyi scheduler" yerine canlı cluster üzerinde policy-space search sırasında öğrenilen tradeoff ve metodoloji dersleri üzerine kur
+- [x] V2 branch, protocol tag'leri, paper ve official evidence asset'lerini private release olarak yayımla ve remote checksum doğrulaması yap
 - [ ] Stabil public paper PDF, speaking sample ve kullanıcı teyitlerini tamamla
 - [ ] Sessionize formunu son resmi gereksinim kontrolünden sonra gönder
 
