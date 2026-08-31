@@ -4,7 +4,7 @@ CLUSTER_NAME ?= evo-sched
 SCHEDULER_IMAGE ?= evok8s-scheduler:0.1.0
 KIND_NODE_IMAGE ?= kindest/node:v1.35.0
 
-.PHONY: verify test vet paper release-package cluster-up cluster-stop scheduler-image scheduler-deploy live-smoke
+.PHONY: verify test vet paper killer-figure release-package cluster-up cluster-stop scheduler-image scheduler-deploy live-smoke
 
 verify:
 	./scripts/verify-official-v2.sh
@@ -17,6 +17,9 @@ vet:
 
 paper:
 	cd paper && latexmk -pdf -interaction=nonstopmode -halt-on-error main.tex
+
+killer-figure:
+	cd presentation/kubecon-europe-2027 && latexmk -pdf -interaction=nonstopmode -halt-on-error killer-figure.tex
 
 release-package:
 	./scripts/package-v2-release.sh $(RELEASE_OUTPUT)

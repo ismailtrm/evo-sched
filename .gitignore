@@ -13,3 +13,11 @@ paper/*.out
 paper/*.synctex.gz
 paper/*.toc
 paper/main.pdf
+
+# KubeCon presentation figure build artifacts.
+presentation/**/*.aux
+presentation/**/*.fdb_latexmk
+presentation/**/*.fls
+presentation/**/*.log
+presentation/**/*.pdf
+presentation/**/*.synctex.gz

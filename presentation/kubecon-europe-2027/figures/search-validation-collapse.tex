@@ -1,0 +1,191 @@
+% Official sources:
+% - results/2026-08-28-v2-official-optimizer-3seed/summary-pareto.csv
+% - results/2026-08-28-v2-official-optimizer-3seed/seed-*/result-all.csv
+% - results/2026-08-28-v2-official-finalist-validation/summary.json
+% Left: one evaluation per policy-workload pair. Right: 10 repeats per
+% policy-workload pair, aggregated over three workloads (30 observations).
+\begin{tikzpicture}
+\begin{groupplot}[
+  group style={
+    group name=collapse,
+    group size=2 by 1,
+    horizontal sep=1.35cm,
+  },
+  width=7.25cm,
+  height=5.7cm,
+  ymin=2.82,
+  ymax=4.18,
+  ytick={3,3.33,3.67,4},
+  grid=both,
+  grid style={gray!17},
+  tick label style={font=\scriptsize},
+  label style={font=\small},
+  title style={font=\small\bfseries, yshift=2pt, align=center},
+  axis line style={black!70},
+  tick style={black!70},
+  clip mode=individual,
+]
+
+\nextgroupplot[
+  title={(a) One shot: 5 optimizer-only front points},
+  xmin=1.20,
+  xmax=1.46,
+  xtick={1.20,1.30,1.40},
+  xlabel={avg. p95 decision latency (s)},
+  ylabel={avg. max occupied workers},
+  legend style={
+    font=\tiny,
+    at={(0.02,0.98)},
+    anchor=north west,
+    draw=none,
+    fill=white,
+    fill opacity=0.86,
+    text opacity=1,
+    row sep=-1pt,
+  },
+]
+
+% Three baseline references from each seed; none remained on a one-shot front.
+\addplot[
+  only marks,
+  mark=square,
+  mark size=2.6pt,
+  draw=softgray,
+  fill=white,
+  thick,
+] coordinates {
+  (1.408250,3.666667) (1.322752,4.000000) (1.406703,3.000000)
+  (1.394035,3.666667) (1.280264,4.000000) (1.398707,3.000000)
+  (1.420916,3.666667) (1.384795,4.000000) (1.434958,3.000000)
+};
+\addlegendentry{baseline refs.}
+
+\addplot[draw=accentorange, thick, dashed, forget plot] coordinates {
+  (1.250408,3.333333) (1.284070,3.000000)
+};
+\addplot[
+  only marks,
+  mark=*,
+  mark size=3.0pt,
+  draw=accentorange,
+  fill=accentorange,
+] coordinates {
+  (1.250408,3.333333) (1.284070,3.000000)
+};
+\addlegendentry{seed 42 front}
+
+\addplot[draw=accentblue, thick, dashed, forget plot] coordinates {
+  (1.254573,4.000000) (1.255230,3.000000)
+};
+\addplot[
+  only marks,
+  mark=triangle*,
+  mark size=3.3pt,
+  draw=accentblue,
+  fill=accentblue,
+] coordinates {
+  (1.254573,4.000000) (1.255230,3.000000)
+};
+\addlegendentry{seed 123 front}
+
+\addplot[
+  only marks,
+  mark=diamond*,
+  mark size=3.5pt,
+  draw=accentgreen,
+  fill=accentgreen,
+] coordinates {
+  (1.235628,3.000000)
+};
+\addlegendentry{seed 999 front}
+
+\nextgroupplot[
+  title={(b) Ten-repeat validation: 0/5 remain},
+  xmin=1.18,
+  xmax=1.39,
+  xtick={1.20,1.25,1.30,1.35},
+  xlabel={mean p95 decision latency (s)},
+  yticklabels={},
+  legend style={
+    font=\tiny,
+    at={(0.98,0.98)},
+    anchor=north east,
+    draw=none,
+    fill=white,
+    fill opacity=0.86,
+    text opacity=1,
+    row sep=-1pt,
+  },
+]
+
+% Horizontal bars are 95% Student-t confidence intervals for mean p95 latency.
+\addplot[
+  only marks,
+  mark=square*,
+  mark size=2.8pt,
+  draw=accentblue,
+  fill=accentblue!72,
+  error bars/.cd,
+  x dir=both,
+  x explicit,
+  error bar style={draw=accentblue!55, line width=0.55pt},
+] coordinates {
+  (1.251855,3.666667) +- (0.052403,0)
+  (1.264390,3.000000) +- (0.058494,0)
+  (1.298361,4.000000) +- (0.062515,0)
+};
+\addlegendentry{baselines (95\% CI)}
+
+\addplot[
+  only marks,
+  mark=x,
+  mark size=3.1pt,
+  very thick,
+  draw=black!72,
+  error bars/.cd,
+  x dir=both,
+  x explicit,
+  error bar style={draw=black!30, line width=0.5pt},
+] coordinates {
+  (1.274759,4.000000) +- (0.063156,0)
+  (1.294087,3.000000) +- (0.061508,0)
+  (1.298254,3.000000) +- (0.062275,0)
+  (1.307147,3.333333) +- (0.067285,0)
+  (1.265704,3.000000) +- (0.059872,0)
+};
+\addlegendentry{optimizer finalists (95\% CI)}
+
+\addplot[draw=accentorange, very thick, dashed, forget plot] coordinates {
+  (1.251855,3.666667) (1.264390,3.000000)
+};
+\addplot[
+  only marks,
+  mark=o,
+  mark size=4.4pt,
+  very thick,
+  draw=accentorange,
+] coordinates {
+  (1.251855,3.666667) (1.264390,3.000000)
+};
+\addlegendentry{repeated-mean front}
+
+\end{groupplot}
+
+\node[
+  anchor=north,
+  rounded corners=2pt,
+  draw=softgray!55,
+  fill=gray!3,
+  inner xsep=8pt,
+  inner ysep=3pt,
+  font=\small\bfseries,
+] at ($(collapse c1r1.south)!0.5!(collapse c2r1.south)+(0,-0.82cm)$)
+  {one-shot Pareto gain $\longrightarrow$ no repeated optimizer point};
+
+\node[
+  anchor=north,
+  font=\scriptsize,
+  text=black!62,
+] at ($(collapse c1r1.south)!0.5!(collapse c2r1.south)+(0,-1.37cm)$)
+  {Panels use different horizontal ranges; right-side intervals overlap.};
+\end{tikzpicture}
