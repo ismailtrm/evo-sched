@@ -3396,6 +3396,105 @@ görüldükten sonra değiştirilmeyecektir. Sıradaki adım test-first fresh ev
 sample aggregation, deterministic promotion ve budget accounting kodudur; cluster
 pilot ancak bu kod clean commit ve acceptance testlerinden sonra açılacaktır.
 
+### 3.70. V3 fresh-sample optimizer ve budget gate'lerini V2 yolunu bozmadan ekledik
+
+V3 implementation üç ayrı atomik kod commit'inde ilerledi:
+
+- `1144af3 feat: add budgeted optimizer sampling`
+- `cd1712c feat: expose fresh budgeted optimizer runs`
+- `f0e0caf feat: gate budgeted multi-seed experiments`
+
+İlk commit optimizer domain katmanını ekledi. Mevcut `optimizer.Run` ve cache'li
+V2 evaluation yolu değiştirilmedi; V3 yalnızca ayrı `RunBudgeted` entrypoint'i
+üzerinden çalışır. `budget-one-shot` ve `budget-two-stage` modları exact sample
+budget denklemini başlamadan doğrular. Treatment'ta promotion sırası lower
+nondomination rank, higher crowding distance ve lower creation ordinal olarak
+deterministiktir. Her başarılı live replay ayrı `EvaluationSample` olarak şu
+provenance ile tutulur:
+
+- unique evaluation ID, sample kind ve sample ordinal
+- baseline/optimizer budget class ve budget ordinal
+- fresh sample start/finish timestamp'leri
+- sample-level workload metric'leri ve iki objective
+- sample sonrasındaki candidate aggregate objective
+- cumulative attempted optimizer sample ve workload execution sayısı
+
+Promoted candidate'ın objective'i sahip olduğu fresh sample point estimate'lerinin
+aritmetik ortalamasıdır. Promotion'ın ikinci/sonraki sample'ı fail olursa daha
+önce tamamlanan sample result'tan kaybolmaz. Partial result ayrıca attempted ve
+actual sample/workload bütçelerini, bitiş zamanını ve o ana kadar oluşmuş unique
+candidate sayısını korur. Bu davranış özellikle evaluator hatası, terminal
+kesintisi veya reboot sonrasında denominator'ın geriye dönük tahmin edilmesini
+önlemek için eklendi.
+
+İkinci commit `cmd/optimizer` CLI katmanını bağladı. `--search-mode` boşken eski
+V2 `optimizer.Run` ve phenotype cache aynen kullanılır. `budget-one-shot` veya
+`budget-two-stage` verildiğinde `EvaluateFresh` her çağrıda gerçek
+`EvaluateWorkloads` replay'i yapar; aynı canonical weight tekrar gelse bile cache
+hit sample sayılamaz. Yeni CLI contract'ı şunları içerir:
+
+- `--search-mode`
+- `--offspring-per-generation`
+- `--promotions-per-generation`
+- `--additional-samples-per-promotion`
+- `--optimizer-sample-budget`
+- opsiyonel `--samples-csv-output`
+
+Budgeted JSON çıktısına ek olarak otomatik `result-samples.csv` üretilir. Bu CSV
+mode ve seed'i açık kolonlarda; candidate identity/weights, evaluation ID,
+sample/aggregate objectives, timestamps ve cumulative budget ile taşır. Candidate
+aggregate CSV ile raw fresh-sample CSV bilinçli olarak ayrıdır; promoted
+candidate'ın workload satırlarını tek bir koşuymuş gibi göstermiyoruz.
+
+Üçüncü commit mevcut `multi-seed-runner`ı kopyalamak yerine geriye uyumlu şekilde
+genelleştirdi. V2 default command ve official evidence eligibility testle
+korundu. V3 için runner artık unique candidate ile fresh policy sample'ı ayrı
+hesaplar ve tamamlanmış bir arm'ı ancak şu gate'ler birlikte geçerse kabul eder:
+
+- JSON search mode ve seed beklenen değerlerdir
+- optimizer, baseline, workload execution ve promotion bütçeleri expected,
+  attempted ve actual olarak eşittir
+- JSON'daki evaluation ID'ler non-empty ve unique'tir
+- candidate `evaluationCount` değeri raw sample sayısıyla eşittir
+- `result-samples.csv` evaluation ID kümesi JSON ile birebir aynıdır
+- resolved workload'lardan hesaplanan Pod bütçesi raw sample workload
+  metric'lerinden yeniden toplanınca aynıdır
+- result, Pareto CSV, all-candidates CSV, sample CSV ve run log checksum'ları
+  manifest'e girer
+
+Pilot/two-stage örneğinde bu ayrım `9` unique candidate (`6` optimizer + `3`
+baseline) ve `11` fresh policy sample (`8` optimizer + `3` baseline) demektir.
+Üç workload ile runner `33` workload execution ve resolved inputlara göre `792`
+Pod bekler. Pilot ve henüz shared validation görmemiş budgeted official search
+completion anında otomatik olarak `paperEvidenceEligible=false` kalır.
+
+Failed veya interrupted subprocess'te completion gate uygulanmaz; bulunan
+partial JSON/CSV/log artifact'leri best-effort SHA-256 ile manifest'e bağlanır ve
+beklenen denominator manifestte korunur. Cluster recovery canonical weights,
+clean evaluator namespace, expected worker count ve experiment cadence için
+mevcut preflight/postflight sözleşmesini kullanmaya devam eder.
+
+Doğrulamalar:
+
+- optimizer ve runner package testleri geçti
+- ilgili package'lerde race detector geçti
+- tüm `go test ./...` ve `go vet ./...` geçti
+- optimizer budget testi 100 kez tekrarlı çalıştırıldığında deterministik kaldı
+- `make verify` üç implementation commit'i sonrasında da official V2 evidence,
+  generated analysis ve paper zincirini temiz doğruladı
+
+Bilerek açık bırakılan gözlemlenebilirlik noktası scheduler rollout sayısıdır.
+Her fresh sample policy apply/restore akışını çağırsa da deployment gerçekten yeni
+Pod üretmediğinde bunu gerçekleşmiş rollout diye saymak doğru değildir. Exact
+sample, workload ve Pod bütçesi şu an kanıtlanmaktadır; gerçek rollout/update
+telemetry'si gerekiyorsa evaluator tarafında ayrıca instrument edilmeden rapora
+eklenmeyecektir.
+
+Bu bölüm yazılırken kind cluster hâlâ durdurulmuştur ve hiçbir V3 live pilot
+başlatılmamıştır. Sıradaki adım iki arm'ı `/tmp` altında sabit sırayla çalıştıran
+pilot launcher/manifest katmanını eklemek, clean pilot commit/tag oluşturmak ve
+ancak preflight sonrasında cluster'ı açmaktır.
+
 ## 4. Şu Anki Durum
 
 Şu anda proje durumu şöyledir:
@@ -3471,7 +3570,8 @@ pilot ancak bu kod clean commit ve acceptance testlerinden sonra açılacaktır.
 - One-shot provisional front ile ten-repeat validation çöküşünü yan yana gösteren standalone KubeCon vector figure hazırdır
 - 25 dakikalık içerik, 5 dakikalık soru bölümü ve 4 dakikalık İngilizce speaking sample script'i içeren KubeCon talk package hazırdır
 - V3 noise-aware search için V2'den ayrılmış research branch ve budget-matched machine-readable protocol hazırdır
-- V3 implementation ve pilot henüz başlamamıştır; cluster kapalıdır
+- V3 fresh-sample optimizer, cache-bypass CLI, sample CSV ve exact-budget runner gate'leri testli ve commitlidir
+- V3 iki-arm pilot launcher'ı ve live pilot henüz tamamlanmamıştır; cluster kapalıdır
 - Functional live smoke ve kind resource lifecycle komutları Makefile entrypoint'leri olarak eklenmiştir
 - Gate 6 CFP taslağı official V2 claim setine bağlı ve commitlidir; public paper
   PDF, speaking sample, kullanıcı teyitleri ve Sessionize gönderimi açıktır
@@ -3696,8 +3796,8 @@ Sonuç:
 - [x] One-shot ve two-stage arm'lar için eşit fresh-sample bütçesini tanımla
 - [x] Primary false-discovery outcome, valid-negative ve finalist cap kurallarını yaz
 - [x] Küçük pilot bütçesi ve acceptance koşullarını machine-readable protocol'e koy
-- [ ] V2 one-shot yolunu bozmadan fresh evaluation API ve sample provenance ekle
-- [ ] Test-first deterministic promotion, mean aggregation ve exact budget accounting uygula
+- [x] V2 one-shot yolunu bozmadan fresh evaluation API ve sample provenance ekle
+- [x] Test-first deterministic promotion, mean aggregation ve exact budget accounting uygula
 - [ ] Pilot runner'ın clean/tag/checksum/preflight/postflight hard gate'lerini ekle
 - [ ] Clean pilot protocol commit/tag oluştur
 - [ ] İki arm'lı pilotu koştur ve acceptance'ı kapat
