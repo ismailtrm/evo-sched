@@ -222,9 +222,10 @@ type acceptance struct {
 }
 
 type generator struct {
-	Command string `json:"command"`
-	GitSHA  string `json:"gitSha"`
-	Branch  string `json:"branch"`
+	Command          string `json:"command"`
+	WorkingDirectory string `json:"workingDirectory"`
+	GitSHA           string `json:"gitSha"`
+	Branch           string `json:"branch"`
 }
 
 type output struct {
@@ -276,7 +277,7 @@ func run(opts options) error {
 		opts.csvOutputPath = strings.TrimSuffix(opts.outputPath, filepath.Ext(opts.outputPath)) + ".csv"
 	}
 
-	generatedBy, err := inspectGenerator()
+	generatedBy, err := inspectGenerator(exactCommand(opts))
 	if err != nil {
 		return err
 	}
@@ -803,7 +804,7 @@ func verifyChecksum(path, expected string) error {
 	return nil
 }
 
-func inspectGenerator() (generator, error) {
+func inspectGenerator(command string) (generator, error) {
 	sha, err := gitOutput("rev-parse", "HEAD")
 	if err != nil {
 		return generator{}, err
@@ -819,7 +820,24 @@ func inspectGenerator() (generator, error) {
 	if status != "" {
 		return generator{}, errors.New("V3 validation summary generation requires a clean Git tree")
 	}
-	return generator{Command: "go run ./cmd/v3-validation-summary", GitSHA: sha, Branch: branch}, nil
+	workingDirectory, err := os.Getwd()
+	if err != nil {
+		return generator{}, err
+	}
+	return generator{Command: command, WorkingDirectory: workingDirectory, GitSHA: sha, Branch: branch}, nil
+}
+
+func exactCommand(opts options) string {
+	return strings.Join([]string{
+		"go run ./cmd/v3-validation-summary",
+		"--inputs " + opts.inputs,
+		"--protocol " + opts.protocolPath,
+		"--manifest " + opts.manifestPath,
+		"--search-summary " + opts.searchPath,
+		"--weights " + opts.weightsPath,
+		"--output " + opts.outputPath,
+		"--csv-output " + opts.csvOutputPath,
+	}, " ")
 }
 
 func gitOutput(args ...string) (string, error) {

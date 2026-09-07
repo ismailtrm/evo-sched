@@ -88,6 +88,17 @@ func TestValidRunRejectsMissingDecisionTimestamp(t *testing.T) {
 	}
 }
 
+func TestExactCommandRecordsAllAnalysisInputsAndOutputs(t *testing.T) {
+	opts := options{
+		inputs: "a.json,b.json", protocolPath: "protocol.json", manifestPath: "manifest.json",
+		searchPath: "search.json", weightsPath: "weights.json", outputPath: "summary.json", csvOutputPath: "summary.csv",
+	}
+	want := "go run ./cmd/v3-validation-summary --inputs a.json,b.json --protocol protocol.json --manifest manifest.json --search-summary search.json --weights weights.json --output summary.json --csv-output summary.csv"
+	if got := exactCommand(opts); got != want {
+		t.Fatalf("exactCommand() = %q, want %q", got, want)
+	}
+}
+
 func TestOfficialSharedValidationArtifactsPassProvenanceGate(t *testing.T) {
 	repoRoot, err := filepath.Abs(filepath.Join("..", "..", ".."))
 	if err != nil {
