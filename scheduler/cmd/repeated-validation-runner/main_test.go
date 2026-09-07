@@ -255,6 +255,50 @@ func TestFrozenV3ValidationProtocolMatchesRepositoryArtifacts(t *testing.T) {
 	}
 }
 
+func TestFrozenV3HoldoutProtocolMatchesRepositoryArtifacts(t *testing.T) {
+	repoRoot, err := filepath.Abs(filepath.Join("..", "..", ".."))
+	if err != nil {
+		t.Fatal(err)
+	}
+	schedulerDir := filepath.Join(repoRoot, "scheduler")
+	workloads := []string{"../workloads/v2/mixed-burst-holdout.json"}
+	opts := options{
+		runName:          "2026-09-08-v3-survivor-holdout",
+		workloads:        strings.Join(workloads, ","),
+		weightsFile:      "../experiments/weights-v3-holdout-survivors.json",
+		protocolTag:      "protocol-v3-survivor-holdout-2026-09-08",
+		protocolVersion:  "v3-survivor-holdout-official",
+		protocolFile:     "../experiments/protocol-v3-survivor-holdout.json",
+		protocolContract: protocolContractHoldout,
+		executionOrder:   executionOrderCyclicRotation,
+		outputRoot:       "/tmp/evo-sched-v3-holdout",
+		provenanceFiles: strings.Join([]string{
+			"../kind-config-4workers.yaml",
+			"../deploy.yaml",
+			"../experiments/protocol-v3-budget-matched-resampling.json",
+			"../results/2026-09-07-v3-budget-matched-official-search/manifest.json",
+			"../results/2026-09-07-v3-shared-validation/manifest.json",
+			"../results/2026-09-07-v3-shared-validation/analysis/validation-summary.json",
+		}, ","),
+		repetitions: 10, pollInterval: 250 * time.Millisecond, timeout: 90 * time.Second,
+		expectedWorkers: 4, expectedSchedulerInterval: 250 * time.Millisecond,
+		finalSchedulerInterval: 2 * time.Second, expectedWeights: "0.25,0.25,0.25,0.25",
+		schedulerNamespace: "evo-sched", schedulerDeployment: "evok8s-scheduler",
+		evaluatorNamespace: "evo-sched-eval", schedulerName: "evok8s-scheduler", image: "busybox:1.36.1",
+	}
+	spec, err := evaluator.LoadExperiment(resolvePath(schedulerDir, opts.weightsFile))
+	if err != nil {
+		t.Fatal(err)
+	}
+	gotPods, err := validateProtocolContract(resolvePath(schedulerDir, opts.protocolFile), schedulerDir, repoRoot, opts, workloads, spec.Runs)
+	if err != nil {
+		t.Fatalf("validateProtocolContract(frozen V3 holdout) error = %v", err)
+	}
+	if gotPods != 1440 {
+		t.Fatalf("frozen V3 holdout Pods = %d, want 1440", gotPods)
+	}
+}
+
 func TestExpandRunSpecsRejectsUnknownExecutionOrder(t *testing.T) {
 	_, err := expandRunSpecs([]evaluator.ExperimentRunSpec{{Name: "a"}}, 2, "random")
 	if err == nil {
