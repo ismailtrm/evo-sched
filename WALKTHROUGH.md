@@ -3725,6 +3725,91 @@ seed-bazlı counterbalanced arm order'ı ve exact official budget'ı uygulayan
 provenance-gated üç-seed launcher'dır. Launcher test ve acceptance'ı bitmeden
 official protocol freeze/tag veya canlı official V3 search başlatılmayacaktır.
 
+### 3.74. Counterbalanced üç-seed V3 official launcher hard-gated eklendi
+
+`849344a feat: add counterbalanced V3 official launcher` commit'i yeni
+`scheduler/cmd/v3-official-runner` komutunu ve contract testlerini ekledi. Pilot
+launcher'ın kanıt zincirini değiştirmek yerine official protocol için ayrı bir
+entrypoint tutuldu. Bu ayrım geçmiş pilot artefact'ini immutable bırakırken
+official execution'ın sınıf, order ve bütçe kurallarını kendi manifestinde açık
+hale getirir.
+
+Launcher'ın sabit execution planı protocolde önceden belirlenen counterbalanced
+sırayı birebir uygular:
+
+| Sıra | Seed | Arm |
+|---:|---:|---|
+| 1 | 42 | one-shot-control |
+| 2 | 42 | two-stage-resampling |
+| 3 | 123 | two-stage-resampling |
+| 4 | 123 | one-shot-control |
+| 5 | 999 | one-shot-control |
+| 6 | 999 | two-stage-resampling |
+
+Her execution ayrı bir `multi-seed-runner` child run'ıdır ve tek seed taşır.
+One-shot arm `12 + 5 x 12 = 72` fresh optimizer sample; two-stage arm ise
+`12 + 5 x (6 + 2 x 3) = 72` fresh optimizer sample tüketir. Her arm/seed ayrıca
+üç baseline sample içerir. Hardcoded ve testle kilitlenen bütçeler:
+
+| Kapsam | Optimizer sample | Baseline sample | Policy sample | Workload execution | Pod |
+|---|---:|---:|---:|---:|---:|
+| her arm/seed | 72 | 3 | 75 | 225 | 5,400 |
+| 3 seed x 2 arm | 432 | 18 | 450 | 1,350 | 32,400 |
+
+Official launcher şu provenance ve safety gate'lerini uygular:
+
+- başlangıç Git tree'si clean olmalı
+- verilen annotated protocol tag doğrudan HEAD'i göstermeli
+- top-level output repo dışında ve daha önce bulunmayan yeni bir dizin olmalı
+- protocol, workload, baseline, cluster config ve deployment girdilerinin
+  SHA-256 değerleri üst manifestte saklanmalı
+- protocol JSON yalnızca checksum ile değil semantik olarak da doğrulanmalı
+- protocol version `v3-budget-matched-resampling-official`, status
+  `official-frozen-before-execution`, seed/order ve tüm per-arm/toplam bütçeler
+  launcher planıyla birebir eşleşmeli
+- her child manifest `official`, `completed`, clean/tagged aynı Git SHA ve exact
+  seed/search-mode/budget contract'ı taşımalı
+- budgeted search çıktıları shared ten-repeat validation tamamlanmadığı için hem
+  child hem top-level manifestte `paperEvidenceEligible=false` kalmalı
+- arm hatası veya SIGINT/SIGTERM yeni child başlatmayı durdurmalı, partial
+  manifest/log checksum'larını korumalı ve final restoration'ı yine denemeli
+- final restoration managed Pod'ları temizlemeli, canonical ağırlıkları ve normal
+  `2s` idle cadence'i geri getirmeli; dört worker, rollout ve boş namespace'i
+  doğrulamalı
+
+Top manifest execution order'ı, exact combined budget'ı, tüm input checksum'ları,
+her child manifest ve launcher log path/checksum'ını ve final restoration
+snapshot'ını taşır. Child çıktıları `seed-<seed>/<arm>/` altında ayrılır; launcher
+logları da seed ve arm adıyla benzersizdir. Böylece counterbalanced gerçek sıra
+sonradan directory sıralamasından tahmin edilmez, machine-readable olarak
+kanıtlanır.
+
+Test-first geliştirmede önce undefined contract nedeniyle beklenen compile
+failure alındı. Ardından testler şunları doğruladı:
+
+- altı execution'ın tam sırası ve iki arm'ın eşit fresh-sample bütçesi
+- official child CLI'nin population, generation, promotion ve budget flag'leri
+- seed `123` treatment execution'ında sentetik failure sonrası yeni execution
+  başlatılmaması ve final restoration'ın yine tamamlanması
+- child manifestte evidence state, Git, seed, search mode ve budget drift'inin
+  reddedilmesi
+- draft protocol status, execution-order drift ve budget drift'inin official
+  gate tarafından reddedilmesi
+
+`go test -race ./cmd/v3-official-runner`, `go test ./...` ve `go vet ./...`
+geçti. İlk çıplak `make verify`, sandbox'ın varsayılan
+`/home/ismail/.cache/go-build` dizisini read-only görmesi nedeniyle setup
+aşamasında durdu; bu kod veya evidence failure değildir. Aynı doğrulama
+`GOCACHE=/tmp/evo-sched-go-cache make verify` ile eksiksiz geçti ve V2 official
+evidence, regenerated analyses ile paper zinciri temiz kaldı.
+
+Bu aşamada launcher implementation acceptance tamamlanmıştır; cluster kapalıdır
+ve hiçbir official V3 execution başlatılmamıştır. Mevcut protocol dosyası bilinçli
+olarak hâlâ draft statüsündedir, dolayısıyla launcher şu an semantik gate'te onu
+reddeder. Sıradaki kapı yalnızca implementation-derived alanları ve pilot süre
+tahminini protocolde son kez gözden geçirmek, açık kararları kapatmak, clean
+protocol freeze commit'i ve annotated tag oluşturmaktır.
+
 ## 4. Şu Anki Durum
 
 Şu anda proje durumu şöyledir:
@@ -4034,7 +4119,7 @@ Sonuç:
 - [x] Clean pilot protocol commit/tag oluştur
 - [x] İki arm'lı pilotu koştur ve acceptance'ı kapat
 - [x] Official run öncesi Pod adlarını DNS-label sınırına indir ve warning-free smoke yap
-- [ ] Counterbalanced üç-seed official launcher ve manifest acceptance'ını ekle
+- [x] Counterbalanced üç-seed official launcher ve manifest acceptance'ını ekle
 - [ ] Pilot süre tahminini kullanarak official protocol freeze/tag oluştur
 - [ ] Pilot sonucuna göre yalnızca implementation-derived manifest alanlarını gözden geçir
 - [ ] Official protocol tag ve yeni result dizinlerini sabitle
