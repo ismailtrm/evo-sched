@@ -4155,6 +4155,11 @@ byte-for-byte, JSON ise yalnızca `generatedAt` çıkarıldığında byte-for-by
 
 - `b1a65ca results: analyze V3 false Pareto discovery`
 
+`8ee63d6 test: verify committed V3 validation analysis` commit'i bu regeneration
+kontrolünü repository contract testine taşıdı. Böylece `go test ./...` ve mevcut
+`make verify`, committed V3 policy/CI/Pareto/arm karar gövdesi ile CSV'yi raw
+artefact'lardan yeniden hesaplayıp birebir karşılaştırmaktadır.
+
 Dondurulmuş primary outcome'un gözlenen sonucu:
 
 | Arm | Validated finalist | Nondominated kalan | False discovery | Proportion |
