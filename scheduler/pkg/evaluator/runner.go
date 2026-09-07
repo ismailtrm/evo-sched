@@ -2,6 +2,7 @@ package evaluator
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
 	"log"
 	"os"
@@ -856,7 +857,7 @@ func createWorkloadPod(
 	memBytes := item.MemoryMiB * 1024 * 1024
 	pod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s-%s", runID, item.Name),
+			Name:      makePodName(runID, item.Name),
 			Namespace: opts.Namespace,
 			Labels: map[string]string{
 				"app":               "evo-sched-eval",
@@ -1093,6 +1094,49 @@ func makeRunID(name string) string {
 		runID = runID[:40]
 	}
 	return fmt.Sprintf("%s-%d", runID, time.Now().Unix())
+}
+
+func makePodName(runID, itemName string) string {
+	const (
+		maxDNSLabelLength = 63
+		hashBytes         = 5
+	)
+	raw := runID + "-" + itemName
+	name := sanitizeDNSLabel(raw)
+	if len(name) <= maxDNSLabelLength {
+		return name
+	}
+
+	digest := sha256.Sum256([]byte(raw))
+	suffix := fmt.Sprintf("%x", digest[:hashBytes])
+	prefixLength := maxDNSLabelLength - len(suffix) - 1
+	prefix := strings.Trim(name[:prefixLength], "-")
+	if prefix == "" {
+		prefix = "pod"
+	}
+	return prefix + "-" + suffix
+}
+
+func sanitizeDNSLabel(value string) string {
+	var b strings.Builder
+	lastHyphen := false
+	for _, r := range strings.ToLower(value) {
+		valid := (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9')
+		if valid {
+			b.WriteRune(r)
+			lastHyphen = false
+			continue
+		}
+		if !lastHyphen && b.Len() > 0 {
+			b.WriteByte('-')
+			lastHyphen = true
+		}
+	}
+	name := strings.Trim(b.String(), "-")
+	if name == "" {
+		return "pod"
+	}
+	return name
 }
 
 func runSelector(runID string) string {

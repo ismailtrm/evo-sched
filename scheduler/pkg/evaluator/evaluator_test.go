@@ -19,6 +19,7 @@ import (
 	apiresource "k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/client-go/kubernetes/fake"
 	ktesting "k8s.io/client-go/testing"
 )
@@ -784,6 +785,27 @@ func TestCreateWorkloadPodStoresHighResolutionSubmissionTimestamp(t *testing.T) 
 	}
 	if pod.Annotations[measurement.MeasurementVersionAnnotation] != measurement.Version {
 		t.Fatalf("measurement version annotation = %q", pod.Annotations[measurement.MeasurementVersionAnnotation])
+	}
+}
+
+func TestMakePodNamePreservesShortNamesAndBoundsLongNames(t *testing.T) {
+	if got := makePodName("run-a", "pod-a"); got != "run-a-pod-a" {
+		t.Fatalf("makePodName(short) = %q, want %q", got, "run-a-pod-a")
+	}
+
+	runID := "eval-budget-two-stage-seed-20260831-promot-1788740000"
+	first := makePodName(runID, "fragmenting-wave-01-a-cpu")
+	second := makePodName(runID, "fragmenting-wave-01-b-mem")
+	for _, name := range []string{first, second} {
+		if len(name) > 63 {
+			t.Fatalf("makePodName(long) length = %d, want <= 63: %q", len(name), name)
+		}
+		if errs := validation.IsDNS1123Label(name); len(errs) != 0 {
+			t.Fatalf("makePodName(long) is not a DNS-1123 label: %q: %v", name, errs)
+		}
+	}
+	if first == second {
+		t.Fatalf("distinct long Pod identities collapsed to %q", first)
 	}
 }
 
