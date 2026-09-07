@@ -3859,6 +3859,39 @@ search'ün çalıştığı anlamına gelmez. Cluster kapalıdır; yeni result di
 yoktur ve shared validation tamamlanana kadar search artefact'leri tek başına
 paper evidence değildir.
 
+### 3.76. Official top manifest invocation'ı transient go-build yolundan arındırıldı
+
+Freeze tag'i oluşturulduktan fakat hiçbir official execution başlamadan önce son
+preflight yapıldı. Git tree clean, annotated tag HEAD ile eşit ve frozen output
+dizini yoktu. Cluster başlatıldı; host `kubectl` eksikliği nedeniyle Make target
+son wait satırında beklendiği gibi durdu, control-plane `kubectl` ile beş node'un
+tamamının `Ready` olduğu doğrulandı. Scheduler `250ms` measurement cadence'e
+alındı; deployment `1/1`, canonical ağırlıklar aktif, runtime image ID beklenen
+değerle aynı ve evaluator namespace boştu.
+
+Run başlatılmadan önce pilot üst manifestindeki `command` alanı yeniden
+incelendiğinde `go run` nedeniyle geçici
+`/tmp/go-build.../exe/v3-pilot-runner` executable yolunu kaydettiği görüldü.
+Pilot manifestte flags bulunmasına rağmen bu yol kalıcı ve doğrudan tekrar
+çalıştırılabilir bir invocation değildir. Official komut tüm değerleri default
+aldığında problem daha belirgin olacaktı; `command` yalnızca transient binary
+yolundan oluşacaktı. Exact-command provenance şartı nedeniyle bu durum official
+başlangıcı bloke etti.
+
+Official launcher manifesti artık `os.Args` kopyalamak yerine stable effective
+invocation üretir. Kayıt `go run ./cmd/v3-official-runner` ile başlar ve frozen
+run adı, output root, protocol tag/file, provenance files, Kubernetes object
+adları, image, restoration timeout ve worker count değerlerini açıkça taşır.
+`TestBuildInvocationRecordsStableEffectiveCommand` gerekli alanları ve
+`/tmp/go-build` sızıntısı olmadığını doğrular.
+
+Bu düzeltme seed/order, search algoritması, objective, budget, workload veya
+analysis kuralını değiştirmez. Hiçbir official Pod oluşturulmadı ve frozen result
+dizini hâlâ yoktur. Kod ve ledger correction commit'inden sonra local annotated
+`protocol-v3-official-search-2026-09-07` tag'i, official veri toplamadan önce yeni
+clean HEAD'e yeniden bağlanacaktır. Bu sıra hem gerçek executable source'u hem
+de protocolü aynı tagged snapshot altında tutar.
+
 ## 4. Şu Anki Durum
 
 Şu anda proje durumu şöyledir:

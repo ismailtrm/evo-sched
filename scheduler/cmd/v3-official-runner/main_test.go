@@ -80,6 +80,27 @@ func TestBuildExecutionArgsCarriesFrozenOfficialContract(t *testing.T) {
 	}
 }
 
+func TestBuildInvocationRecordsStableEffectiveCommand(t *testing.T) {
+	opts := defaultOptions()
+	invocation := strings.Join(buildInvocation(opts), " ")
+	for _, required := range []string{
+		"go run ./cmd/v3-official-runner",
+		"--run-name " + officialRunName,
+		"--output-root /tmp/evo-sched-v3-official",
+		"--protocol-tag " + officialProtocolTag,
+		"--protocol-file ../experiments/protocol-v3-budget-matched-resampling.json",
+		"--restore-timeout 3m0s",
+		"--expect-workers 4",
+	} {
+		if !strings.Contains(invocation, required) {
+			t.Fatalf("stable invocation missing %q:\n%s", required, invocation)
+		}
+	}
+	if strings.Contains(invocation, "/tmp/go-build") {
+		t.Fatalf("stable invocation leaked transient go-build path: %s", invocation)
+	}
+}
+
 func TestValidateOptionsRejectsOfficialIdentityDrift(t *testing.T) {
 	valid := defaultOptions()
 	if err := validateOptions(valid); err != nil {

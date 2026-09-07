@@ -388,7 +388,7 @@ func run(ctx context.Context, opts options) error {
 		StartedAt:              time.Now().UTC(),
 		Repository:             repoRoot,
 		WorkingDirectory:       schedulerDir,
-		Command:                append([]string(nil), os.Args...),
+		Command:                buildInvocation(opts),
 		Git:                    git,
 		Inputs:                 inputs,
 		ExecutionOrder:         order,
@@ -410,6 +410,23 @@ func run(ctx context.Context, opts options) error {
 	}
 	fmt.Printf("completed V3 counterbalanced official search: %s\n", topRoot)
 	return nil
+}
+
+func buildInvocation(opts options) []string {
+	return []string{
+		"go", "run", "./cmd/v3-official-runner",
+		"--run-name", opts.runName,
+		"--output-root", opts.outputRoot,
+		"--protocol-tag", opts.protocolTag,
+		"--protocol-file", opts.protocolFile,
+		"--provenance-files", opts.provenanceFiles,
+		"--scheduler-namespace", opts.schedulerNamespace,
+		"--scheduler-deployment", opts.schedulerDeployment,
+		"--evaluator-namespace", opts.evaluatorNamespace,
+		"--image", opts.image,
+		"--restore-timeout", opts.restoreTimeout.String(),
+		"--expect-workers", strconv.Itoa(opts.expectedWorkers),
+	}
 }
 
 func runOfficialSequence(
