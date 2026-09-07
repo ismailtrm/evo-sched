@@ -29,11 +29,18 @@ import (
 
 const defaultRepetitions = 10
 
+const (
+	executionOrderFixed          = "fixed"
+	executionOrderCyclicRotation = "cyclic-rotation"
+)
+
 type options struct {
 	runName                   string
 	workloads                 string
 	weightsFile               string
 	protocolTag               string
+	protocolVersion           string
+	executionOrder            string
 	outputRoot                string
 	provenanceFiles           string
 	repetitions               int
@@ -98,7 +105,9 @@ type manifest struct {
 	Repository            string        `json:"repository"`
 	WorkingDirectory      string        `json:"workingDirectory"`
 	Git                   gitState      `json:"git"`
+	Command               []string      `json:"command"`
 	Inputs                []artifact    `json:"inputs"`
+	ExecutionOrder        string        `json:"executionOrder"`
 	Repetitions           int           `json:"repetitionsPerPolicyWorkload"`
 	PolicyCount           int           `json:"policyCount"`
 	ExpectedRows          int           `json:"expectedResultRows"`
@@ -124,6 +133,8 @@ func parseFlags() options {
 	flag.StringVar(&opts.workloads, "workloads", "", "Comma-separated workload paths")
 	flag.StringVar(&opts.weightsFile, "weights-file", "", "Validation policy file")
 	flag.StringVar(&opts.protocolTag, "protocol-tag", "", "Required annotated Git tag at HEAD")
+	flag.StringVar(&opts.protocolVersion, "protocol-version", "v2-official-repeated-validation", "Manifest protocol version")
+	flag.StringVar(&opts.executionOrder, "execution-order", executionOrderFixed, "Policy order across repetitions: fixed or cyclic-rotation")
 	flag.StringVar(&opts.outputRoot, "output-root", "../results", "Output root relative to scheduler/")
 	flag.StringVar(&opts.provenanceFiles, "provenance-files", "../kind-config-4workers.yaml,../deploy.yaml", "Additional input files")
 	flag.IntVar(&opts.repetitions, "repetitions", defaultRepetitions, "Repetitions per policy and workload")
@@ -197,7 +208,7 @@ func run(ctx context.Context, opts options) (runErr error) {
 	if err != nil {
 		return err
 	}
-	expanded, err := expandRunSpecs(spec.Runs, opts.repetitions)
+	expanded, err := expandRunSpecs(spec.Runs, opts.repetitions, opts.executionOrder)
 	if err != nil {
 		return err
 	}
@@ -219,7 +230,7 @@ func run(ctx context.Context, opts options) (runErr error) {
 	manifestPath := filepath.Join(runRoot, "manifest.json")
 	state := manifest{
 		SchemaVersion:        "v1",
-		ProtocolVersion:      "v2-official-repeated-validation",
+		ProtocolVersion:      opts.protocolVersion,
 		Class:                "official",
 		RunName:              opts.runName,
 		Status:               "running",
@@ -227,7 +238,9 @@ func run(ctx context.Context, opts options) (runErr error) {
 		Repository:           repoRoot,
 		WorkingDirectory:     schedulerDir,
 		Git:                  git,
+		Command:              buildInvocation(opts),
 		Inputs:               inputs,
+		ExecutionOrder:       opts.executionOrder,
 		Repetitions:          opts.repetitions,
 		PolicyCount:          len(spec.Runs),
 		ExpectedRows:         len(expanded) * len(workloads),
@@ -332,6 +345,12 @@ func validateOptions(opts options) error {
 	if strings.TrimSpace(opts.weightsFile) == "" || strings.TrimSpace(opts.protocolTag) == "" {
 		return errors.New("--weights-file and --protocol-tag are required")
 	}
+	if strings.TrimSpace(opts.protocolVersion) == "" {
+		return errors.New("--protocol-version is required")
+	}
+	if opts.executionOrder != executionOrderFixed && opts.executionOrder != executionOrderCyclicRotation {
+		return fmt.Errorf("--execution-order must be %q or %q", executionOrderFixed, executionOrderCyclicRotation)
+	}
 	if opts.repetitions < 2 || opts.expectedWorkers < 1 {
 		return errors.New("repetitions must be at least 2 and expected workers must be positive")
 	}
@@ -341,18 +360,52 @@ func validateOptions(opts options) error {
 	return nil
 }
 
-func expandRunSpecs(specs []evaluator.ExperimentRunSpec, repetitions int) ([]evaluator.ExperimentRunSpec, error) {
+func expandRunSpecs(specs []evaluator.ExperimentRunSpec, repetitions int, order string) ([]evaluator.ExperimentRunSpec, error) {
 	if len(specs) == 0 || repetitions < 1 {
 		return nil, errors.New("run specs and repetitions must be positive")
 	}
+	if order != executionOrderFixed && order != executionOrderCyclicRotation {
+		return nil, fmt.Errorf("unsupported execution order %q", order)
+	}
 	expanded := make([]evaluator.ExperimentRunSpec, 0, len(specs)*repetitions)
 	for repetition := 1; repetition <= repetitions; repetition++ {
-		for _, spec := range specs {
+		start := 0
+		if order == executionOrderCyclicRotation {
+			start = (repetition - 1) % len(specs)
+		}
+		for offset := range specs {
+			spec := specs[(start+offset)%len(specs)]
 			spec.Name = fmt.Sprintf("%s-r%02d", spec.Name, repetition)
 			expanded = append(expanded, spec)
 		}
 	}
 	return expanded, nil
+}
+
+func buildInvocation(opts options) []string {
+	return []string{
+		"go", "run", "./cmd/repeated-validation-runner",
+		"--run-name", opts.runName,
+		"--workloads", opts.workloads,
+		"--weights-file", opts.weightsFile,
+		"--protocol-tag", opts.protocolTag,
+		"--protocol-version", opts.protocolVersion,
+		"--execution-order", opts.executionOrder,
+		"--output-root", opts.outputRoot,
+		"--provenance-files", opts.provenanceFiles,
+		"--repetitions", strconv.Itoa(opts.repetitions),
+		"--poll-interval", opts.pollInterval.String(),
+		"--timeout", opts.timeout.String(),
+		"--expect-workers", strconv.Itoa(opts.expectedWorkers),
+		"--expect-scheduler-interval", opts.expectedSchedulerInterval.String(),
+		"--final-scheduler-interval", opts.finalSchedulerInterval.String(),
+		"--expect-weights", opts.expectedWeights,
+		"--scheduler-namespace", opts.schedulerNamespace,
+		"--scheduler-deployment", opts.schedulerDeployment,
+		"--evaluator-namespace", opts.evaluatorNamespace,
+		"--scheduler-name", opts.schedulerName,
+		"--image", opts.image,
+	}
 }
 
 func validateBatch(batch evaluator.BatchResult, expectedRows int) error {
