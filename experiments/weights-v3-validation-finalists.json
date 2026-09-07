@@ -1,0 +1,86 @@
+{
+  "policyVersion": "v2",
+  "runs": [
+    {
+      "name": "evok8s-v2-balanced",
+      "weights": {
+        "freeCPU": 0.25,
+        "freeMem": 0.25,
+        "balance": 0.25,
+        "consolidation": 0.25
+      }
+    },
+    {
+      "name": "evok8s-v2-spread-heavy",
+      "weights": {
+        "freeCPU": 0.35,
+        "freeMem": 0.35,
+        "balance": 0.25,
+        "consolidation": 0.05
+      }
+    },
+    {
+      "name": "evok8s-v2-consolidation-heavy",
+      "weights": {
+        "freeCPU": 0.1,
+        "freeMem": 0.1,
+        "balance": 0.2,
+        "consolidation": 0.6
+      }
+    },
+    {
+      "name": "v3-one-shot-s999-gen-01-001",
+      "weights": {
+        "freeCPU": 0.4054859669343971,
+        "freeMem": 0.1993193641008743,
+        "balance": 0.27851644212584703,
+        "consolidation": 0.11667822683888159
+      }
+    },
+    {
+      "name": "v3-one-shot-s123-gen-03-010",
+      "weights": {
+        "freeCPU": 0.18781491507028208,
+        "freeMem": 0.38017471475257847,
+        "balance": 0.059254137148709154,
+        "consolidation": 0.37275623302843025
+      }
+    },
+    {
+      "name": "v3-one-shot-s999-gen-03-009",
+      "weights": {
+        "freeCPU": 0.16190834949410585,
+        "freeMem": 0.1453927613965776,
+        "balance": 0.18398084429137648,
+        "consolidation": 0.5087180448179401
+      }
+    },
+    {
+      "name": "v3-two-stage-s999-init-004",
+      "weights": {
+        "freeCPU": 0.2896381121721976,
+        "freeMem": 0.40210443230694476,
+        "balance": 0.006283487846330932,
+        "consolidation": 0.3019739676745267
+      }
+    },
+    {
+      "name": "v3-two-stage-s999-gen-05-006",
+      "weights": {
+        "freeCPU": 0,
+        "freeMem": 0.34532438234527846,
+        "balance": 0.3001748262701294,
+        "consolidation": 0.3545007913845922
+      }
+    },
+    {
+      "name": "v3-two-stage-s999-gen-05-003",
+      "weights": {
+        "freeCPU": 0,
+        "freeMem": 0.005896228037547725,
+        "balance": 0.3286896608635757,
+        "consolidation": 0.6654141110988766
+      }
+    }
+  ]
+}

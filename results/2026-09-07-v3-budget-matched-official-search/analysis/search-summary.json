@@ -1,0 +1,340 @@
+{
+  "schemaVersion": "v3-search-summary-v1",
+  "protocolVersion": "v3-budget-matched-resampling-official",
+  "generatedAt": "2026-09-07T19:36:36.847970344Z",
+  "generator": {
+    "command": "go run ./cmd/v3-search-summary",
+    "gitSha": "ea2a8d6ddfcbec365991cc6327555e4d8525614a",
+    "branch": "research/noise-aware-resampling-v3"
+  },
+  "inputs": [
+    {
+      "path": "../experiments/protocol-v3-budget-matched-resampling.json",
+      "sha256": "4986d18615405187324c3aaf95c4628918e9952881da6e8b4a5082395b4ec3a9"
+    },
+    {
+      "path": "../experiments/weights-v2.json",
+      "sha256": "fe690c528b277d4a41496f5f702e25a554d7406f04accf17e832f75566d8d782"
+    },
+    {
+      "path": "../results/2026-09-07-v3-budget-matched-official-search/manifest.json",
+      "sha256": "9e45b175a1fc56fdca9a0c2932518d7e30b5199d9d4a78020fe4a45ed7332ba1"
+    },
+    {
+      "path": "../results/2026-09-07-v3-budget-matched-official-search/seed-123/one-shot-control/seed-123/result.json",
+      "sha256": "971af4ab665351d77acdbcbca61a902865cf9d45f3f6f60440804b222020a0af"
+    },
+    {
+      "path": "../results/2026-09-07-v3-budget-matched-official-search/seed-123/two-stage-resampling/seed-123/result.json",
+      "sha256": "7384906bc4a184f106d3f8c0f6e9af615d321c1a56f8ca303074912db58ff96c"
+    },
+    {
+      "path": "../results/2026-09-07-v3-budget-matched-official-search/seed-42/one-shot-control/seed-42/result.json",
+      "sha256": "5b177c640fb589bf37b657bd42e8d512b4533f0957648c201a0bd444a5154795"
+    },
+    {
+      "path": "../results/2026-09-07-v3-budget-matched-official-search/seed-42/two-stage-resampling/seed-42/result.json",
+      "sha256": "f5f6e5065aeb8356d5588f08159e1e5a693fa3edb21561a00e17b2b242da5fd2"
+    },
+    {
+      "path": "../results/2026-09-07-v3-budget-matched-official-search/seed-999/one-shot-control/seed-999/result.json",
+      "sha256": "4c54a69b321257b74763339d2d1a830d18d1384b8e7b8f25550ac64a7600deba"
+    },
+    {
+      "path": "../results/2026-09-07-v3-budget-matched-official-search/seed-999/two-stage-resampling/seed-999/result.json",
+      "sha256": "a3b64daff3cbc81a5563e0a085703d6ea3588fdf23f3540bf5c0a40bd17caf9f"
+    }
+  ],
+  "maximumFinalistsPerArm": 5,
+  "arms": [
+    {
+      "name": "one-shot-control",
+      "seeds": [
+        {
+          "seed": 42,
+          "optimizerCandidateCount": 72,
+          "optimizerSampleCount": 72,
+          "baselineSampleCount": 3,
+          "workloadExecutionCount": 225,
+          "optimizerOnlyCombinedParetoMembers": 2,
+          "baselinesKept": [
+            "evok8s-v2-balanced"
+          ]
+        },
+        {
+          "seed": 123,
+          "optimizerCandidateCount": 72,
+          "optimizerSampleCount": 72,
+          "baselineSampleCount": 3,
+          "workloadExecutionCount": 225,
+          "optimizerOnlyCombinedParetoMembers": 3,
+          "baselinesKept": []
+        },
+        {
+          "seed": 999,
+          "optimizerCandidateCount": 72,
+          "optimizerSampleCount": 72,
+          "baselineSampleCount": 3,
+          "workloadExecutionCount": 225,
+          "optimizerOnlyCombinedParetoMembers": 3,
+          "baselinesKept": []
+        }
+      ],
+      "optimizerCandidateCount": 216,
+      "optimizerSampleCount": 216,
+      "baselineSampleCount": 9,
+      "workloadExecutionCount": 675,
+      "uniqueProvisionalPhenotypes": 8,
+      "pooledParetoPointCount": 3,
+      "selectedFinalistCount": 3,
+      "safety": {
+        "workloadRecords": 675,
+        "pods": 16200,
+        "unschedulable": 0,
+        "invalidResultRows": 0
+      },
+      "pooledPointEstimateParetoFront": [
+        {
+          "validationName": "v3-one-shot-s999-gen-01-001",
+          "arm": "one-shot-control",
+          "weights": {
+            "freeCPU": 0.4054859669343971,
+            "freeMem": 0.1993193641008743,
+            "balance": 0.27851644212584703,
+            "consolidation": 0.11667822683888159
+          },
+          "provisionalObjectives": {
+            "averageP95SchedulingDecisionLatencySeconds": 1.2559548545833332,
+            "averageMaxWorkloadOccupiedWorkerNodes": 4
+          },
+          "crowdingDistance": 1000000000,
+          "provenance": [
+            {
+              "seed": 999,
+              "name": "gen-01-001",
+              "source": "offspring",
+              "generation": 1,
+              "creationOrdinal": 13,
+              "evaluationCount": 1
+            }
+          ],
+          "selectedForValidation": true,
+          "selectionRole": [
+            "pending-best"
+          ]
+        },
+        {
+          "validationName": "v3-one-shot-s123-gen-03-010",
+          "arm": "one-shot-control",
+          "weights": {
+            "freeCPU": 0.18781491507028208,
+            "freeMem": 0.38017471475257847,
+            "balance": 0.059254137148709154,
+            "consolidation": 0.37275623302843025
+          },
+          "provisionalObjectives": {
+            "averageP95SchedulingDecisionLatencySeconds": 1.2753483097666665,
+            "averageMaxWorkloadOccupiedWorkerNodes": 3.3333333333333335
+          },
+          "crowdingDistance": 2,
+          "provenance": [
+            {
+              "seed": 123,
+              "name": "gen-03-010",
+              "source": "offspring",
+              "generation": 3,
+              "creationOrdinal": 46,
+              "evaluationCount": 1
+            }
+          ],
+          "selectedForValidation": true,
+          "selectionRole": [
+            "crowding"
+          ]
+        },
+        {
+          "validationName": "v3-one-shot-s999-gen-03-009",
+          "arm": "one-shot-control",
+          "weights": {
+            "freeCPU": 0.16190834949410585,
+            "freeMem": 0.1453927613965776,
+            "balance": 0.18398084429137648,
+            "consolidation": 0.5087180448179401
+          },
+          "provisionalObjectives": {
+            "averageP95SchedulingDecisionLatencySeconds": 1.3091225563166664,
+            "averageMaxWorkloadOccupiedWorkerNodes": 3
+          },
+          "crowdingDistance": 1000000000,
+          "provenance": [
+            {
+              "seed": 999,
+              "name": "gen-03-009",
+              "source": "offspring",
+              "generation": 3,
+              "creationOrdinal": 45,
+              "evaluationCount": 1
+            }
+          ],
+          "selectedForValidation": true,
+          "selectionRole": [
+            "node-best"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "two-stage-resampling",
+      "seeds": [
+        {
+          "seed": 42,
+          "optimizerCandidateCount": 42,
+          "optimizerSampleCount": 72,
+          "baselineSampleCount": 3,
+          "workloadExecutionCount": 225,
+          "optimizerOnlyCombinedParetoMembers": 2,
+          "baselinesKept": [
+            "evok8s-v2-consolidation-heavy",
+            "evok8s-v2-spread-heavy"
+          ]
+        },
+        {
+          "seed": 123,
+          "optimizerCandidateCount": 42,
+          "optimizerSampleCount": 72,
+          "baselineSampleCount": 3,
+          "workloadExecutionCount": 225,
+          "optimizerOnlyCombinedParetoMembers": 5,
+          "baselinesKept": [
+            "evok8s-v2-consolidation-heavy"
+          ]
+        },
+        {
+          "seed": 999,
+          "optimizerCandidateCount": 42,
+          "optimizerSampleCount": 72,
+          "baselineSampleCount": 3,
+          "workloadExecutionCount": 225,
+          "optimizerOnlyCombinedParetoMembers": 3,
+          "baselinesKept": []
+        }
+      ],
+      "optimizerCandidateCount": 126,
+      "optimizerSampleCount": 216,
+      "baselineSampleCount": 9,
+      "workloadExecutionCount": 675,
+      "uniqueProvisionalPhenotypes": 10,
+      "pooledParetoPointCount": 3,
+      "selectedFinalistCount": 3,
+      "safety": {
+        "workloadRecords": 675,
+        "pods": 16200,
+        "unschedulable": 0,
+        "invalidResultRows": 0
+      },
+      "pooledPointEstimateParetoFront": [
+        {
+          "validationName": "v3-two-stage-s999-init-004",
+          "arm": "two-stage-resampling",
+          "weights": {
+            "freeCPU": 0.2896381121721976,
+            "freeMem": 0.40210443230694476,
+            "balance": 0.006283487846330932,
+            "consolidation": 0.3019739676745267
+          },
+          "provisionalObjectives": {
+            "averageP95SchedulingDecisionLatencySeconds": 1.3390659714666662,
+            "averageMaxWorkloadOccupiedWorkerNodes": 3.6666666666666665
+          },
+          "crowdingDistance": 1000000000,
+          "provenance": [
+            {
+              "seed": 999,
+              "name": "init-004",
+              "source": "initial",
+              "generation": 0,
+              "creationOrdinal": 4,
+              "evaluationCount": 4
+            }
+          ],
+          "selectedForValidation": true,
+          "selectionRole": [
+            "pending-best"
+          ]
+        },
+        {
+          "validationName": "v3-two-stage-s999-gen-05-006",
+          "arm": "two-stage-resampling",
+          "weights": {
+            "freeCPU": 0,
+            "freeMem": 0.34532438234527846,
+            "balance": 0.3001748262701294,
+            "consolidation": 0.3545007913845922
+          },
+          "provisionalObjectives": {
+            "averageP95SchedulingDecisionLatencySeconds": 1.3681286224499996,
+            "averageMaxWorkloadOccupiedWorkerNodes": 3.3333333333333335
+          },
+          "crowdingDistance": 2,
+          "provenance": [
+            {
+              "seed": 999,
+              "name": "gen-05-006",
+              "source": "offspring",
+              "generation": 5,
+              "creationOrdinal": 42,
+              "evaluationCount": 1
+            }
+          ],
+          "selectedForValidation": true,
+          "selectionRole": [
+            "crowding"
+          ]
+        },
+        {
+          "validationName": "v3-two-stage-s999-gen-05-003",
+          "arm": "two-stage-resampling",
+          "weights": {
+            "freeCPU": 0,
+            "freeMem": 0.005896228037547725,
+            "balance": 0.3286896608635757,
+            "consolidation": 0.6654141110988766
+          },
+          "provisionalObjectives": {
+            "averageP95SchedulingDecisionLatencySeconds": 1.3765454000999997,
+            "averageMaxWorkloadOccupiedWorkerNodes": 3
+          },
+          "crowdingDistance": 1000000000,
+          "provenance": [
+            {
+              "seed": 999,
+              "name": "gen-05-003",
+              "source": "offspring",
+              "generation": 5,
+              "creationOrdinal": 39,
+              "evaluationCount": 4
+            }
+          ],
+          "selectedForValidation": true,
+          "selectionRole": [
+            "node-best"
+          ]
+        }
+      ]
+    }
+  ],
+  "validation": {
+    "baselineCount": 3,
+    "optimizerFinalistCount": 6,
+    "policyCount": 9,
+    "repetitionsPerPolicyWorkload": 10,
+    "workloadCount": 3,
+    "expectedWorkloadExecutions": 270,
+    "expectedPods": 6480
+  },
+  "notes": [
+    "All reported fronts are provisional point-estimate Pareto fronts from search.",
+    "Selected optimizer policies require shared repeated validation before any improvement claim.",
+    "Exact phenotype duplicates must have identical provisional objectives; otherwise selection fails rather than silently choosing an occurrence."
+  ]
+}
