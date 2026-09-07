@@ -138,6 +138,8 @@ type validationProtocolContract struct {
 	TemporaryOutputRoot                  string   `json:"temporaryOutputRoot"`
 	WeightsFile                          string   `json:"weightsFile"`
 	Workloads                            []string `json:"workloads"`
+	Policies                             []string `json:"policies"`
+	ProvenanceFiles                      []string `json:"provenanceFiles"`
 	ExecutionOrder                       string   `json:"executionOrder"`
 	PolicyCount                          int      `json:"policyCount"`
 	BaselinePolicyCount                  int      `json:"baselinePolicyCount"`
@@ -151,6 +153,9 @@ type validationProtocolContract struct {
 	ExperimentSchedulerInterval          string   `json:"experimentSchedulerInterval"`
 	RestoredIdleSchedulerInterval        string   `json:"restoredIdleSchedulerInterval"`
 	CanonicalWeights                     string   `json:"canonicalWeights"`
+	SchedulerNamespace                   string   `json:"schedulerNamespace"`
+	SchedulerDeployment                  string   `json:"schedulerDeployment"`
+	EvaluatorNamespace                   string   `json:"evaluatorNamespace"`
 	SchedulerName                        string   `json:"schedulerName"`
 	Image                                string   `json:"image"`
 }
@@ -436,6 +441,9 @@ func validateProtocolContract(path, schedulerDir, repoRoot string, opts options,
 		"perPolicyWorkloadTimeout":      opts.timeout.String(),
 		"experimentSchedulerInterval":   opts.expectedSchedulerInterval.String(),
 		"restoredIdleSchedulerInterval": opts.finalSchedulerInterval.String(),
+		"schedulerNamespace":            opts.schedulerNamespace,
+		"schedulerDeployment":           opts.schedulerDeployment,
+		"evaluatorNamespace":            opts.evaluatorNamespace,
 		"schedulerName":                 opts.schedulerName,
 		"image":                         opts.image,
 	}
@@ -448,6 +456,9 @@ func validateProtocolContract(path, schedulerDir, repoRoot string, opts options,
 		"perPolicyWorkloadTimeout":      contract.PerPolicyWorkloadTimeout,
 		"experimentSchedulerInterval":   contract.ExperimentSchedulerInterval,
 		"restoredIdleSchedulerInterval": contract.RestoredIdleSchedulerInterval,
+		"schedulerNamespace":            contract.SchedulerNamespace,
+		"schedulerDeployment":           contract.SchedulerDeployment,
+		"evaluatorNamespace":            contract.EvaluatorNamespace,
 		"schedulerName":                 contract.SchedulerName,
 		"image":                         contract.Image,
 	}
@@ -471,6 +482,24 @@ func validateProtocolContract(path, schedulerDir, repoRoot string, opts options,
 	}
 	if !slices.Equal(actualWorkloads, contract.Workloads) {
 		return 0, fmt.Errorf("workloads=%v, protocol requires %v", actualWorkloads, contract.Workloads)
+	}
+	actualPolicies := make([]string, len(policies))
+	for i, candidate := range policies {
+		actualPolicies[i] = candidate.Name
+	}
+	if !slices.Equal(actualPolicies, contract.Policies) {
+		return 0, fmt.Errorf("policies=%v, protocol requires %v", actualPolicies, contract.Policies)
+	}
+	provenanceFiles, err := splitPaths(opts.provenanceFiles)
+	if err != nil {
+		return 0, fmt.Errorf("provenance files: %w", err)
+	}
+	actualProvenance := make([]string, len(provenanceFiles))
+	for i, provenanceFile := range provenanceFiles {
+		actualProvenance[i] = relativePath(repoRoot, resolvePath(schedulerDir, provenanceFile))
+	}
+	if !slices.Equal(actualProvenance, contract.ProvenanceFiles) {
+		return 0, fmt.Errorf("provenanceFiles=%v, protocol requires %v", actualProvenance, contract.ProvenanceFiles)
 	}
 
 	actualWeights, err := parseWeights(opts.expectedWeights)

@@ -85,10 +85,12 @@ func TestValidateProtocolContractAcceptsExactFrozenBudget(t *testing.T) {
 		runName: "v3-validation", workloads: "../workloads/training.json", weightsFile: "../experiments/weights.json",
 		protocolTag: "protocol-v3-validation", protocolVersion: "v3-validation-official",
 		protocolFile: "../experiments/protocol.json", executionOrder: executionOrderCyclicRotation,
-		outputRoot: filepath.Join(repoRoot, "results"), repetitions: 2,
+		outputRoot: filepath.Join(repoRoot, "results"), provenanceFiles: "../kind.yaml,../deploy.yaml", repetitions: 2,
 		pollInterval: 250 * time.Millisecond, timeout: 90 * time.Second, expectedWorkers: 4,
 		expectedSchedulerInterval: 250 * time.Millisecond, finalSchedulerInterval: 2 * time.Second,
-		expectedWeights: "0.25,0.25,0.25,0.25", schedulerName: "evok8s-scheduler", image: "busybox:1.36.1",
+		expectedWeights: "0.25,0.25,0.25,0.25", schedulerNamespace: "evo-sched",
+		schedulerDeployment: "evok8s-scheduler", evaluatorNamespace: "evo-sched-eval",
+		schedulerName: "evok8s-scheduler", image: "busybox:1.36.1",
 	}
 	document := validationProtocolDocument{}
 	contract := &document.SharedValidation.Official
@@ -101,6 +103,8 @@ func TestValidateProtocolContractAcceptsExactFrozenBudget(t *testing.T) {
 	contract.TemporaryOutputRoot = opts.outputRoot
 	contract.WeightsFile = "experiments/weights.json"
 	contract.Workloads = []string{"workloads/training.json"}
+	contract.Policies = []string{"baseline", "one-shot", "two-stage"}
+	contract.ProvenanceFiles = []string{"kind.yaml", "deploy.yaml"}
 	contract.ExecutionOrder = opts.executionOrder
 	contract.PolicyCount = 3
 	contract.BaselinePolicyCount = 1
@@ -114,6 +118,9 @@ func TestValidateProtocolContractAcceptsExactFrozenBudget(t *testing.T) {
 	contract.ExperimentSchedulerInterval = opts.expectedSchedulerInterval.String()
 	contract.RestoredIdleSchedulerInterval = opts.finalSchedulerInterval.String()
 	contract.CanonicalWeights = opts.expectedWeights
+	contract.SchedulerNamespace = opts.schedulerNamespace
+	contract.SchedulerDeployment = opts.schedulerDeployment
+	contract.EvaluatorNamespace = opts.evaluatorNamespace
 	contract.SchedulerName = opts.schedulerName
 	contract.Image = opts.image
 	protocolPath := filepath.Join(protocolDir, "protocol.json")
