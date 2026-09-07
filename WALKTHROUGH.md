@@ -3495,6 +3495,83 @@ başlatılmamıştır. Sıradaki adım iki arm'ı `/tmp` altında sabit sırayla
 pilot launcher/manifest katmanını eklemek, clean pilot commit/tag oluşturmak ve
 ancak preflight sonrasında cluster'ı açmaktır.
 
+### 3.71. İki-arm V3 pilot launcher'ını hard-gated ve interrupt-safe kurduk
+
+`cbdad08 feat: add two-arm V3 pilot launcher` commit'i
+`scheduler/cmd/v3-pilot-runner` komutunu ekledi. Yeni komut mevcut
+`multi-seed-runner`ı kopyalamaz; iki provenance-gated child run'ı pilot protokolde
+sabitlenen sırayla çağırır:
+
+1. `one-shot-control`
+2. `two-stage-resampling`
+
+Pilot sırası sonuç görülmeden implementation içinde donduruldu. Official
+protokoldeki seed bazlı counterbalanced order bu pilot kararıyla değiştirilmedi;
+pilotun amacı optimizer sonucu üretmekten önce orchestration ve denominator
+acceptance'ını sınamaktır.
+
+Launcher contract'ı:
+
+- yalnızca clean Git tree ve `HEAD`i gösteren annotated protocol tag ile başlar
+- output root'un repo dışında olmasını zorunlu tutar; varsayılan
+  `/tmp/evo-sched-v3-pilot` olduğu için ilk child run ikinci arm'ın clean-tree
+  gate'ini kirletmez
+- seed `20260831`, üç V2 train workload, üç V2 baseline, `250ms` scheduler/poll
+  cadence ve `90s` workload timeout değerlerini kodda sabitler
+- one-shot için `4 + 4 = 8`, treatment için
+  `4 + 2 + 1 x 2 = 8` optimizer fresh sample üretir
+- her arm'da `3` baseline sample ile toplam `11` policy sample, `33` workload
+  execution ve `792` Pod bekler
+- batch üst manifestinde exact launcher command, Git SHA/branch/tag, protocol
+  checksum, arm order ve birleşik `16 optimizer + 6 baseline = 22` policy sample,
+  `66` workload execution, `1,584` Pod denominator'ını yazar
+- her child manifest ile launcher stdout/stderr log'unu SHA-256 ile üst
+  manifest'e bağlar
+- child completion'ı yalnızca status/class/evidence eligibility, Git provenance,
+  seed/search mode ve bütün expected budget alanları eşleşirse kabul eder
+
+Failure ve interruption akışında child process ayrı process group olarak
+sonlandırılır. Child runner kendi partial JSON/CSV/log checksum ve `250ms`
+recovery sözleşmesini uygular; üst launcher bulunan child manifest/log checksum'ını
+korur. Hangi arm'da hata olursa olsun launcher yeni bir background timeout ile
+evaluator Pod'larını temizler, canonical `0.25/0.25/0.25/0.25` weight'lerini
+uygular, scheduler cadence'ini normal idle değeri `2s`ye döndürür ve dört worker,
+healthy rollout, boş namespace, canonical weights ve `2s` snapshot'ını hard gate
+olarak doğrular. Böylece terminal kapanması veya sinyal, deney cadence'ini kalıcı
+bırakmaz.
+
+Test-first doğrulamada önce implementation sembolleri bulunmadığı için beklenen
+compile failure görüldü. Implementation sonrasında:
+
+- arm order ve arm/combined exact budget testleri geçti
+- frozen child CLI argümanları testi geçti
+- ikinci arm synthetic failure'ında final restoration'ın yine çağrıldığı ve üst
+  manifestin `failed` kaldığı test edildi
+- child manifestte evidence/Git/budget drift'inin reddedildiği test edildi
+- launcher, multi-seed runner ve optimizer package race testleri geçti
+- tüm `go test ./...`, `go vet ./...` ve `make verify` geçti
+- official V2 evidence, regenerated analyses ve paper zinciri değişmeden temiz
+  doğrulandı
+
+Implementation review sırasında machine-readable protocol ile gözlemlenebilir
+telemetry arasında bir conflict bulundu. Pilot acceptance metni exact rollout
+budget istiyordu; ancak deployment update çağrısı Pod template değişmediğinde
+gerçek bir replacement rollout üretmeyebilir. Mevcut evaluator actual deployment
+update ile actual Pod replacement sayısını ayrı instrument etmediği için rollout
+sayısı uydurulmayacaktır. Pilot verisi görülmeden protocol draft şu şekilde
+daraltıldı:
+
+- exact fresh-policy sample, workload execution ve Pod denominator'ları hard gate
+- elapsed wall time ölçülen secondary budget
+- deployment update/actual rollout sayısı yalnızca dedicated telemetry official
+  freeze öncesinde eklenirse raporlanabilir
+
+Bu düzeltme pilot/official sample bütçelerini, seed'leri, workload'ları, promotion
+kuralını, primary outcome'u veya valid-negative koşullarını değiştirmez. Cluster
+bu bölüm yazılırken hâlâ kapalıdır ve V3 pilot verisi üretilmemiştir. Sıradaki
+kapı clean docs commit'i, annotated pilot protocol tag, cluster startup ve
+`250ms` preflight'tır.
+
 ## 4. Şu Anki Durum
 
 Şu anda proje durumu şöyledir:
@@ -3571,7 +3648,7 @@ ancak preflight sonrasında cluster'ı açmaktır.
 - 25 dakikalık içerik, 5 dakikalık soru bölümü ve 4 dakikalık İngilizce speaking sample script'i içeren KubeCon talk package hazırdır
 - V3 noise-aware search için V2'den ayrılmış research branch ve budget-matched machine-readable protocol hazırdır
 - V3 fresh-sample optimizer, cache-bypass CLI, sample CSV ve exact-budget runner gate'leri testli ve commitlidir
-- V3 iki-arm pilot launcher'ı ve live pilot henüz tamamlanmamıştır; cluster kapalıdır
+- V3 iki-arm pilot launcher'ı testli ve commitlidir; live pilot henüz başlamamıştır ve cluster kapalıdır
 - Functional live smoke ve kind resource lifecycle komutları Makefile entrypoint'leri olarak eklenmiştir
 - Gate 6 CFP taslağı official V2 claim setine bağlı ve commitlidir; public paper
   PDF, speaking sample, kullanıcı teyitleri ve Sessionize gönderimi açıktır
@@ -3798,7 +3875,7 @@ Sonuç:
 - [x] Küçük pilot bütçesi ve acceptance koşullarını machine-readable protocol'e koy
 - [x] V2 one-shot yolunu bozmadan fresh evaluation API ve sample provenance ekle
 - [x] Test-first deterministic promotion, mean aggregation ve exact budget accounting uygula
-- [ ] Pilot runner'ın clean/tag/checksum/preflight/postflight hard gate'lerini ekle
+- [x] Pilot runner'ın clean/tag/checksum/preflight/postflight hard gate'lerini ekle
 - [ ] Clean pilot protocol commit/tag oluştur
 - [ ] İki arm'lı pilotu koştur ve acceptance'ı kapat
 - [ ] Pilot sonucuna göre yalnızca implementation-derived manifest alanlarını gözden geçir

@@ -71,7 +71,8 @@
     "armSeedCount": 6,
     "officialSearchWorkloadExecutions": 1350,
     "officialSearchPods": 32400,
-    "exclusions": "Post-search shared validation is reported separately and is not charged to either search arm."
+    "exclusions": "Post-search shared validation is reported separately and is not charged to either search arm.",
+    "rolloutTelemetry": "Fresh policy samples require deployment update and rollout convergence, but the pilot does not claim an exact rollout count. A deployment update can be a no-op when the Pod template is unchanged; actual rollout/update telemetry must be instrumented before it is reported as an observed budget."
   },
   "arms": [
     {
@@ -160,7 +161,8 @@
       "The promoted treatment candidate contains exactly three distinct evaluation IDs and sample timestamps.",
       "Candidate aggregate objectives equal the arithmetic mean of retained sample objectives.",
       "No cache hit substitutes for a fresh live replay.",
-      "Result and manifest expose exact sample, rollout, workload, Pod, and wall-time budgets.",
+      "Result and manifest expose exact fresh-policy sample, workload-execution, and Pod budgets plus measured wall time.",
+      "No exact scheduler rollout count is claimed without dedicated deployment update and Pod replacement telemetry.",
       "Postflight restores canonical weights, scheduler cadence, clean evaluator namespace, and healthy deployment."
     ]
   },
@@ -217,7 +219,8 @@
     "secondaryOutcomes": [
       "number and proportion of finalists that remain nondominated",
       "unique canonical candidates explored",
-      "fresh policy samples, workload executions, Pods, rollouts, and wall time",
+      "fresh policy samples, workload executions, Pods, and wall time",
+      "scheduler deployment updates and actual rollouts only if dedicated telemetry is added before official freeze",
       "baseline survival and exact duplicate objective points",
       "repeated-mean objective coordinates and 95% Student-t confidence intervals",
       "unschedulable and invalid evaluation counts"
