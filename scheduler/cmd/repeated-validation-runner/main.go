@@ -31,8 +31,10 @@ import (
 const defaultRepetitions = 10
 
 const (
-	executionOrderFixed          = "fixed"
-	executionOrderCyclicRotation = "cyclic-rotation"
+	executionOrderFixed              = "fixed"
+	executionOrderCyclicRotation     = "cyclic-rotation"
+	protocolContractSharedValidation = "shared-validation"
+	protocolContractHoldout          = "holdout"
 )
 
 type options struct {
@@ -42,6 +44,7 @@ type options struct {
 	protocolTag               string
 	protocolVersion           string
 	protocolFile              string
+	protocolContract          string
 	executionOrder            string
 	outputRoot                string
 	provenanceFiles           string
@@ -126,6 +129,9 @@ type validationProtocolDocument struct {
 	SharedValidation struct {
 		Official validationProtocolContract `json:"official"`
 	} `json:"sharedValidation"`
+	Holdout struct {
+		Official validationProtocolContract `json:"official"`
+	} `json:"holdout"`
 }
 
 type validationProtocolContract struct {
@@ -178,6 +184,7 @@ func parseFlags() options {
 	flag.StringVar(&opts.protocolTag, "protocol-tag", "", "Required annotated Git tag at HEAD")
 	flag.StringVar(&opts.protocolVersion, "protocol-version", "v2-official-repeated-validation", "Manifest protocol version")
 	flag.StringVar(&opts.protocolFile, "protocol-file", "", "Optional machine-readable protocol contract")
+	flag.StringVar(&opts.protocolContract, "protocol-contract", protocolContractSharedValidation, "Protocol contract to enforce: shared-validation or holdout")
 	flag.StringVar(&opts.executionOrder, "execution-order", executionOrderFixed, "Policy order across repetitions: fixed or cyclic-rotation")
 	flag.StringVar(&opts.outputRoot, "output-root", "../results", "Output root relative to scheduler/")
 	flag.StringVar(&opts.provenanceFiles, "provenance-files", "../kind-config-4workers.yaml,../deploy.yaml", "Additional input files")
@@ -407,6 +414,13 @@ func validateOptions(opts options) error {
 	if strings.TrimSpace(opts.protocolVersion) == "" {
 		return errors.New("--protocol-version is required")
 	}
+	contractName := effectiveProtocolContract(opts.protocolContract)
+	if contractName != protocolContractSharedValidation && contractName != protocolContractHoldout {
+		return fmt.Errorf("--protocol-contract must be %q or %q", protocolContractSharedValidation, protocolContractHoldout)
+	}
+	if opts.protocolFile == "" && contractName != protocolContractSharedValidation {
+		return errors.New("--protocol-contract requires --protocol-file when selecting a non-default contract")
+	}
 	if opts.executionOrder != executionOrderFixed && opts.executionOrder != executionOrderCyclicRotation {
 		return fmt.Errorf("--execution-order must be %q or %q", executionOrderFixed, executionOrderCyclicRotation)
 	}
@@ -428,9 +442,13 @@ func validateProtocolContract(path, schedulerDir, repoRoot string, opts options,
 	if err := json.Unmarshal(data, &document); err != nil {
 		return 0, fmt.Errorf("parse %s: %w", path, err)
 	}
-	contract := document.SharedValidation.Official
+	contractName := effectiveProtocolContract(opts.protocolContract)
+	contract, err := selectProtocolContract(document, contractName)
+	if err != nil {
+		return 0, err
+	}
 	if contract.Status != "official-frozen-before-execution" || contract.Class != "official" || !contract.PaperEvidenceEligibleAtRunCompletion {
-		return 0, fmt.Errorf("shared validation is not a frozen paper-eligible official protocol")
+		return 0, fmt.Errorf("%s is not a frozen paper-eligible official protocol", contractName)
 	}
 	if invocation := buildInvocation(opts); !slices.Equal(invocation, contract.Command) {
 		return 0, fmt.Errorf("effective invocation does not match frozen protocol command")
@@ -544,6 +562,24 @@ func validateProtocolContract(path, schedulerDir, repoRoot string, opts options,
 	return expectedPods, nil
 }
 
+func selectProtocolContract(document validationProtocolDocument, name string) (validationProtocolContract, error) {
+	switch name {
+	case protocolContractSharedValidation:
+		return document.SharedValidation.Official, nil
+	case protocolContractHoldout:
+		return document.Holdout.Official, nil
+	default:
+		return validationProtocolContract{}, fmt.Errorf("unsupported protocol contract %q", name)
+	}
+}
+
+func effectiveProtocolContract(name string) string {
+	if name == "" {
+		return protocolContractSharedValidation
+	}
+	return name
+}
+
 func countWorkloadPods(path string) (int, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -598,6 +634,9 @@ func buildInvocation(opts options) []string {
 	}
 	if opts.protocolFile != "" {
 		command = append(command, "--protocol-file", opts.protocolFile)
+	}
+	if opts.protocolContract != "" && opts.protocolContract != protocolContractSharedValidation {
+		command = append(command, "--protocol-contract", opts.protocolContract)
 	}
 	return append(command,
 		"--execution-order", opts.executionOrder,

@@ -61,8 +61,63 @@ func TestBuildInvocationRecordsEffectiveProtocolAndOrder(t *testing.T) {
 
 func TestBuildInvocationOmitsOptionalProtocolFileForV2Compatibility(t *testing.T) {
 	opts := options{protocolVersion: "v2-official-repeated-validation"}
-	if got := strings.Join(buildInvocation(opts), " "); strings.Contains(got, "--protocol-file") {
-		t.Fatalf("V2-compatible invocation unexpectedly contains --protocol-file: %s", got)
+	if got := strings.Join(buildInvocation(opts), " "); strings.Contains(got, "--protocol-file") || strings.Contains(got, "--protocol-contract") {
+		t.Fatalf("V2-compatible invocation unexpectedly contains an optional protocol selector: %s", got)
+	}
+}
+
+func TestBuildInvocationIncludesExplicitHoldoutContract(t *testing.T) {
+	opts := options{
+		protocolFile:     "protocol.json",
+		protocolContract: protocolContractHoldout,
+	}
+	got := strings.Join(buildInvocation(opts), " ")
+	if !strings.Contains(got, "--protocol-file protocol.json --protocol-contract holdout") {
+		t.Fatalf("holdout invocation does not contain the explicit contract selector: %s", got)
+	}
+}
+
+func TestSelectProtocolContract(t *testing.T) {
+	document := validationProtocolDocument{}
+	document.SharedValidation.Official.RunName = "shared"
+	document.Holdout.Official.RunName = "holdout"
+
+	shared, err := selectProtocolContract(document, protocolContractSharedValidation)
+	if err != nil || shared.RunName != "shared" {
+		t.Fatalf("select shared-validation = %+v, %v", shared, err)
+	}
+	holdout, err := selectProtocolContract(document, protocolContractHoldout)
+	if err != nil || holdout.RunName != "holdout" {
+		t.Fatalf("select holdout = %+v, %v", holdout, err)
+	}
+	if _, err := selectProtocolContract(document, "unknown"); err == nil {
+		t.Fatal("select unknown contract error = nil")
+	}
+}
+
+func TestValidateOptionsRejectsHoldoutWithoutProtocolFile(t *testing.T) {
+	opts := options{
+		runName: "holdout", weightsFile: "weights.json", protocolTag: "protocol-holdout",
+		protocolVersion: "holdout-v1", protocolContract: protocolContractHoldout,
+		executionOrder: executionOrderFixed, repetitions: 10, expectedWorkers: 4,
+		pollInterval: time.Second, timeout: time.Second,
+		expectedSchedulerInterval: time.Second, finalSchedulerInterval: time.Second,
+	}
+	if err := validateOptions(opts); err == nil || !strings.Contains(err.Error(), "requires --protocol-file") {
+		t.Fatalf("validateOptions() error = %v, want missing protocol file rejection", err)
+	}
+}
+
+func TestValidateOptionsRejectsUnknownProtocolContract(t *testing.T) {
+	opts := options{
+		runName: "validation", weightsFile: "weights.json", protocolTag: "protocol-validation",
+		protocolVersion: "validation-v1", protocolContract: "unknown",
+		executionOrder: executionOrderFixed, repetitions: 10, expectedWorkers: 4,
+		pollInterval: time.Second, timeout: time.Second,
+		expectedSchedulerInterval: time.Second, finalSchedulerInterval: time.Second,
+	}
+	if err := validateOptions(opts); err == nil || !strings.Contains(err.Error(), "must be") {
+		t.Fatalf("validateOptions() error = %v, want unknown contract rejection", err)
 	}
 }
 
