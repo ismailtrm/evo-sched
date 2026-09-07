@@ -120,6 +120,19 @@ func TestValidateOptionsRejectsOfficialIdentityDrift(t *testing.T) {
 	}
 }
 
+func TestParseFlagsPreservesFrozenOfficialDefaults(t *testing.T) {
+	opts, err := parseFlags(nil)
+	if err != nil {
+		t.Fatalf("parseFlags(nil) error = %v", err)
+	}
+	if opts.runName != officialRunName || opts.protocolTag != officialProtocolTag {
+		t.Fatalf("parseFlags(nil) identity = run %q tag %q", opts.runName, opts.protocolTag)
+	}
+	if err := validateOptions(opts); err != nil {
+		t.Fatalf("validateOptions(parseFlags(nil)) error = %v", err)
+	}
+}
+
 func TestRunOfficialSequenceRestoresIdleStateAfterExecutionFailure(t *testing.T) {
 	manifestPath := filepath.Join(t.TempDir(), "manifest.json")
 	manifest := officialManifest{

@@ -226,7 +226,11 @@ type protocolContract struct {
 }
 
 func main() {
-	opts := parseFlags()
+	opts, err := parseFlags(os.Args[1:])
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(2)
+	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	if err := run(ctx, opts); err != nil {
@@ -253,21 +257,25 @@ func defaultOptions() options {
 	}
 }
 
-func parseFlags() options {
+func parseFlags(args []string) (options, error) {
 	opts := defaultOptions()
-	flag.StringVar(&opts.runName, "run-name", "", "New V3 official directory name below --output-root")
-	flag.StringVar(&opts.outputRoot, "output-root", opts.outputRoot, "Official output root outside the Git repository")
-	flag.StringVar(&opts.protocolTag, "protocol-tag", "", "Required annotated official protocol tag at HEAD")
-	flag.StringVar(&opts.protocolFile, "protocol-file", opts.protocolFile, "Committed V3 protocol path relative to scheduler/")
-	flag.StringVar(&opts.provenanceFiles, "provenance-files", opts.provenanceFiles, "Child-runner provenance paths")
-	flag.StringVar(&opts.schedulerNamespace, "scheduler-namespace", opts.schedulerNamespace, "Scheduler deployment namespace")
-	flag.StringVar(&opts.schedulerDeployment, "scheduler-deployment", opts.schedulerDeployment, "Scheduler deployment name")
-	flag.StringVar(&opts.evaluatorNamespace, "evaluator-namespace", opts.evaluatorNamespace, "Evaluator workload namespace")
-	flag.StringVar(&opts.image, "image", opts.image, "Evaluator Pod image")
-	flag.DurationVar(&opts.restoreTimeout, "restore-timeout", opts.restoreTimeout, "Final cleanup and idle-cadence timeout")
-	flag.IntVar(&opts.expectedWorkers, "expect-workers", opts.expectedWorkers, "Required ready worker count")
-	flag.Parse()
-	return opts
+	flags := flag.NewFlagSet("v3-official-runner", flag.ContinueOnError)
+	flags.SetOutput(io.Discard)
+	flags.StringVar(&opts.runName, "run-name", opts.runName, "New V3 official directory name below --output-root")
+	flags.StringVar(&opts.outputRoot, "output-root", opts.outputRoot, "Official output root outside the Git repository")
+	flags.StringVar(&opts.protocolTag, "protocol-tag", opts.protocolTag, "Required annotated official protocol tag at HEAD")
+	flags.StringVar(&opts.protocolFile, "protocol-file", opts.protocolFile, "Committed V3 protocol path relative to scheduler/")
+	flags.StringVar(&opts.provenanceFiles, "provenance-files", opts.provenanceFiles, "Child-runner provenance paths")
+	flags.StringVar(&opts.schedulerNamespace, "scheduler-namespace", opts.schedulerNamespace, "Scheduler deployment namespace")
+	flags.StringVar(&opts.schedulerDeployment, "scheduler-deployment", opts.schedulerDeployment, "Scheduler deployment name")
+	flags.StringVar(&opts.evaluatorNamespace, "evaluator-namespace", opts.evaluatorNamespace, "Evaluator workload namespace")
+	flags.StringVar(&opts.image, "image", opts.image, "Evaluator Pod image")
+	flags.DurationVar(&opts.restoreTimeout, "restore-timeout", opts.restoreTimeout, "Final cleanup and idle-cadence timeout")
+	flags.IntVar(&opts.expectedWorkers, "expect-workers", opts.expectedWorkers, "Required ready worker count")
+	if err := flags.Parse(args); err != nil {
+		return options{}, err
+	}
+	return opts, nil
 }
 
 func validateOptions(opts options) error {

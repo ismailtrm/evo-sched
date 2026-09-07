@@ -3892,6 +3892,39 @@ dizini hâlâ yoktur. Kod ve ledger correction commit'inden sonra local annotate
 clean HEAD'e yeniden bağlanacaktır. Bu sıra hem gerçek executable source'u hem
 de protocolü aynı tagged snapshot altında tutar.
 
+### 3.77. Frozen CLI defaultlarını sıfırlayan parser bug'ı pre-run gate'te yakalandı
+
+Stable invocation correction'ından sonra annotated tag clean HEAD'e taşındı ve
+official launcher tmux altında başlatılmaya çalışıldı. İlk tmux process'i kalıcı
+session bırakmadan kapandı. İkinci denemede stdout/stderr
+`/tmp/evo-v3-official-launch.log` dosyasına yönlendirildi ve hata açıkça
+yakalandı:
+
+```text
+--run-name must be frozen official name "2026-09-07-v3-budget-matched-official-search"
+```
+
+Kök neden `defaultOptions` içinde frozen `runName` ve `protocolTag` set edilmiş
+olmasına rağmen eski `parseFlags` kodunun `flag.StringVar` defaultları olarak
+literal boş string kullanmasıydı. Argümansız official invocation bu iki alanı
+yeniden boşaltıyor, `validateOptions` ise doğru biçimde execution başlamadan
+reddediyordu.
+
+Parser test-first düzeltildi. `TestParseFlagsPreservesFrozenOfficialDefaults`
+önce eski imzada compile failure verdi; sonra parser local
+`flag.NewFlagSet(..., flag.ContinueOnError)` kullanan ve explicit `args` alan bir
+fonksiyona çevrildi. Flag defaultları artık doğrudan `defaultOptions` değerlerini
+kullanır. `main`, `os.Args[1:]` parse hatasını exit code `2` ile ayırır. Boş argüman
+listesinde frozen identity'nin korunduğu ve `validateOptions` gate'ini geçtiği
+test edilir.
+
+Bu iki launch denemesi de top output dizini veya manifest oluşturmadan, child
+runner ve Kubernetes Pod yaratmadan kapandı. Dolayısıyla official sample
+denominatorü hâlâ sıfırdır ve partial experiment artefact'i yoktur. Parser
+correction commit'i tam doğrulamadan sonra annotated protocol tag'inin yeni
+pre-execution HEAD'i olacaktır; ancak ondan sonra aynı frozen command yeniden
+başlatılacaktır.
+
 ## 4. Şu Anki Durum
 
 Şu anda proje durumu şöyledir:
