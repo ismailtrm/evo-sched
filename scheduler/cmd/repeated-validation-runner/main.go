@@ -135,6 +135,7 @@ type validationProtocolContract struct {
 	ProtocolVersion                      string   `json:"protocolVersion"`
 	ProtocolTag                          string   `json:"protocolTag"`
 	RunName                              string   `json:"runName"`
+	Command                              []string `json:"command"`
 	TemporaryOutputRoot                  string   `json:"temporaryOutputRoot"`
 	WeightsFile                          string   `json:"weightsFile"`
 	Workloads                            []string `json:"workloads"`
@@ -430,6 +431,9 @@ func validateProtocolContract(path, schedulerDir, repoRoot string, opts options,
 	contract := document.SharedValidation.Official
 	if contract.Status != "official-frozen-before-execution" || contract.Class != "official" || !contract.PaperEvidenceEligibleAtRunCompletion {
 		return 0, fmt.Errorf("shared validation is not a frozen paper-eligible official protocol")
+	}
+	if invocation := buildInvocation(opts); !slices.Equal(invocation, contract.Command) {
+		return 0, fmt.Errorf("effective invocation does not match frozen protocol command")
 	}
 
 	actualStrings := map[string]string{
