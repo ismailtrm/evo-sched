@@ -50,7 +50,6 @@ func TestOfficialExecutionPlanFreezesCounterbalancedOrderAndBudget(t *testing.T)
 
 func TestBuildExecutionArgsCarriesFrozenOfficialContract(t *testing.T) {
 	opts := defaultOptions()
-	opts.protocolTag = "protocol-v3-official-test"
 	topRoot := filepath.Join(opts.outputRoot, "official-test")
 	execution := officialExecutionPlan()[2]
 	args := strings.Join(buildExecutionArgs(opts, execution, topRoot), " ")
@@ -60,7 +59,7 @@ func TestBuildExecutionArgsCarriesFrozenOfficialContract(t *testing.T) {
 		"--seeds 123",
 		"--class official",
 		"--protocol-version v3-budget-matched-resampling-official",
-		"--protocol-tag protocol-v3-official-test",
+		"--protocol-tag " + officialProtocolTag,
 		"--search-mode budget-two-stage",
 		"--population 12",
 		"--generations 5",
@@ -78,6 +77,25 @@ func TestBuildExecutionArgsCarriesFrozenOfficialContract(t *testing.T) {
 		if !strings.Contains(args, required) {
 			t.Fatalf("official execution args missing %q:\n%s", required, args)
 		}
+	}
+}
+
+func TestValidateOptionsRejectsOfficialIdentityDrift(t *testing.T) {
+	valid := defaultOptions()
+	if err := validateOptions(valid); err != nil {
+		t.Fatalf("validateOptions(valid) error = %v", err)
+	}
+
+	wrongTag := valid
+	wrongTag.protocolTag = "protocol-v3-other"
+	if err := validateOptions(wrongTag); err == nil || !strings.Contains(err.Error(), "protocol-tag") {
+		t.Fatalf("validateOptions(wrong tag) error = %v", err)
+	}
+
+	wrongRun := valid
+	wrongRun.runName = "other-run"
+	if err := validateOptions(wrongRun); err == nil || !strings.Contains(err.Error(), "run-name") {
+		t.Fatalf("validateOptions(wrong run) error = %v", err)
 	}
 }
 
@@ -216,6 +234,8 @@ func TestValidateProtocolContractRejectsDraftAndExecutionOrderDrift(t *testing.T
 		"official": map[string]any{
 			"class":                                "official",
 			"paperEvidenceEligibleAtRunCompletion": false,
+			"protocolTag":                          officialProtocolTag,
+			"runName":                              officialRunName,
 			"seeds":                                []int64{42, 123, 999},
 			"armExecutionOrder": []map[string]any{
 				{"seed": int64(42), "order": []string{"one-shot-control", "two-stage-resampling"}},
@@ -236,13 +256,13 @@ func TestValidateProtocolContractRejectsDraftAndExecutionOrderDrift(t *testing.T
 		}
 	}
 	writeDocument()
-	if err := validateProtocolContract(path, plan); err != nil {
+	if err := validateProtocolContract(path, plan, officialProtocolTag, officialRunName); err != nil {
 		t.Fatalf("validateProtocolContract(valid) error = %v", err)
 	}
 
 	document["status"] = "design-committed-before-implementation"
 	writeDocument()
-	if err := validateProtocolContract(path, plan); err == nil || !strings.Contains(err.Error(), "status") {
+	if err := validateProtocolContract(path, plan, officialProtocolTag, officialRunName); err == nil || !strings.Contains(err.Error(), "status") {
 		t.Fatalf("validateProtocolContract(draft) error = %v", err)
 	}
 
@@ -254,7 +274,7 @@ func TestValidateProtocolContractRejectsDraftAndExecutionOrderDrift(t *testing.T
 		{"seed": int64(999), "order": []string{"one-shot-control", "two-stage-resampling"}},
 	}
 	writeDocument()
-	if err := validateProtocolContract(path, plan); err == nil || !strings.Contains(err.Error(), "execution order") {
+	if err := validateProtocolContract(path, plan, officialProtocolTag, officialRunName); err == nil || !strings.Contains(err.Error(), "execution order") {
 		t.Fatalf("validateProtocolContract(order drift) error = %v", err)
 	}
 
@@ -266,7 +286,14 @@ func TestValidateProtocolContractRejectsDraftAndExecutionOrderDrift(t *testing.T
 	budget := document["budgetDefinition"].(map[string]any)
 	budget["officialSearchPods"] = 32399
 	writeDocument()
-	if err := validateProtocolContract(path, plan); err == nil || !strings.Contains(err.Error(), "budget") {
+	if err := validateProtocolContract(path, plan, officialProtocolTag, officialRunName); err == nil || !strings.Contains(err.Error(), "budget") {
 		t.Fatalf("validateProtocolContract(budget drift) error = %v", err)
+	}
+
+	budget["officialSearchPods"] = 32400
+	official["runName"] = "wrong-run"
+	writeDocument()
+	if err := validateProtocolContract(path, plan, officialProtocolTag, officialRunName); err == nil || !strings.Contains(err.Error(), "identity") {
+		t.Fatalf("validateProtocolContract(identity drift) error = %v", err)
 	}
 }

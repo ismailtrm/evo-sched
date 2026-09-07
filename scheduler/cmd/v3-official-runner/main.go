@@ -32,6 +32,8 @@ const (
 	officialManifestSchemaVersion = "v1"
 	officialProtocolVersion       = "v3-budget-matched-resampling-official"
 	officialProtocolStatus        = "official-frozen-before-execution"
+	officialProtocolTag           = "protocol-v3-official-search-2026-09-07"
+	officialRunName               = "2026-09-07-v3-budget-matched-official-search"
 	officialWorkloads             = "../workloads/v2/cpu-tight-train.json,../workloads/v2/mem-tight-train.json,../workloads/v2/fragmenting-mix-train.json"
 	officialBaselineFile          = "../experiments/weights-v2.json"
 	canonicalWeights              = "0.25,0.25,0.25,0.25"
@@ -213,6 +215,8 @@ type protocolContract struct {
 	Official struct {
 		Class                                string  `json:"class"`
 		PaperEvidenceEligibleAtRunCompletion bool    `json:"paperEvidenceEligibleAtRunCompletion"`
+		ProtocolTag                          string  `json:"protocolTag"`
+		RunName                              string  `json:"runName"`
 		Seeds                                []int64 `json:"seeds"`
 		ArmExecutionOrder                    []struct {
 			Seed  int64    `json:"seed"`
@@ -233,7 +237,9 @@ func main() {
 
 func defaultOptions() options {
 	return options{
+		runName:             officialRunName,
 		outputRoot:          "/tmp/evo-sched-v3-official",
+		protocolTag:         officialProtocolTag,
 		protocolFile:        "../experiments/protocol-v3-budget-matched-resampling.json",
 		provenanceFiles:     "../kind-config-4workers.yaml,../deploy.yaml,../experiments/protocol-v3-budget-matched-resampling.json",
 		schedulerNamespace:  "evo-sched",
@@ -265,11 +271,11 @@ func parseFlags() options {
 }
 
 func validateOptions(opts options) error {
-	if strings.TrimSpace(opts.runName) == "" || strings.Contains(opts.runName, string(filepath.Separator)) {
-		return errors.New("--run-name must be a single non-empty path component")
+	if opts.runName != officialRunName {
+		return fmt.Errorf("--run-name must be frozen official name %q", officialRunName)
 	}
-	if strings.TrimSpace(opts.protocolTag) == "" {
-		return errors.New("--protocol-tag is required")
+	if opts.protocolTag != officialProtocolTag {
+		return fmt.Errorf("--protocol-tag must be frozen official tag %q", officialProtocolTag)
 	}
 	if strings.TrimSpace(opts.outputRoot) == "" || strings.TrimSpace(opts.protocolFile) == "" {
 		return errors.New("--output-root and --protocol-file are required")
@@ -357,7 +363,7 @@ func run(ctx context.Context, opts options) error {
 
 	plan := officialExecutionPlan()
 	protocolPath := resolvePath(schedulerDir, opts.protocolFile)
-	if err := validateProtocolContract(protocolPath, plan); err != nil {
+	if err := validateProtocolContract(protocolPath, plan, opts.protocolTag, opts.runName); err != nil {
 		return fmt.Errorf("official protocol gate: %w", err)
 	}
 	inputs, err := inspectInputs(schedulerDir, repoRoot, opts)
@@ -644,7 +650,7 @@ func validateChildManifest(path string, git gitState, protocolTag string, execut
 	return nil
 }
 
-func validateProtocolContract(path string, plan []executionSpec) error {
+func validateProtocolContract(path string, plan []executionSpec, protocolTag, runName string) error {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return fmt.Errorf("read protocol: %w", err)
@@ -664,6 +670,15 @@ func validateProtocolContract(path string, plan []executionSpec) error {
 			"protocol official evidence state class=%q eligible=%t",
 			protocol.Official.Class,
 			protocol.Official.PaperEvidenceEligibleAtRunCompletion,
+		)
+	}
+	if protocol.Official.ProtocolTag != protocolTag || protocol.Official.RunName != runName {
+		return fmt.Errorf(
+			"protocol identity tag=%q run=%q, want tag=%q run=%q",
+			protocol.Official.ProtocolTag,
+			protocol.Official.RunName,
+			protocolTag,
+			runName,
 		)
 	}
 	if len(plan) == 0 {
