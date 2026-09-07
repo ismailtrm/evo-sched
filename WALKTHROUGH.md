@@ -4109,6 +4109,97 @@ kapalıdır ve hiçbir shared-validation ölçümü başlamamıştır. Sıradaki
 commit'i, clean tree üzerinde annotated tag, cluster preflight ve tmux içinde
 tek resmi koşudur.
 
+### 3.80. V3 shared validation tamamlandı ve two-stage arm daha düşük false discovery üretti
+
+`protocol-v3-shared-validation-2026-09-07` tag'inde dondurulan resmi shared
+validation, `2026-09-07T20:08:05Z` ile `2026-09-07T22:37:10Z` arasında yaklaşık
+`2 saat 29 dakika 5 saniye` çalıştı. Cyclic-rotation sırası altında üç workload'un
+her biri dokuz policy x on tekrar ile `90/90` satır tamamladı. Machine-readable
+manifest ve bağımsız raw acceptance denetimi şu paydaları doğruladı:
+
+- `270/270` workload execution
+- `6,480/6,480` submitted, scheduled ve completed Pod
+- `6,480/6,480` scheduler-decision, Kubernetes-scheduled ve evaluator-observation
+  timestamp
+- sıfır unschedulable Pod
+- preflight'ta dört worker, healthy scheduler, canonical weights ve `250ms`
+  measurement cadence
+- postflight'ta dört worker, healthy scheduler, canonical weights, restore edilmiş
+  `2s` idle cadence ve boş evaluator namespace
+
+Manifest `paperEvidenceEligible=true` ve `status=completed` olarak kapandı. Dokuz
+input checksum'ı, altı raw JSON/CSV output checksum'ı, protocol tag ile run Git
+SHA eşleşmesi, her policy-workload çifti için tam `r01`--`r10` kapsamı ve JSON/CSV
+satırlarının 37 alanı bağımsız olarak doğrulandı. Ham artefact'lar byte-for-byte
+`results/2026-09-07-v3-shared-validation` altına taşındı; `/tmp` ile `diff -qr`
+yalnızca sonradan eklenen `artifact-import.json` provenance kaydını gösterdi.
+Raw sonuç commit'i:
+
+- `8f352ab results: record V3 shared validation`
+
+False-discovery analizi için `cmd/v3-validation-summary` eklendi. Araç raw
+JSON'ları, official manifesti, frozen protocolü, pooled search summary'yi ve
+validation weights dosyasını birlikte hard-gate eder. Her repetition'ın üç
+workload objective'i önce aritmetik ortalanır; böylece aggregate belirsizlik,
+heterojen 30 workload satırını iid kabul etmek yerine optimizer objective'ini
+temsil eden `n=10` repetition-level örnek üzerinden yüzde 95 Student-t confidence
+interval ile hesaplanır. Workload-level `n=10` dağılımlar da JSON'da korunur.
+Analyzer ve provenance düzeltmesi şu commit'lerdedir:
+
+- `35989a0 feat: add V3 validation outcome analysis`
+- `c6a8945 fix: record exact V3 analysis invocation`
+
+Clean `c6a8945` üzerinden üretilen JSON/CSV ikinci kez regenerate edildi. CSV
+byte-for-byte, JSON ise yalnızca `generatedAt` çıkarıldığında byte-for-byte aynı
+çıktı verdi. Analiz artefact commit'i:
+
+- `b1a65ca results: analyze V3 false Pareto discovery`
+
+Dondurulmuş primary outcome'un gözlenen sonucu:
+
+| Arm | Validated finalist | Nondominated kalan | False discovery | Proportion |
+|---|---:|---:|---:|---:|
+| `one-shot-control` | 3 | 1 | 2 | `0.667` |
+| `two-stage-resampling` | 3 | 2 | 1 | `0.333` |
+
+Two-stage minus one-shot absolute farkı `-0.333` oldu. Bu nedenle dondurulmuş
+karar kuralı altında two-stage mitigation **tanımlayıcı olarak desteklenmiştir**:
+eşit 72 fresh-sample search bütçesinde promoted adayları tekrar ölçmek, shared
+validation'da front'tan düşen finalist oranını bu deneyde azalttı.
+
+Ortak repeated-mean point-estimate Pareto front üç unique noktadan oluştu:
+
+| Policy | Arm | Mean p95 decision latency (s) | Mean occupied workers |
+|---|---|---:|---:|
+| `v3-two-stage-s999-init-004` | two-stage | `1.2592` | `3.7000` |
+| `v3-two-stage-s999-gen-05-003` | two-stage | `1.2946` | `3.1000` |
+| `v3-one-shot-s123-gen-03-010` | one-shot | `1.2985` | `3.0667` |
+
+Üç baseline'ın hiçbiri bu combined point-estimate front'ta kalmadı. One-shot
+finalistlerinden `v3-one-shot-s999-gen-01-001` ve
+`v3-one-shot-s999-gen-03-009`; two-stage finalistlerinden
+`v3-two-stage-s999-gen-05-006` repeated-mean evaluation altında nondominated
+kalmadı.
+
+İddia sınırları önemlidir:
+
+- Pareto dominance repeated mean point estimate üzerindedir; statistical
+  significance testi değildir.
+- Arm başına yalnızca üç seçilmiş finalist vardır. `2/3` ve `1/3` oranları küçük
+  paydalı tanımlayıcı sonuçlardır; population-level false-discovery tahmini gibi
+  yorumlanmaz.
+- Marginal yüzde 95 confidence interval'lar geniş ölçüde çakışır; multivariate
+  üstünlük veya equivalence kanıtlamaz.
+- V3 protocolünde holdout yoktur. Front'ta kalan üç optimizer policy için ayrı,
+  execution öncesinde commitlenmiş holdout olmadan genelleme iddiası kurulamaz.
+- Bu sonuç, two-stage resampling'in her cluster/workload/bütçede üstün olduğunu
+  değil, bu dondurulmuş budget-matched deneyde one-shot control'den daha düşük
+  observed false Pareto discovery proportion verdiğini gösterir.
+
+Raw acceptance ve analiz sonrasında kind container'ları silinmeden durduruldu.
+Cluster daha sonra gerekirse `make cluster-up` ile aynı topoloji korunarak yeniden
+başlatılabilir.
+
 ## 4. Şu Anki Durum
 
 Şu anda proje durumu şöyledir:
@@ -4196,8 +4287,18 @@ tek resmi koşudur.
   genişletilmiştir
 - V3 shared-validation resmi identity, policy order, provenance, cluster
   contract ve exact command execution öncesinde commitlenmiştir
-- V3 official search hâlâ `paperEvidenceEligible=false`; shared ten-repeat validation açık kapıdır
-- kind cluster pilot sonrasında canonical state doğrulanarak durdurulmuştur
+- V3 shared ten-repeat validation `270/270` workload execution ve `6,480/6,480`
+  Pod ile tamamlanmış, raw acceptance'tan geçmiş ve `paperEvidenceEligible=true`
+  olarak commitlenmiştir
+- V3 repeated-mean point-estimate front'ta one-shot arm'dan bir, two-stage
+  arm'dan iki finalist kalmış; üç baseline'ın tamamı combined front'tan düşmüştür
+- False Pareto discovery proportion one-shot için `2/3`, two-stage için `1/3`
+  ölçülmüş; mitigation küçük finalist paydası altında yalnızca tanımlayıcı olarak
+  desteklenmiştir
+- V3 holdout dondurulmamıştır; surviving policy'ler için genelleme iddiası açık
+  değildir
+- kind cluster official shared-validation postflight'i ve raw acceptance sonrası
+  canonical state korunarak durdurulmuştur
 - Functional live smoke ve kind resource lifecycle komutları Makefile entrypoint'leri olarak eklenmiştir
 - Gate 6 CFP taslağı official V2 claim setine bağlı ve commitlidir; public paper
   PDF, speaking sample, kullanıcı teyitleri ve Sessionize gönderimi açıktır
@@ -4226,9 +4327,9 @@ tek resmi koşudur.
 - Üç V2 train workload üzerinde üç custom policy ve default kube-scheduler için üç tekrarlı official baseline protokolü tamamlanmıştır
 - Official baseline artifactleri, manifestleri ve mean/sample-SD/worst-case özetleri commitlenmiştir
 - Clean/tag/preflight hard gate'li ve interruption recovery destekli repo-içi official multi-seed runner tamamlanmıştır
-- Sıradaki aktif araştırma işi docs commit'i ve annotated protocol tag sonrası
-  cluster'ı preflight ederek V3 shared ten-repeat validation'ı çalıştırmak ve
-  false Pareto discovery proportion'ı hesaplamaktır
+- Sıradaki aktif araştırma kararı, V3 sonucunu paper/CFP'ye işlemeden önce
+  surviving üç policy için ayrı pre-specified holdout protokolü açılıp
+  açılmayacağıdır
 - Ayrı CFP hattında stabil public paper PDF ve speaking sample hazırlayıp CFP
   taslağını kullanıcı onayıyla Sessionize'a aktarma işi açıktır
 
@@ -4437,7 +4538,7 @@ Sonuç:
 - [x] Official protocol tag ve yeni result dizinlerini sabitle
 - [x] Counterbalanced üç-seed, iki-arm official search'ü koştur
 - [x] Pooled optimizer-only front'ları çıkar ve protocol cap kuralıyla validation finalistlerini sabitle
-- [ ] Shared ten-repeat finalist validation ve false-discovery analizini tamamla
+- [x] Shared ten-repeat finalist validation ve false-discovery analizini tamamla
 
 Çıkış koşulu:
 
@@ -4446,6 +4547,15 @@ Sonuç:
 - pilot çıktıları official evidence olarak etiketlenmemeli
 - mitigation işe yaramasa bile sonuç ve partial artifact zinciri korunmalı
 - V3 hiçbir aşamada KubeCon CFP submission gate'ini bloklamamalı
+
+Sonuç:
+
+- Gate 7'nin dondurulmuş search ve shared-validation protokolü tamamlandı
+- one-shot false Pareto discovery proportion `2/3`, two-stage proportion `1/3`
+- two-stage mitigation bu sınırlı official deneyde tanımlayıcı olarak desteklendi
+- combined repeated-mean point-estimate front üç optimizer policy'den oluştu;
+  hiçbir baseline front'ta kalmadı
+- statistical superiority ve holdout generalization iddiaları açık değildir
 
 ## 6. Bu Dosya Nasıl Kullanılmalı
 
