@@ -1,0 +1,115 @@
+{
+  "schemaVersion": "v1",
+  "protocolVersion": "v3-budget-matched-resampling-pilot",
+  "class": "pilot",
+  "paperEvidenceEligible": false,
+  "runName": "2026-09-07-budget-matched-pilot",
+  "status": "completed",
+  "startedAt": "2026-09-07T00:07:20.5771405Z",
+  "finishedAt": "2026-09-07T00:43:45.324141467Z",
+  "repository": "/home/ismail/evo-sched",
+  "workingDirectory": "/home/ismail/evo-sched/scheduler",
+  "command": [
+    "/tmp/go-build3725495278/b001/exe/v3-pilot-runner",
+    "--run-name",
+    "2026-09-07-budget-matched-pilot",
+    "--protocol-tag",
+    "protocol-v3-pilot-2026-09-07"
+  ],
+  "git": {
+    "sha": "c567c9eb944cdabad596036d71c8bf4cfe44786b",
+    "branch": "research/noise-aware-resampling-v3",
+    "protocolTag": "protocol-v3-pilot-2026-09-07",
+    "tagAnnotated": true,
+    "dirtyAtStart": false
+  },
+  "inputs": [
+    {
+      "path": "experiments/protocol-v3-budget-matched-resampling.json",
+      "sha256": "a7b4059e053da884fe00b21575adae4a705bb2d70b8138f1d7c0fbcba0812f41"
+    }
+  ],
+  "armOrder": [
+    "one-shot-control",
+    "two-stage-resampling"
+  ],
+  "expectedCombinedBudget": {
+    "optimizerSamples": 16,
+    "baselineSamples": 6,
+    "policySamples": 22,
+    "workloadExecutions": 66,
+    "pods": 1584
+  },
+  "arms": [
+    {
+      "spec": {
+        "name": "one-shot-control",
+        "searchMode": "budget-one-shot",
+        "population": 4,
+        "generations": 1,
+        "offspringPerGeneration": 4,
+        "promotionsPerGeneration": 0,
+        "additionalSamplesPerPromotion": 0,
+        "optimizerSampleBudget": 8,
+        "expectedOptimizerSamples": 8,
+        "expectedBaselineSamples": 3,
+        "expectedPolicySamples": 11,
+        "expectedUniqueCandidates": 11,
+        "expectedPromotions": 0,
+        "expectedWorkloadExecutions": 33,
+        "expectedPods": 792
+      },
+      "status": "completed",
+      "startedAt": "2026-09-07T00:07:20.577254186Z",
+      "finishedAt": "2026-09-07T00:25:34.851171912Z",
+      "childManifestPath": "one-shot-control/manifest.json",
+      "childManifestSha256": "0b2e34d2d7ed982fa28c7e9d9af42caca3cd72f77f5f70fbe007a43d5dbddb1d",
+      "launcherLogPath": "logs/one-shot-control.log",
+      "launcherLogSha256": "e392035960e6703151f4b88b1f5fb3a51654b45286e2d5d4f11b0e29f4f9b0ea"
+    },
+    {
+      "spec": {
+        "name": "two-stage-resampling",
+        "searchMode": "budget-two-stage",
+        "population": 4,
+        "generations": 1,
+        "offspringPerGeneration": 2,
+        "promotionsPerGeneration": 1,
+        "additionalSamplesPerPromotion": 2,
+        "optimizerSampleBudget": 8,
+        "expectedOptimizerSamples": 8,
+        "expectedBaselineSamples": 3,
+        "expectedPolicySamples": 11,
+        "expectedUniqueCandidates": 9,
+        "expectedPromotions": 1,
+        "expectedWorkloadExecutions": 33,
+        "expectedPods": 792
+      },
+      "status": "completed",
+      "startedAt": "2026-09-07T00:25:34.851300915Z",
+      "finishedAt": "2026-09-07T00:43:41.763964723Z",
+      "childManifestPath": "two-stage-resampling/manifest.json",
+      "childManifestSha256": "c1cc0ee2240a54e8e75bad471a8d6a244cfe3a9560f97a30b5e7fb645f47265e",
+      "launcherLogPath": "logs/two-stage-resampling.log",
+      "launcherLogSha256": "016dd42894aebbd81591e10b64463484d80884ce8b58afd6381aea898c6e7da5"
+    }
+  ],
+  "finalRestoration": {
+    "status": "completed",
+    "startedAt": "2026-09-07T00:43:41.764058612Z",
+    "finishedAt": "2026-09-07T00:43:45.324141234Z",
+    "snapshot": {
+      "capturedAt": "2026-09-07T00:43:45.324137361Z",
+      "workerCount": 4,
+      "schedulerRolloutReady": true,
+      "schedulerIntervalSeconds": 2,
+      "schedulerCanonicalWeights": {
+        "freeCPU": 0.25,
+        "freeMem": 0.25,
+        "balance": 0.25,
+        "consolidation": 0.25
+      },
+      "evaluatorPodCount": 0
+    }
+  }
+}

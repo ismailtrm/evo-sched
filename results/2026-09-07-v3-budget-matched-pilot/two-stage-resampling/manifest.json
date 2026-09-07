@@ -1,0 +1,209 @@
+{
+  "schemaVersion": "v1",
+  "protocolVersion": "v3-budget-matched-resampling-pilot",
+  "class": "pilot",
+  "paperEvidenceEligible": false,
+  "runName": "two-stage-resampling",
+  "status": "completed",
+  "startedAt": "2026-09-07T00:25:34.992562548Z",
+  "finishedAt": "2026-09-07T00:43:41.760548981Z",
+  "repository": "/home/ismail/evo-sched",
+  "workingDirectory": "/home/ismail/evo-sched/scheduler",
+  "git": {
+    "sha": "c567c9eb944cdabad596036d71c8bf4cfe44786b",
+    "branch": "research/noise-aware-resampling-v3",
+    "tagsAtHead": [
+      "protocol-v3-pilot-2026-09-07"
+    ],
+    "protocolTag": "protocol-v3-pilot-2026-09-07",
+    "tagAnnotated": true,
+    "dirtyAtStart": false
+  },
+  "inputs": [
+    {
+      "path": "workloads/v2/cpu-tight-train.json",
+      "sha256": "4f5f37555465b179c48b5e9a3bc1c738cddf03309c0823c9c55f51ec99374096"
+    },
+    {
+      "path": "workloads/v2/mem-tight-train.json",
+      "sha256": "9fbf91b4fe156c7100ed4363f674a3bddaaf56c572c1f23ba50e2fbb78f1c7b4"
+    },
+    {
+      "path": "workloads/v2/fragmenting-mix-train.json",
+      "sha256": "8dca751f14582c2fa56fa6f83d4bc58bb1d66a19e550716076715e9227143872"
+    },
+    {
+      "path": "experiments/weights-v2.json",
+      "sha256": "fe690c528b277d4a41496f5f702e25a554d7406f04accf17e832f75566d8d782"
+    },
+    {
+      "path": "kind-config-4workers.yaml",
+      "sha256": "d26c091ff873418387e8c45148283a71235a2190efe1d8f021fc566de0bd664f"
+    },
+    {
+      "path": "deploy.yaml",
+      "sha256": "3de13f7b422236a72f0d1cce608957e469d8124f0ab5ad2b26d6d2af80dbf91c"
+    },
+    {
+      "path": "experiments/protocol-v3-budget-matched-resampling.json",
+      "sha256": "a7b4059e053da884fe00b21575adae4a705bb2d70b8138f1d7c0fbcba0812f41"
+    }
+  ],
+  "search": {
+    "seeds": [
+      20260831
+    ],
+    "workloads": [
+      "../workloads/v2/cpu-tight-train.json",
+      "../workloads/v2/mem-tight-train.json",
+      "../workloads/v2/fragmenting-mix-train.json"
+    ],
+    "baselineFile": "../experiments/weights-v2.json",
+    "population": 4,
+    "generations": 1,
+    "mutationRate": 0.8,
+    "mutationSigma": 0.25,
+    "minWeight": 0,
+    "maxWeight": 2,
+    "pollIntervalNanoseconds": 250000000,
+    "timeoutNanoseconds": 90000000000,
+    "image": "busybox:1.36.1",
+    "expectedCandidatesPerSeed": 9,
+    "expectedWorkloadRunsPerSeed": 33,
+    "searchMode": "budget-two-stage",
+    "offspringPerGeneration": 2,
+    "promotionsPerGeneration": 1,
+    "additionalSamplesPerPromotion": 2,
+    "optimizerSampleBudget": 8,
+    "expectedOptimizerSamplesPerSeed": 8,
+    "expectedBaselineSamplesPerSeed": 3,
+    "expectedPromotionEventsPerSeed": 1,
+    "expectedPolicySamplesPerSeed": 11,
+    "podsPerPolicySample": 72,
+    "expectedPodsPerSeed": 792
+  },
+  "preflight": {
+    "capturedAt": "2026-09-07T00:25:34.992434665Z",
+    "context": "kind-evo-sched",
+    "kubernetesServerVersion": "v1.35.0",
+    "workerCount": 4,
+    "workerCpuMilli": 16000,
+    "workerMemoryMiB": 31712,
+    "schedulerDeployment": "evok8s-scheduler",
+    "schedulerImage": "evok8s-scheduler:0.1.0",
+    "schedulerRuntimeImageIds": [
+      "sha256:1c442eae9853d18d6ed327d426536a126c2e7de1fb94b7188d896117c1e42c79"
+    ],
+    "schedulerRolloutReady": true,
+    "schedulerIntervalSeconds": 0.25,
+    "schedulerCanonicalWeights": {
+      "freeCPU": 0.25,
+      "freeMem": 0.25,
+      "balance": 0.25,
+      "consolidation": 0.25
+    },
+    "evaluatorPodCount": 0
+  },
+  "runs": [
+    {
+      "seed": 20260831,
+      "status": "completed",
+      "startedAt": "2026-09-07T00:25:34.992737913Z",
+      "finishedAt": "2026-09-07T00:43:41.737212831Z",
+      "command": [
+        "go",
+        "run",
+        "./cmd/optimizer",
+        "--workloads",
+        "../workloads/v2/cpu-tight-train.json,../workloads/v2/mem-tight-train.json,../workloads/v2/fragmenting-mix-train.json",
+        "--baseline-file",
+        "../experiments/weights-v2.json",
+        "--population",
+        "4",
+        "--generations",
+        "1",
+        "--mutation-rate",
+        "0.8",
+        "--mutation-sigma",
+        "0.25",
+        "--min-weight",
+        "0",
+        "--max-weight",
+        "2",
+        "--seed",
+        "20260831",
+        "--poll-interval",
+        "250ms",
+        "--timeout",
+        "1m30s",
+        "--image",
+        "busybox:1.36.1",
+        "--output",
+        "/tmp/evo-sched-v3-pilot/2026-09-07-budget-matched-pilot/two-stage-resampling/seed-20260831/result.json",
+        "--search-mode",
+        "budget-two-stage",
+        "--offspring-per-generation",
+        "2",
+        "--promotions-per-generation",
+        "1",
+        "--additional-samples-per-promotion",
+        "2",
+        "--optimizer-sample-budget",
+        "8"
+      ],
+      "exitCode": 0,
+      "expectedCandidates": 9,
+      "expectedWorkloadRuns": 33,
+      "expectedOptimizerSamples": 8,
+      "expectedBaselineSamples": 3,
+      "expectedPromotionEvents": 1,
+      "expectedPolicySamples": 11,
+      "expectedPods": 792,
+      "logPath": "../../../tmp/evo-sched-v3-pilot/2026-09-07-budget-matched-pilot/two-stage-resampling/seed-20260831/run.log",
+      "outputs": [
+        {
+          "path": "../../../tmp/evo-sched-v3-pilot/2026-09-07-budget-matched-pilot/two-stage-resampling/seed-20260831/result.json",
+          "sha256": "9f9b366f2fdd241c7e195c8f402aefbdc989ab8d949d11045e862d6037019fd2"
+        },
+        {
+          "path": "../../../tmp/evo-sched-v3-pilot/2026-09-07-budget-matched-pilot/two-stage-resampling/seed-20260831/result-pareto.csv",
+          "sha256": "24a6147a44358f3ab3776a1a3290d5703ccea5a1f83e3fd134907255a600b0d8"
+        },
+        {
+          "path": "../../../tmp/evo-sched-v3-pilot/2026-09-07-budget-matched-pilot/two-stage-resampling/seed-20260831/result-all.csv",
+          "sha256": "60e43c4ef26b9ad40f6f7aafbc0f3ec76487970e7ffd05263f77185bb99406ca"
+        },
+        {
+          "path": "../../../tmp/evo-sched-v3-pilot/2026-09-07-budget-matched-pilot/two-stage-resampling/seed-20260831/run.log",
+          "sha256": "efc196c7489b3f78c8e0f4dd0eaf57f779c64801532b179e423590873c884107"
+        },
+        {
+          "path": "../../../tmp/evo-sched-v3-pilot/2026-09-07-budget-matched-pilot/two-stage-resampling/seed-20260831/result-samples.csv",
+          "sha256": "eb1f3a4526e1e6d1cc97dcce5f35b9b862d40b8071a258fcfeb5141ce4887d1e"
+        }
+      ],
+      "postflight": {
+        "capturedAt": "2026-09-07T00:43:41.760363541Z",
+        "context": "kind-evo-sched",
+        "kubernetesServerVersion": "v1.35.0",
+        "workerCount": 4,
+        "workerCpuMilli": 16000,
+        "workerMemoryMiB": 31712,
+        "schedulerDeployment": "evok8s-scheduler",
+        "schedulerImage": "evok8s-scheduler:0.1.0",
+        "schedulerRuntimeImageIds": [
+          "sha256:1c442eae9853d18d6ed327d426536a126c2e7de1fb94b7188d896117c1e42c79"
+        ],
+        "schedulerRolloutReady": true,
+        "schedulerIntervalSeconds": 0.25,
+        "schedulerCanonicalWeights": {
+          "freeCPU": 0.25,
+          "freeMem": 0.25,
+          "balance": 0.25,
+          "consolidation": 0.25
+        },
+        "evaluatorPodCount": 0
+      }
+    }
+  ]
+}
