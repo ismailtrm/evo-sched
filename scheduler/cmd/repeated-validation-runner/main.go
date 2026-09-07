@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -40,6 +41,7 @@ type options struct {
 	weightsFile               string
 	protocolTag               string
 	protocolVersion           string
+	protocolFile              string
 	executionOrder            string
 	outputRoot                string
 	provenanceFiles           string
@@ -112,10 +114,45 @@ type manifest struct {
 	PolicyCount           int           `json:"policyCount"`
 	ExpectedRows          int           `json:"expectedResultRows"`
 	ExpectedWorkloadRuns  int           `json:"expectedWorkloadRuns"`
+	ExpectedPods          int           `json:"expectedPods,omitempty"`
+	ObservedPods          int           `json:"observedPods,omitempty"`
 	Preflight             snapshot      `json:"preflight"`
 	Runs                  []workloadRun `json:"runs"`
 	Postflight            *snapshot     `json:"postflight,omitempty"`
 	Failure               string        `json:"failure,omitempty"`
+}
+
+type validationProtocolDocument struct {
+	SharedValidation struct {
+		Official validationProtocolContract `json:"official"`
+	} `json:"sharedValidation"`
+}
+
+type validationProtocolContract struct {
+	Status                               string   `json:"status"`
+	Class                                string   `json:"class"`
+	PaperEvidenceEligibleAtRunCompletion bool     `json:"paperEvidenceEligibleAtRunCompletion"`
+	ProtocolVersion                      string   `json:"protocolVersion"`
+	ProtocolTag                          string   `json:"protocolTag"`
+	RunName                              string   `json:"runName"`
+	TemporaryOutputRoot                  string   `json:"temporaryOutputRoot"`
+	WeightsFile                          string   `json:"weightsFile"`
+	Workloads                            []string `json:"workloads"`
+	ExecutionOrder                       string   `json:"executionOrder"`
+	PolicyCount                          int      `json:"policyCount"`
+	BaselinePolicyCount                  int      `json:"baselinePolicyCount"`
+	OptimizerFinalistCount               int      `json:"optimizerFinalistCount"`
+	RepetitionsPerPolicyWorkload         int      `json:"repetitionsPerPolicyWorkload"`
+	ExpectedWorkloadExecutions           int      `json:"expectedWorkloadExecutions"`
+	ExpectedPods                         int      `json:"expectedPods"`
+	PollInterval                         string   `json:"pollInterval"`
+	PerPolicyWorkloadTimeout             string   `json:"perPolicyWorkloadTimeout"`
+	ExpectedWorkers                      int      `json:"expectedWorkers"`
+	ExperimentSchedulerInterval          string   `json:"experimentSchedulerInterval"`
+	RestoredIdleSchedulerInterval        string   `json:"restoredIdleSchedulerInterval"`
+	CanonicalWeights                     string   `json:"canonicalWeights"`
+	SchedulerName                        string   `json:"schedulerName"`
+	Image                                string   `json:"image"`
 }
 
 func main() {
@@ -134,6 +171,7 @@ func parseFlags() options {
 	flag.StringVar(&opts.weightsFile, "weights-file", "", "Validation policy file")
 	flag.StringVar(&opts.protocolTag, "protocol-tag", "", "Required annotated Git tag at HEAD")
 	flag.StringVar(&opts.protocolVersion, "protocol-version", "v2-official-repeated-validation", "Manifest protocol version")
+	flag.StringVar(&opts.protocolFile, "protocol-file", "", "Optional machine-readable protocol contract")
 	flag.StringVar(&opts.executionOrder, "execution-order", executionOrderFixed, "Policy order across repetitions: fixed or cyclic-rotation")
 	flag.StringVar(&opts.outputRoot, "output-root", "../results", "Output root relative to scheduler/")
 	flag.StringVar(&opts.provenanceFiles, "provenance-files", "../kind-config-4workers.yaml,../deploy.yaml", "Additional input files")
@@ -198,6 +236,9 @@ func run(ctx context.Context, opts options) (runErr error) {
 	}
 
 	inputPaths := append(append([]string(nil), workloads...), opts.weightsFile)
+	if opts.protocolFile != "" {
+		inputPaths = append(inputPaths, opts.protocolFile)
+	}
 	inputPaths = append(inputPaths, provenance...)
 	inputs, err := inspectInputs(schedulerDir, repoRoot, inputPaths)
 	if err != nil {
@@ -207,6 +248,13 @@ func run(ctx context.Context, opts options) (runErr error) {
 	spec, err := evaluator.LoadExperiment(weightsPath)
 	if err != nil {
 		return err
+	}
+	expectedPods := 0
+	if opts.protocolFile != "" {
+		expectedPods, err = validateProtocolContract(resolvePath(schedulerDir, opts.protocolFile), schedulerDir, repoRoot, opts, workloads, spec.Runs)
+		if err != nil {
+			return fmt.Errorf("protocol contract: %w", err)
+		}
 	}
 	expanded, err := expandRunSpecs(spec.Runs, opts.repetitions, opts.executionOrder)
 	if err != nil {
@@ -245,6 +293,7 @@ func run(ctx context.Context, opts options) (runErr error) {
 		PolicyCount:          len(spec.Runs),
 		ExpectedRows:         len(expanded) * len(workloads),
 		ExpectedWorkloadRuns: len(expanded) * len(workloads),
+		ExpectedPods:         expectedPods,
 		Preflight:            preflight,
 	}
 	if err := writeManifest(manifestPath, state); err != nil {
@@ -326,6 +375,7 @@ func run(ctx context.Context, opts options) (runErr error) {
 		for _, row := range batch.Results {
 			current.PodCount += row.PodCount
 		}
+		state.ObservedPods += current.PodCount
 		outputs, err := inspectOutputs(repoRoot, runRoot, entry.Workload)
 		if err != nil {
 			return err
@@ -334,6 +384,9 @@ func run(ctx context.Context, opts options) (runErr error) {
 		if err := writeManifest(manifestPath, state); err != nil {
 			return err
 		}
+	}
+	if state.ExpectedPods > 0 && state.ObservedPods != state.ExpectedPods {
+		return fmt.Errorf("observed Pods=%d, want %d", state.ObservedPods, state.ExpectedPods)
 	}
 	return nil
 }
@@ -360,6 +413,125 @@ func validateOptions(opts options) error {
 	return nil
 }
 
+func validateProtocolContract(path, schedulerDir, repoRoot string, opts options, workloads []string, policies []evaluator.ExperimentRunSpec) (int, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return 0, fmt.Errorf("read %s: %w", path, err)
+	}
+	var document validationProtocolDocument
+	if err := json.Unmarshal(data, &document); err != nil {
+		return 0, fmt.Errorf("parse %s: %w", path, err)
+	}
+	contract := document.SharedValidation.Official
+	if contract.Status != "official-frozen-before-execution" || contract.Class != "official" || !contract.PaperEvidenceEligibleAtRunCompletion {
+		return 0, fmt.Errorf("shared validation is not a frozen paper-eligible official protocol")
+	}
+
+	actualStrings := map[string]string{
+		"protocolVersion":               opts.protocolVersion,
+		"protocolTag":                   opts.protocolTag,
+		"runName":                       opts.runName,
+		"executionOrder":                opts.executionOrder,
+		"pollInterval":                  opts.pollInterval.String(),
+		"perPolicyWorkloadTimeout":      opts.timeout.String(),
+		"experimentSchedulerInterval":   opts.expectedSchedulerInterval.String(),
+		"restoredIdleSchedulerInterval": opts.finalSchedulerInterval.String(),
+		"schedulerName":                 opts.schedulerName,
+		"image":                         opts.image,
+	}
+	expectedStrings := map[string]string{
+		"protocolVersion":               contract.ProtocolVersion,
+		"protocolTag":                   contract.ProtocolTag,
+		"runName":                       contract.RunName,
+		"executionOrder":                contract.ExecutionOrder,
+		"pollInterval":                  contract.PollInterval,
+		"perPolicyWorkloadTimeout":      contract.PerPolicyWorkloadTimeout,
+		"experimentSchedulerInterval":   contract.ExperimentSchedulerInterval,
+		"restoredIdleSchedulerInterval": contract.RestoredIdleSchedulerInterval,
+		"schedulerName":                 contract.SchedulerName,
+		"image":                         contract.Image,
+	}
+	for field, actual := range actualStrings {
+		if actual != expectedStrings[field] {
+			return 0, fmt.Errorf("%s=%q, protocol requires %q", field, actual, expectedStrings[field])
+		}
+	}
+
+	actualOutputRoot := resolvePath(schedulerDir, opts.outputRoot)
+	if actualOutputRoot != filepath.Clean(contract.TemporaryOutputRoot) {
+		return 0, fmt.Errorf("outputRoot=%q, protocol requires %q", actualOutputRoot, contract.TemporaryOutputRoot)
+	}
+	actualWeightsFile := relativePath(repoRoot, resolvePath(schedulerDir, opts.weightsFile))
+	if actualWeightsFile != filepath.ToSlash(filepath.Clean(contract.WeightsFile)) {
+		return 0, fmt.Errorf("weightsFile=%q, protocol requires %q", actualWeightsFile, contract.WeightsFile)
+	}
+	actualWorkloads := make([]string, len(workloads))
+	for i, workload := range workloads {
+		actualWorkloads[i] = relativePath(repoRoot, resolvePath(schedulerDir, workload))
+	}
+	if !slices.Equal(actualWorkloads, contract.Workloads) {
+		return 0, fmt.Errorf("workloads=%v, protocol requires %v", actualWorkloads, contract.Workloads)
+	}
+
+	actualWeights, err := parseWeights(opts.expectedWeights)
+	if err != nil {
+		return 0, fmt.Errorf("parse expected weights: %w", err)
+	}
+	contractWeights, err := parseWeights(contract.CanonicalWeights)
+	if err != nil {
+		return 0, fmt.Errorf("parse protocol canonical weights: %w", err)
+	}
+	if actualWeights != contractWeights {
+		return 0, fmt.Errorf("canonical weights=%+v, protocol requires %+v", actualWeights, contractWeights)
+	}
+
+	if len(policies) != contract.PolicyCount || contract.BaselinePolicyCount+contract.OptimizerFinalistCount != contract.PolicyCount {
+		return 0, fmt.Errorf("policy count=%d, protocol requires %d (%d baseline + %d optimizer)", len(policies), contract.PolicyCount, contract.BaselinePolicyCount, contract.OptimizerFinalistCount)
+	}
+	if opts.repetitions != contract.RepetitionsPerPolicyWorkload || opts.expectedWorkers != contract.ExpectedWorkers {
+		return 0, fmt.Errorf("repetitions/workers=%d/%d, protocol requires %d/%d", opts.repetitions, opts.expectedWorkers, contract.RepetitionsPerPolicyWorkload, contract.ExpectedWorkers)
+	}
+	expectedWorkloadExecutions := len(policies) * opts.repetitions * len(workloads)
+	if expectedWorkloadExecutions != contract.ExpectedWorkloadExecutions {
+		return 0, fmt.Errorf("workload executions=%d, protocol requires %d", expectedWorkloadExecutions, contract.ExpectedWorkloadExecutions)
+	}
+
+	podsPerRepetition := 0
+	for _, workload := range workloads {
+		count, err := countWorkloadPods(resolvePath(schedulerDir, workload))
+		if err != nil {
+			return 0, err
+		}
+		podsPerRepetition += count
+	}
+	expectedPods := len(policies) * opts.repetitions * podsPerRepetition
+	if expectedPods != contract.ExpectedPods {
+		return 0, fmt.Errorf("Pod executions=%d, protocol requires %d", expectedPods, contract.ExpectedPods)
+	}
+	return expectedPods, nil
+}
+
+func countWorkloadPods(path string) (int, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return 0, fmt.Errorf("read workload %s: %w", path, err)
+	}
+	var direct []json.RawMessage
+	if err := json.Unmarshal(data, &direct); err == nil && len(direct) > 0 {
+		return len(direct), nil
+	}
+	var envelope struct {
+		Pods []json.RawMessage `json:"pods"`
+	}
+	if err := json.Unmarshal(data, &envelope); err != nil {
+		return 0, fmt.Errorf("parse workload %s: %w", path, err)
+	}
+	if len(envelope.Pods) == 0 {
+		return 0, fmt.Errorf("workload %s has no Pods", path)
+	}
+	return len(envelope.Pods), nil
+}
+
 func expandRunSpecs(specs []evaluator.ExperimentRunSpec, repetitions int, order string) ([]evaluator.ExperimentRunSpec, error) {
 	if len(specs) == 0 || repetitions < 1 {
 		return nil, errors.New("run specs and repetitions must be positive")
@@ -383,13 +555,18 @@ func expandRunSpecs(specs []evaluator.ExperimentRunSpec, repetitions int, order 
 }
 
 func buildInvocation(opts options) []string {
-	return []string{
+	command := []string{
 		"go", "run", "./cmd/repeated-validation-runner",
 		"--run-name", opts.runName,
 		"--workloads", opts.workloads,
 		"--weights-file", opts.weightsFile,
 		"--protocol-tag", opts.protocolTag,
 		"--protocol-version", opts.protocolVersion,
+	}
+	if opts.protocolFile != "" {
+		command = append(command, "--protocol-file", opts.protocolFile)
+	}
+	return append(command,
 		"--execution-order", opts.executionOrder,
 		"--output-root", opts.outputRoot,
 		"--provenance-files", opts.provenanceFiles,
@@ -405,7 +582,7 @@ func buildInvocation(opts options) []string {
 		"--evaluator-namespace", opts.evaluatorNamespace,
 		"--scheduler-name", opts.schedulerName,
 		"--image", opts.image,
-	}
+	)
 }
 
 func validateBatch(batch evaluator.BatchResult, expectedRows int) error {
