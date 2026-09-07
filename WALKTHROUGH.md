@@ -3666,6 +3666,65 @@ verir. Bu yalnızca kapasite planlama tahminidir; official manifestte gerçek wa
 time ayrıca ölçülecektir. Sıradaki kapı Pod-name warning fix'i, official launcher
 acceptance testleri ve bunlardan sonra official protocol freeze/tag'dir.
 
+### 3.73. Uzun evaluator kimlikleri warning-free DNS Pod adlarına indirildi
+
+V3 pilotunda gözlenen API server warning'i official freeze öncesinde test-first
+giderildi. Kök neden, `makeRunID` ile üretilen uzun evaluation kimliğine workload
+item adının doğrudan eklenmesi ve sonuçtaki Pod adının Kubernetes DNS-1123 label
+sınırı olan `63` karakteri aşmasıydı. Bu durum pilot workload'larını bozmadı,
+ancak warning gürültüsü ve gelecekte daha katı API doğrulaması riski nedeniyle
+official deney önkoşulu olarak ele alındı.
+
+`5eb2e74 fix: bound evaluator pod names` commit'i şu contract'ı ekledi:
+
+- kısa ve zaten geçerli adlar değiştirilmeden korunur
+- tüm kimlik küçük harf DNS-1123 label biçimine sanitize edilir
+- `63` karakteri aşan adlar, tam ham kimliğin SHA-256 digest'inden ilk `5` byte
+  yani `40` bitlik hexadecimal suffix ile collision-resistant biçimde kısaltılır
+- prefix ve hash birlikte en fazla `63` karakter olur
+- farklı uzun workload item kimliklerinin aynı Pod adına çökmediği test edilir
+
+Unit testler kısa adın korunmasını, uzun ad sınırını, Kubernetes
+`validation.IsDNS1123Label` sonucunu ve iki farklı uzun kimliğin benzersizliğini
+doğruladı. Değişiklikten sonra hedefli evaluator testleri, evaluator package
+testleri, evaluator race testi, `go test ./...`, `go vet ./...` ve `make verify`
+geçti. Böylece V2 official evidence ve paper zincirinin değişmediği de yeniden
+doğrulandı.
+
+Canlı doğrulama `debug` sınıfında yapıldı; paper evidence değildir. Cluster
+başlatıldıktan sonra host PATH'inde `kubectl` bulunmaması nedeniyle `make
+cluster-up` yine host-side wait adımında durdu. kind container'ları ve workload
+çalışması sağlıklıydı; dört worker'ın `Ready`, scheduler'ın `1/1`, canonical
+V2 ağırlıklarının `0.25/0.25/0.25/0.25`, cadence'in `2s` ve evaluator
+namespace'inin boş olduğu control-plane container'ındaki `kubectl` ile
+doğrulandı.
+
+Smoke, pilotta warning üreten uzunluğa eşdeğer
+`budget-two-stage-seed-20260831-initial-init-002-promotion-003` run adı ve
+`fragmenting-mix-train` workload'u ile çalıştırıldı. İlk deneme geçici weights
+fixture'ında zorunlu `policyVersion: v2` alanı eksik olduğu için Pod oluşturmadan
+schema gate'inde durdu; fixture düzeltildikten sonra aynı test tekrarlandı.
+Sonuçlar:
+
+- evaluator stdout/stderr çıktısında `metadata.name` veya DNS-label warning'i yok
+- `24/24` Pod scheduled ve completed, unschedulable count `0`
+- `24` Pod adı da benzersiz ve DNS-1123 uyumlu
+- gözlenen minimum ve maksimum Pod adı uzunluğu `62` karakter
+- decision timestamp sayısı `24`; debug ölçümünde ortalama decision latency
+  `1.0613s`, p95 `2.4467s` ve max occupied worker count `3`
+
+Debug çıktısı `/tmp/evo-v3-name-smoke.json` altında üretildi ve official/pilot
+result ağacına alınmadı. Amaç policy karşılaştırmak değil, isim contract'ını
+gerçek API server üzerinde doğrulamaktı. Smoke Pod'ları label selector ile
+silindi; namespace'in boş, scheduler'ın canonical ağırlıklar ve `2s` cadence ile
+`1/1` olduğu doğrulandı. Ardından tüm kind container'ları kaynak tüketimini
+durdurmak için stop edildi.
+
+Pod-name kapısı böylece kapandı. Sıradaki davranış değişikliği, protocoldeki
+seed-bazlı counterbalanced arm order'ı ve exact official budget'ı uygulayan
+provenance-gated üç-seed launcher'dır. Launcher test ve acceptance'ı bitmeden
+official protocol freeze/tag veya canlı official V3 search başlatılmayacaktır.
+
 ## 4. Şu Anki Durum
 
 Şu anda proje durumu şöyledir:
@@ -3974,7 +4033,7 @@ Sonuç:
 - [x] Pilot runner'ın clean/tag/checksum/preflight/postflight hard gate'lerini ekle
 - [x] Clean pilot protocol commit/tag oluştur
 - [x] İki arm'lı pilotu koştur ve acceptance'ı kapat
-- [ ] Official run öncesi Pod adlarını DNS-label sınırına indir ve warning-free smoke yap
+- [x] Official run öncesi Pod adlarını DNS-label sınırına indir ve warning-free smoke yap
 - [ ] Counterbalanced üç-seed official launcher ve manifest acceptance'ını ekle
 - [ ] Pilot süre tahminini kullanarak official protocol freeze/tag oluştur
 - [ ] Pilot sonucuna göre yalnızca implementation-derived manifest alanlarını gözden geçir
