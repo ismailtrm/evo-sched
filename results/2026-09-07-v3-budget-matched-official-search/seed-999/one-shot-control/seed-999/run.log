@@ -1,0 +1,4 @@
+2026/09/07 18:18:05 wrote optimizer result to /tmp/evo-sched-v3-official/2026-09-07-v3-budget-matched-official-search/seed-999/one-shot-control/seed-999/result.json
+2026/09/07 18:18:05 wrote optimizer pareto csv to /tmp/evo-sched-v3-official/2026-09-07-v3-budget-matched-official-search/seed-999/one-shot-control/seed-999/result-pareto.csv
+2026/09/07 18:18:05 wrote optimizer all-candidates csv to /tmp/evo-sched-v3-official/2026-09-07-v3-budget-matched-official-search/seed-999/one-shot-control/seed-999/result-all.csv
+2026/09/07 18:18:05 wrote optimizer fresh samples csv to /tmp/evo-sched-v3-official/2026-09-07-v3-budget-matched-official-search/seed-999/one-shot-control/seed-999/result-samples.csv

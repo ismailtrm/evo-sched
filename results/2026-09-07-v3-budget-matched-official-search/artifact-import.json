@@ -1,0 +1,15 @@
+{
+  "schemaVersion": "artifact-import-v1",
+  "class": "official",
+  "paperEvidenceEligible": false,
+  "importedAt": "2026-09-07T17:28:04Z",
+  "sourceRoot": "/tmp/evo-sched-v3-official/2026-09-07-v3-budget-matched-official-search",
+  "committedRoot": "results/2026-09-07-v3-budget-matched-official-search",
+  "sourceGitSha": "5cae8720dea6689f1adafa85604159d340e96137",
+  "protocolTag": "protocol-v3-official-search-2026-09-07",
+  "sourceManifestSha256": "9e45b175a1fc56fdca9a0c2932518d7e30b5199d9d4a78020fe4a45ed7332ba1",
+  "copyMethod": "cp -a source/. destination/",
+  "verification": "diff -qr source destination exited 0 before this metadata file was added",
+  "rawArtifactsModified": false,
+  "pathRelocationNote": "Paths inside copied child manifests preserve the original /tmp execution location. Their committed counterparts retain the same relative subtree beneath committedRoot; checksummed raw manifests and logs were not rewritten."
+}

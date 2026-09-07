@@ -1,0 +1,5 @@
+2026/09/07 14:10:57 wrote optimizer result to /tmp/evo-sched-v3-official/2026-09-07-v3-budget-matched-official-search/seed-123/two-stage-resampling/seed-123/result.json
+2026/09/07 14:10:57 wrote optimizer pareto csv to /tmp/evo-sched-v3-official/2026-09-07-v3-budget-matched-official-search/seed-123/two-stage-resampling/seed-123/result-pareto.csv
+2026/09/07 14:10:57 wrote optimizer all-candidates csv to /tmp/evo-sched-v3-official/2026-09-07-v3-budget-matched-official-search/seed-123/two-stage-resampling/seed-123/result-all.csv
+2026/09/07 14:10:57 wrote optimizer fresh samples csv to /tmp/evo-sched-v3-official/2026-09-07-v3-budget-matched-official-search/seed-123/two-stage-resampling/seed-123/result-samples.csv
+completed multi-seed experiment: /tmp/evo-sched-v3-official/2026-09-07-v3-budget-matched-official-search/seed-123/two-stage-resampling
