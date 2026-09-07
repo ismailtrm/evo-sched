@@ -4205,6 +4205,64 @@ Raw acceptance ve analiz sonrasında kind container'ları silinmeden durduruldu.
 Cluster daha sonra gerekirse `make cluster-up` ile aynı topoloji korunarak yeniden
 başlatılabilir.
 
+### 3.81. V3 survivor holdout protokolü sonuç görülmeden önce donduruldu
+
+Shared validation repeated-mean point-estimate Pareto front'unda kalan üç
+optimizer policy için ayrı bir V3 holdout gate'i açıldı. Runner'ın mevcut V2 ve
+V3 shared-validation invocation'larını değiştirmeden ayrı bir
+`--protocol-contract holdout` seçebilmesi sağlandı. Bu davranış ve geriye dönük
+uyumluluk şu commit'tedir:
+
+- `ea278dd feat: add holdout protocol contract selection`
+
+Holdout candidate seti sonuçtan bağımsız ve eksiksiz seçildi: shared validation
+front'unda kalan üç policy'nin tamamı ile üç V2 baseline kullanılacaktır.
+Optimizer survivor'ları:
+
+- `v3-one-shot-s123-gen-03-010`
+- `v3-two-stage-s999-init-004`
+- `v3-two-stage-s999-gen-05-003`
+
+Machine-readable policy seti
+[`experiments/weights-v3-holdout-survivors.json`](./experiments/weights-v3-holdout-survivors.json),
+ayrı holdout protokolü ise
+[`experiments/protocol-v3-survivor-holdout.json`](./experiments/protocol-v3-survivor-holdout.json)
+altında donduruldu. Repository contract testi exact command, policy sırası,
+workload, provenance listesi ve `1,440` Pod bütçesini doğrular. Freeze commit'i:
+
+- `8370ee1 test: freeze V3 survivor holdout protocol`
+
+Deney tasarımı:
+
+- workload: `workloads/v2/mixed-burst-holdout.json`, her replay'de 24 Pod
+- policy: üç baseline + üç optimizer survivor
+- repetition: policy başına `n=10`
+- execution order: deterministic cyclic rotation
+- toplam: `6 x 10 x 1 = 60` workload execution ve `1,440` Pod
+- primary outcome: altı policy'nin repeated-mean point-estimate Pareto front'unda
+  her survivor'ın kalıp kalmadığı
+- uncertainty: on repetition-level estimate üzerinden yüzde 95 Student-t
+  confidence interval
+- safety: sıfır unschedulable, tam completion ve timestamp coverage, dört worker,
+  canonical weights, `250ms` measurement cadence ve `2s` postflight restoration
+
+Bu workload V3 search, finalist selection ve shared validation sırasında
+kullanılmadı. Bununla birlikte pre-existing V2 baseline-only holdout sonucunda
+baseline davranışı daha önce gözlendi. Bu nedenle çalışma bunu "V3 optimizer ve
+policy selection'a unseen" bir genelleme kontrolü olarak adlandırır; tamamen kör
+holdout veya statistical superiority iddiası kurmaz. Altı policy'nin deterministic
+cyclic order'ında altı repetition tam bir position cycle oluşturur; `n=10`
+uyumluluğu korunduğundan son dört repetition ilk dört rotasyonu tekrarlar. Bu
+küçük residual order imbalance execution öncesinde açıkça kabul edilmiştir.
+
+Geçerli pozitif sonuç, en az bir frozen survivor'ın safety gate'leri altında
+holdout point-estimate front'unda kalmasıdır. Hiçbir survivor'ın kalmaması da
+geçerli negatif sonuçtur; policy replacement, post-hoc seçim veya protokol
+yeniden tasarımı yapılmayacaktır. Bu kayıt anında annotated tag henüz
+oluşturulmamış, cluster kapalı ve canlı holdout koşusu başlamamıştır. Sıradaki
+kapı clean docs commit, exact-HEAD annotated tag, cluster preflight ve tmux
+içinde tek official holdout koşusudur.
+
 ## 4. Şu Anki Durum
 
 Şu anda proje durumu şöyledir:
@@ -4300,8 +4358,11 @@ başlatılabilir.
 - False Pareto discovery proportion one-shot için `2/3`, two-stage için `1/3`
   ölçülmüş; mitigation küçük finalist paydası altında yalnızca tanımlayıcı olarak
   desteklenmiştir
-- V3 holdout dondurulmamıştır; surviving policy'ler için genelleme iddiası açık
-  değildir
+- V3 survivor holdout policy seti ve exact `60` workload execution / `1,440` Pod
+  protokolü commitlenmiştir; annotated tag ve canlı koşu henüz başlamamıştır
+- V3 holdout, pre-existing mixed-burst workload'un baseline davranışı daha önce
+  görüldüğü için tam kör değil, V3 search ve policy selection'a unseen olarak
+  sınırlandırılmıştır
 - kind cluster official shared-validation postflight'i ve raw acceptance sonrası
   canonical state korunarak durdurulmuştur
 - Functional live smoke ve kind resource lifecycle komutları Makefile entrypoint'leri olarak eklenmiştir
@@ -4332,9 +4393,9 @@ başlatılabilir.
 - Üç V2 train workload üzerinde üç custom policy ve default kube-scheduler için üç tekrarlı official baseline protokolü tamamlanmıştır
 - Official baseline artifactleri, manifestleri ve mean/sample-SD/worst-case özetleri commitlenmiştir
 - Clean/tag/preflight hard gate'li ve interruption recovery destekli repo-içi official multi-seed runner tamamlanmıştır
-- Sıradaki aktif araştırma kararı, V3 sonucunu paper/CFP'ye işlemeden önce
-  surviving üç policy için ayrı pre-specified holdout protokolü açılıp
-  açılmayacağıdır
+- Sıradaki aktif araştırma adımı, V3 survivor holdout freeze commit'i üzerinde
+  annotated protocol tag oluşturup cluster preflight sonrası official koşuyu
+  başlatmaktır
 - Ayrı CFP hattında stabil public paper PDF ve speaking sample hazırlayıp CFP
   taslağını kullanıcı onayıyla Sessionize'a aktarma işi açıktır
 
@@ -4544,6 +4605,14 @@ Sonuç:
 - [x] Counterbalanced üç-seed, iki-arm official search'ü koştur
 - [x] Pooled optimizer-only front'ları çıkar ve protocol cap kuralıyla validation finalistlerini sabitle
 - [x] Shared ten-repeat finalist validation ve false-discovery analizini tamamla
+- [x] Shared validation'da kalan üç policy için ayrı holdout policy seti ve
+  machine-readable protocolü sonuç görülmeden önce sabitle
+- [x] Holdout contract selection ve exact `60` workload / `1,440` Pod budget
+  testini ekle
+- [ ] Clean docs commit ve annotated holdout protocol tag oluştur
+- [ ] Official survivor holdout'u tmux içinde koştur ve raw acceptance'ı kapat
+- [ ] Repeated-mean point-estimate front, uncertainty ve survivor genelleme
+  sonucunu analiz et
 
 Çıkış koşulu:
 
@@ -4560,6 +4629,7 @@ Sonuç:
 - two-stage mitigation bu sınırlı official deneyde tanımlayıcı olarak desteklendi
 - combined repeated-mean point-estimate front üç optimizer policy'den oluştu;
   hiçbir baseline front'ta kalmadı
+- survivor holdout protokolü donduruldu fakat henüz çalıştırılmadı
 - statistical superiority ve holdout generalization iddiaları açık değildir
 
 ## 6. Bu Dosya Nasıl Kullanılmalı
