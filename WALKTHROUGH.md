@@ -3572,6 +3572,100 @@ bu bölüm yazılırken hâlâ kapalıdır ve V3 pilot verisi üretilmemiştir. 
 kapı clean docs commit'i, annotated pilot protocol tag, cluster startup ve
 `250ms` preflight'tır.
 
+### 3.72. Budget-matched V3 pilot iki arm'da exact acceptance ile tamamlandı
+
+Canlı koşu sınıfı `pilot`tır; paper evidence değildir. Kaynak commit
+`c567c9eb944cdabad596036d71c8bf4cfe44786b`, annotated tag
+`protocol-v3-pilot-2026-09-07` ve branch
+`research/noise-aware-resampling-v3` üst manifestte kaydedildi. Başlangıç Git
+tree'si clean, protocol tag annotated ve doğrudan source commit'i gösteriyordu.
+
+Preflight sırasında host PATH'inde `kubectl` ve `kind` binary'lerinin artık
+bulunmadığı görüldü. kind control-plane container'ındaki `/usr/bin/kubectl`
+salt-okunur operasyonel gözlem için kullanıldı; asıl runner preflight'ı
+`client-go` ile çalışmaya devam etti. Ayrıca reboot sonrasında Docker
+container'larının auto-start nedeniyle ledger'daki son “cluster kapalı”
+snapshot'ından farklı olarak zaten çalıştığı görüldü. Canlı gate şunları
+doğruladı:
+
+- Kubernetes server `v1.35.0`
+- dört worker `Ready`
+- scheduler image `evok8s-scheduler:0.1.0`, runtime image ID
+  `sha256:1c442eae9853d18d6ed327d426536a126c2e7de1fb94b7188d896117c1e42c79`
+- converged scheduler deployment
+- canonical `0.25/0.25/0.25/0.25` V2 weights
+- `250ms` scheduler cadence
+- boş `evo-sched-eval` namespace
+
+Pilot `evo-v3-pilot` tmux session'ında, sabit sırayla çalıştı. Top-level süre
+`2026-09-07T00:07:20.5771405Z` ile `2026-09-07T00:43:45.324141467Z` arasında
+yaklaşık `36 dakika 25 saniye` oldu. Arm süreleri:
+
+| Arm | Süre | Unique optimizer candidate | Fresh optimizer sample | Baseline sample | Workload execution | Pod | Promotion |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| one-shot control | 18 dk 13 sn | 8 | 8 | 3 | 33 | 792 | 0 |
+| two-stage resampling | 18 dk 7 sn | 6 | 8 | 3 | 33 | 792 | 1 |
+
+Bağımsız raw JSON/CSV yeniden sayımı iki arm için de acceptance'ı doğruladı:
+
+- expected, attempted ve actual optimizer sample değerleri `8/8/8`
+- expected, attempted ve actual baseline sample değerleri `3/3/3`
+- expected, attempted ve actual workload execution değerleri `33/33/33`
+- her arm'da `11` sample row ve `11` unique/non-empty evaluation ID
+- her arm'da raw workload satırlarından yeniden toplanan `792` Pod
+- `0` invalid workload; her workload'da scheduled/completed/decision timestamp
+  sayıları Pod sayısıyla eşit ve unschedulable count sıfır
+- treatment'ta tam bir promotion event; promoted `initial-init-002` candidate'ı
+  screening ve iki promotion olmak üzere üç distinct evaluation ID taşır
+- promoted candidate'ın iki aggregate objective'i üç retained sample'ın aritmetik
+  ortalamasıyla birebir eşleşir
+
+Top manifestteki iki child manifest ve iki launcher log SHA-256 değeri committed
+dosyalarla tekrar hesaplandığında birebir eşleşti. Raw pilot ağacı önce
+`/tmp/evo-sched-v3-pilot/2026-09-07-budget-matched-pilot` altında üretildi.
+İkinci arm'ın clean-tree gate'ini korumak için seçilen bu geçici konum daha sonra
+`results/2026-09-07-v3-budget-matched-pilot` altına `cp -a` ile aktarıldı;
+`diff -qr` raw dosyalarda sıfır fark verdi. Child manifestlerin tarihsel `/tmp`
+path'leri checksum'ları bozmamak için yeniden yazılmadı. Relocation mapping ve
+source manifest checksum'ı ayrı `artifact-import.json` içinde kaydedildi. Ham
+paket `943fd1a results: record V3 budget-matched pilot` commit'indedir.
+
+Pilot point estimate'leri yalnızca plumbing sanity signal olarak kaydedildi:
+
+- one-shot combined provisional front tek optimizer-only noktaya çöktü:
+  `(1.3280 s, 3.0 worker)`
+- two-stage combined provisional front üç unique nokta taşıdı:
+  optimizer-only `(1.2912 s, 4.0)`, balanced baseline
+  `(1.3461 s, 3.6667)` ve consolidation-heavy baseline `(1.5185 s, 3.0)`
+
+Bu noktalar bir pilot seed, küçük population ve one-shot baseline ölçümlerinden
+gelir. İki arm'ın baseline point estimate'leri bile noise nedeniyle farklıdır.
+Bu nedenle pilot, two-stage mitigation'ın daha iyi/kötü olduğunu, optimizer
+improvement'ı veya statistical superiority'yi göstermez. Primary
+`falseParetoDiscoveryProportion` ancak official üç-seed search sonrasında seçilen
+finalistlerin ortak ten-repeat validation'ı ile hesaplanacaktır.
+
+Final restoration `completed` oldu: dört worker, healthy rollout, canonical
+weights, boş evaluator namespace ve normal `2s` idle cadence hem üst snapshot
+hem canlı Kubernetes sorgusuyla doğrulandı. Ardından kind container'ları batarya
+ve kaynak tüketimini durdurmak için stop edildi.
+
+Pilot sırasında official freeze öncesi düzeltilmesi gereken bir kalite problemi
+ortaya çıktı. Uzun evaluation ID'lerinden türeyen Pod adları `63` karakter DNS
+label sınırını aştığı için API server her Pod create işleminde warning üretti.
+Pod'lar eksiksiz çalıştığından pilot acceptance geçerlidir; ancak official run
+öncesinde kısa, collision-resistant Pod name contract'ı test-first eklenmeli ve
+bir debug smoke ile warning'in kaybolduğu doğrulanmalıdır. Official run ayrıca
+protocol'deki seed-bazlı counterbalanced arm order'ı, partial artifact ve final
+`2s` restoration kurallarını uygulayan provenance-gated orchestration katmanına
+ihtiyaç duyar.
+
+Pilot hızının doğrusal kaba ölçeklemesi bir arm/seed için yaklaşık `2 saat 4
+dakika`, üç seed x iki arm official search için yaklaşık `12 saat 24 dakika`
+verir. Bu yalnızca kapasite planlama tahminidir; official manifestte gerçek wall
+time ayrıca ölçülecektir. Sıradaki kapı Pod-name warning fix'i, official launcher
+acceptance testleri ve bunlardan sonra official protocol freeze/tag'dir.
+
 ## 4. Şu Anki Durum
 
 Şu anda proje durumu şöyledir:
@@ -3648,7 +3742,9 @@ kapı clean docs commit'i, annotated pilot protocol tag, cluster startup ve
 - 25 dakikalık içerik, 5 dakikalık soru bölümü ve 4 dakikalık İngilizce speaking sample script'i içeren KubeCon talk package hazırdır
 - V3 noise-aware search için V2'den ayrılmış research branch ve budget-matched machine-readable protocol hazırdır
 - V3 fresh-sample optimizer, cache-bypass CLI, sample CSV ve exact-budget runner gate'leri testli ve commitlidir
-- V3 iki-arm pilot launcher'ı testli ve commitlidir; live pilot henüz başlamamıştır ve cluster kapalıdır
+- V3 iki-arm budget-matched pilot exact sample/workload/Pod gate'leri ve final restoration ile tamamlanıp commitlenmiştir
+- V3 pilot paper evidence değildir; official freeze öncesi Pod-name warning fix'i ve counterbalanced official launcher açıktır
+- kind cluster pilot sonrasında canonical state doğrulanarak durdurulmuştur
 - Functional live smoke ve kind resource lifecycle komutları Makefile entrypoint'leri olarak eklenmiştir
 - Gate 6 CFP taslağı official V2 claim setine bağlı ve commitlidir; public paper
   PDF, speaking sample, kullanıcı teyitleri ve Sessionize gönderimi açıktır
@@ -3876,8 +3972,11 @@ Sonuç:
 - [x] V2 one-shot yolunu bozmadan fresh evaluation API ve sample provenance ekle
 - [x] Test-first deterministic promotion, mean aggregation ve exact budget accounting uygula
 - [x] Pilot runner'ın clean/tag/checksum/preflight/postflight hard gate'lerini ekle
-- [ ] Clean pilot protocol commit/tag oluştur
-- [ ] İki arm'lı pilotu koştur ve acceptance'ı kapat
+- [x] Clean pilot protocol commit/tag oluştur
+- [x] İki arm'lı pilotu koştur ve acceptance'ı kapat
+- [ ] Official run öncesi Pod adlarını DNS-label sınırına indir ve warning-free smoke yap
+- [ ] Counterbalanced üç-seed official launcher ve manifest acceptance'ını ekle
+- [ ] Pilot süre tahminini kullanarak official protocol freeze/tag oluştur
 - [ ] Pilot sonucuna göre yalnızca implementation-derived manifest alanlarını gözden geçir
 - [ ] Official protocol tag ve yeni result dizinlerini sabitle
 - [ ] Counterbalanced üç-seed, iki-arm official search'ü koştur
