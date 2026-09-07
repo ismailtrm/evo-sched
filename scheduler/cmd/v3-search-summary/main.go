@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -143,11 +144,18 @@ type summary struct {
 	SchemaVersion    string          `json:"schemaVersion"`
 	ProtocolVersion  string          `json:"protocolVersion"`
 	GeneratedAt      time.Time       `json:"generatedAt"`
+	Generator        generator       `json:"generator"`
 	Inputs           []inputArtifact `json:"inputs"`
 	MaximumFinalists int             `json:"maximumFinalistsPerArm"`
 	Arms             []armSummary    `json:"arms"`
 	Validation       validationPlan  `json:"validation"`
 	Notes            []string        `json:"notes"`
+}
+
+type generator struct {
+	Command string `json:"command"`
+	GitSHA  string `json:"gitSha"`
+	Branch  string `json:"branch"`
 }
 
 type validationPlan struct {
@@ -207,6 +215,10 @@ func run(opts options) error {
 	if err != nil {
 		return err
 	}
+	generatedBy, err := inspectGenerator()
+	if err != nil {
+		return err
+	}
 	armInputs := []struct {
 		name string
 		raw  string
@@ -220,6 +232,7 @@ func run(opts options) error {
 		SchemaVersion:    "v3-search-summary-v1",
 		ProtocolVersion:  protocol.ProtocolVersion,
 		GeneratedAt:      time.Now().UTC(),
+		Generator:        generatedBy,
 		MaximumFinalists: protocol.SharedValidation.MaximumFinalistsPerArm,
 		Validation: validationPlan{
 			BaselineCount:        len(baselines.Runs),
@@ -281,6 +294,34 @@ func run(opts options) error {
 		return err
 	}
 	return writeWeights(opts.weightsPath, baselines, selected)
+}
+
+func inspectGenerator() (generator, error) {
+	sha, err := gitOutput("rev-parse", "HEAD")
+	if err != nil {
+		return generator{}, err
+	}
+	branch, err := gitOutput("branch", "--show-current")
+	if err != nil {
+		return generator{}, err
+	}
+	status, err := gitOutput("status", "--porcelain")
+	if err != nil {
+		return generator{}, err
+	}
+	if status != "" {
+		return generator{}, errors.New("summary generation requires a clean Git tree")
+	}
+	return generator{Command: "go run ./cmd/v3-search-summary", GitSHA: sha, Branch: branch}, nil
+}
+
+func gitOutput(args ...string) (string, error) {
+	command := exec.Command("git", args...)
+	output, err := command.CombinedOutput()
+	if err != nil {
+		return "", fmt.Errorf("git %s: %w: %s", strings.Join(args, " "), err, strings.TrimSpace(string(output)))
+	}
+	return strings.TrimSpace(string(output)), nil
 }
 
 func loadOfficialManifest(path string, protocol protocolSpec) (officialManifest, error) {
