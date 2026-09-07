@@ -4032,6 +4032,83 @@ ve annotated validation tag oluşturmak, ardından tek ortak round-robin koşuyu
 çalıştırmaktır. False Pareto discovery proportion ancak bu koşudan sonra arm
 başına hesaplanacaktır.
 
+### 3.79. V3 shared-validation runner ve resmi protokol execution öncesinde donduruldu
+
+V2 repeated-validation runner'ı kopyalanmadı. Aynı araç backward-compatible
+biçimde genişletildi: varsayılan `executionOrder=fixed` ve
+`protocolVersion=v2-official-repeated-validation` kaldığı için geçmiş V2 komut
+semantiği değişmedi. V3 için açıkça `cyclic-rotation` eklendi. Dokuz policy'nin
+ilk sırada çalışması repetition başına bir pozisyon döner; ilk dokuz repetition
+her policy'yi bir kez başlangıç konumuna getirir, onuncu repetition ilk sırayı
+tekrarlar. Bu deterministic düzen uzun koşu boyunca oluşabilecek zaman/ısınma
+drift'inin sürekli aynı policy'ye yüklenmesini azaltırken yeniden üretilebilirliği
+korur.
+
+Runner manifesti artık etkili invocation'ı, execution-order stratejisini,
+beklenen ve gözlenen Pod bütçesini kaydeder. İsteğe bağlı `--protocol-file`
+verildiğinde canlı cluster bağlantısından önce şu alanlar hard-gate edilir:
+
+- frozen official status, class ve paper-evidence eligibility
+- exact command, run name, protocol version ve annotated tag
+- output root, workload sırası, weights dosyası ve dokuz policy'nin ad/sırası
+- baseline/finalist sayıları ve provenance dosyaları
+- worker, namespace, deployment, scheduler, image ve canonical weight kimliği
+- `250ms` evaluator/scheduler cadence, `90s` timeout ve `2s` idle restoration
+- `270` workload execution ve workload JSON'larından bağımsız türetilen `6,480`
+  Pod bütçesi
+
+Bu davranış üç atomik kod commit'ine ayrıldı:
+
+- `e43345b feat: support ordered shared validation runs`
+- `d286e1d feat: gate repeated validation by protocol`
+- `af6e848 fix: complete shared validation contract gate`
+
+Resmi sözleşme `7a729a1 test: freeze V3 shared validation protocol` commit'inde
+`experiments/protocol-v3-budget-matched-resampling.json` içine yazıldı ve gerçek
+workload/finalist artefact'larını okuyarak tam `6,480` Pod bütçesini doğrulayan
+repository contract testi eklendi. Dondurulan kimlik:
+
+- tag: `protocol-v3-shared-validation-2026-09-07`
+- run: `2026-09-07-v3-shared-validation`
+- geçici kök: `/tmp/evo-sched-v3-validation`
+- committed hedef: `results/2026-09-07-v3-shared-validation`
+
+Resmi komut protocol içindeki token dizisiyle birebir doğrulanacaktır:
+
+```bash
+cd scheduler
+go run ./cmd/repeated-validation-runner \
+  --run-name 2026-09-07-v3-shared-validation \
+  --workloads ../workloads/v2/cpu-tight-train.json,../workloads/v2/mem-tight-train.json,../workloads/v2/fragmenting-mix-train.json \
+  --weights-file ../experiments/weights-v3-validation-finalists.json \
+  --protocol-tag protocol-v3-shared-validation-2026-09-07 \
+  --protocol-version v3-budget-matched-resampling-shared-validation-official \
+  --protocol-file ../experiments/protocol-v3-budget-matched-resampling.json \
+  --execution-order cyclic-rotation \
+  --output-root /tmp/evo-sched-v3-validation \
+  --provenance-files ../kind-config-4workers.yaml,../deploy.yaml,../results/2026-09-07-v3-budget-matched-official-search/manifest.json,../results/2026-09-07-v3-budget-matched-official-search/analysis/search-summary.json \
+  --repetitions 10 \
+  --poll-interval 250ms \
+  --timeout 1m30s \
+  --expect-workers 4 \
+  --expect-scheduler-interval 250ms \
+  --final-scheduler-interval 2s \
+  --expect-weights 0.25,0.25,0.25,0.25 \
+  --scheduler-namespace evo-sched \
+  --scheduler-deployment evok8s-scheduler \
+  --evaluator-namespace evo-sched-eval \
+  --scheduler-name evok8s-scheduler \
+  --image busybox:1.36.1
+```
+
+Doğrulama zinciri `go test ./...`, `go vet ./...`, runner race testi ve
+`make verify` ile geçti. `make verify` geçmiş V2 official analysis ve paper
+kanıtlarını da yeniden üretip karşılaştırdı. Bu noktada yalnızca protocol ve
+runner hazırdır: annotated validation tag henüz oluşturulmadı, kind cluster
+kapalıdır ve hiçbir shared-validation ölçümü başlamamıştır. Sıradaki kapı docs
+commit'i, clean tree üzerinde annotated tag, cluster preflight ve tmux içinde
+tek resmi koşudur.
+
 ## 4. Şu Anki Durum
 
 Şu anda proje durumu şöyledir:
@@ -4114,6 +4191,11 @@ başına hesaplanacaktır.
 - V3 pooled finalist selection testli ve provenance-gated repo komutuyla türetilmiştir
 - Her arm için üç optimizer-only provisional nokta, shared validation için toplam altı finalist seçilmiştir
 - Üç ortak baseline ile shared validation seti dokuz canonical policy, `270` workload execution ve `6,480` Pod olarak sabitlenmiştir
+- V3 repeated-validation runner V2 fixed-order varsayılanını koruyarak cyclic
+  rotation, exact invocation, protocol-contract ve Pod-budget hard gate'leriyle
+  genişletilmiştir
+- V3 shared-validation resmi identity, policy order, provenance, cluster
+  contract ve exact command execution öncesinde commitlenmiştir
 - V3 official search hâlâ `paperEvidenceEligible=false`; shared ten-repeat validation açık kapıdır
 - kind cluster pilot sonrasında canonical state doğrulanarak durdurulmuştur
 - Functional live smoke ve kind resource lifecycle komutları Makefile entrypoint'leri olarak eklenmiştir
@@ -4144,8 +4226,9 @@ başına hesaplanacaktır.
 - Üç V2 train workload üzerinde üç custom policy ve default kube-scheduler için üç tekrarlı official baseline protokolü tamamlanmıştır
 - Official baseline artifactleri, manifestleri ve mean/sample-SD/worst-case özetleri commitlenmiştir
 - Clean/tag/preflight hard gate'li ve interruption recovery destekli repo-içi official multi-seed runner tamamlanmıştır
-- Sıradaki aktif araştırma işi V3 shared ten-repeat validation runner/protocol
-  gate'ini kapatmak ve false Pareto discovery proportion'ı hesaplamaktır
+- Sıradaki aktif araştırma işi docs commit'i ve annotated protocol tag sonrası
+  cluster'ı preflight ederek V3 shared ten-repeat validation'ı çalıştırmak ve
+  false Pareto discovery proportion'ı hesaplamaktır
 - Ayrı CFP hattında stabil public paper PDF ve speaking sample hazırlayıp CFP
   taslağını kullanıcı onayıyla Sessionize'a aktarma işi açıktır
 
