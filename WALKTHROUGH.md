@@ -3925,6 +3925,113 @@ correction commit'i tam doğrulamadan sonra annotated protocol tag'inin yeni
 pre-execution HEAD'i olacaktır; ancak ondan sonra aynı frozen command yeniden
 başlatılacaktır.
 
+### 3.78. Budget-matched V3 official search tamamlandı ve validation finalistleri sabitlendi
+
+Frozen official launcher `5cae872` HEAD'i ve aynı commit'i gösteren
+`protocol-v3-official-search-2026-09-07` annotated tag'i üzerinden tmux altında
+başlatıldı. Top-level koşu `2026-09-07 07:59:10 TRT` ile
+`2026-09-07 20:21:23 TRT` arasında `12 saat 22 dakika 13 saniye` sürdü. Fixed
+counterbalanced sıra değiştirilmeden altı execution'ın tamamı exit code `0` ile
+bitti:
+
+1. seed `42`, one-shot
+2. seed `42`, two-stage
+3. seed `123`, two-stage
+4. seed `123`, one-shot
+5. seed `999`, one-shot
+6. seed `999`, two-stage
+
+Exact combined budget bağımsız olarak hem child result budget alanlarından hem
+de sample CSV'lerinden doğrulandı:
+
+- `432` optimizer fresh sample
+- `18` baseline fresh sample
+- toplam `450` policy sample
+- `1,350` workload execution
+- `32,400` tamamlanan Pod
+- arm başına `216` optimizer ve `9` baseline sample, `675` workload execution ve
+  `16,200` Pod
+- one-shot arm'da üç seed toplam `216` unique optimizer candidate
+- two-stage arm'da üç seed toplam `126` unique optimizer candidate ve beklenen
+  `30` promotion event / `90` promotion sample
+
+Her iki arm'da `unschedulable=0` ve invalid result row `0` kaldı. Altı child
+manifest ve launcher log checksum'ı top manifestle eşleşti. Final restoration
+snapshot'ı dört worker, healthy `1/1` scheduler deployment, canonical
+`0.25/0.25/0.25/0.25` weight, normal `2s` cadence ve sıfır evaluator Pod
+gösterdi. Son kontrol sonrası kind container'ları silinmeden durduruldu.
+
+Ham `/tmp` ağacı checksum'lı ve byte-preserving biçimde
+`results/2026-09-07-v3-budget-matched-official-search` altına aktarıldı.
+`artifact-import.json`, source manifest SHA-256, source Git SHA, protocol tag ve
+path relocation notunu taşır. Bu immutable ham paket
+`0943ec5 results: record V3 budget-matched official search` commit'indedir.
+Search tamamlanmış olsa da protocol gereği `paperEvidenceEligible=false` kalır;
+primary false-discovery sonucu shared validation olmadan üretilemez.
+
+Search sonrası seçim elle yapılmadı. `d31c4cc` ve `ea2a8d6` commit'lerindeki
+`cmd/v3-search-summary` şu hard gate'leri uygular:
+
+- frozen protocol ve completed official top manifest identity
+- altı child manifest/log checksum'ı ve final restoration
+- arm başına expected/actual sample ve workload budget eşitliği
+- seed seti, search mode, V2 policy/measurement contract ve committed baseline
+  tanımları
+- tüm sample'larda completion, timestamp coverage ve sıfır unschedulable safety
+  koşulu
+- exact canonical phenotype dedup, pooled nondominance, pending/node extreme ve
+  crowding tabanlı finalist cap
+
+İlk gerçek-data çalıştırmasında `seed=123/two-stage/gen-03-001` weight toplamı
+floating-point nedeniyle `1.0000000000000002` çıktı. Bit düzeyinde struct
+eşitliği canonical vector'ü yanlış reddediyordu. Gate kaldırılmadı; yeniden
+normalizasyon farkı `1e-12` bileşen toleransıyla sınırlandı ve ölçeklenmiş
+noncanonical vector'ün yine reddedildiği regression testi eklendi.
+
+Seed içi combined provisional point-estimate front'lar farklı baseline survival
+gösterdi. One-shot seed `42` balanced baseline'ı korurken seed `123` ve `999`
+hiçbir baseline tutmadı. Two-stage seed `42` spread-heavy ile
+consolidation-heavy'yi, seed `123` yalnızca consolidation-heavy'yi korudu; seed
+`999` hiçbir baseline tutmadı. Bu değişkenlik tek search ölçümünün doğrulama
+yerine kullanılamayacağını tekrar gösterir.
+
+Arm içi seed front'ları exact phenotype ile deduplicate edilip yeniden
+nondominated süzüldüğünde her arm üç pooled optimizer-only nokta üretti:
+
+| Arm | Validation policy | Provisional avg. p95 decision (s) | Provisional avg. max occupied workers | Search sample count |
+|---|---|---:|---:|---:|
+| one-shot | `v3-one-shot-s999-gen-01-001` | 1.255955 | 4.0000 | 1 |
+| one-shot | `v3-one-shot-s123-gen-03-010` | 1.275348 | 3.3333 | 1 |
+| one-shot | `v3-one-shot-s999-gen-03-009` | 1.309123 | 3.0000 | 1 |
+| two-stage | `v3-two-stage-s999-init-004` | 1.339066 | 3.6667 | 4 |
+| two-stage | `v3-two-stage-s999-gen-05-006` | 1.368129 | 3.3333 | 1 |
+| two-stage | `v3-two-stage-s999-gen-05-003` | 1.376545 | 3.0000 | 4 |
+
+Pooled adaylarda arm içinde exact phenotype duplicate yoktur. Her front üç
+noktadan oluştuğu ve protocol cap'i beş olduğu için pending-best, interior
+crowding noktası ve node-best'in tamamı validation'a seçildi. Provisional
+koordinatlarda one-shot aynı `3.3333` ve `3.0000` worker seviyelerinde daha düşük
+latency göstermektedir; bu arama çıktısı two-stage mitigation'ın başarısızlığı
+veya one-shot üstünlüğü değildir. Primary soru, bu görünür noktaların shared
+repeated validation sonrasında ne oranda nondominated kaldığıdır.
+
+Machine-readable seçim `df1cdb6 results: select V3 shared-validation finalists`
+commit'indedir:
+
+- `analysis/search-summary.json`: source checksum, generator SHA, seed/arm budget,
+  safety, provisional pooled front ve selection role'ları
+- `analysis/pooled-pareto.csv`: altı seçilmiş optimizer noktasının düz tablosu
+- `experiments/weights-v3-validation-finalists.json`: üç ortak baseline ile altı
+  optimizer finalistinden oluşan dokuz canonical policy
+
+Shared validation bütçesi artık sonuçtan türetilmiş fakat protocol kuralıyla
+sabitlenmiş durumdadır: `9 policy x 10 tekrar x 3 workload = 270 workload
+execution = 6,480 Pod`. Sıradaki kapı, mevcut V2 repeated-validation runner'ını
+V3 identity ve bu finalist artefact'ı için hard-gated hale getirmek, temiz commit
+ve annotated validation tag oluşturmak, ardından tek ortak round-robin koşuyu
+çalıştırmaktır. False Pareto discovery proportion ancak bu koşudan sonra arm
+başına hesaplanacaktır.
+
 ## 4. Şu Anki Durum
 
 Şu anda proje durumu şöyledir:
@@ -4002,7 +4109,12 @@ başlatılacaktır.
 - V3 noise-aware search için V2'den ayrılmış research branch ve budget-matched machine-readable protocol hazırdır
 - V3 fresh-sample optimizer, cache-bypass CLI, sample CSV ve exact-budget runner gate'leri testli ve commitlidir
 - V3 iki-arm budget-matched pilot exact sample/workload/Pod gate'leri ve final restoration ile tamamlanıp commitlenmiştir
-- V3 pilot paper evidence değildir; official freeze öncesi Pod-name warning fix'i ve counterbalanced official launcher açıktır
+- V3 counterbalanced üç-seed, iki-arm official search `450` policy sample, `1,350` workload execution ve `32,400` Pod ile tamamlanmıştır
+- V3 official search altı execution, exact budget, checksum, safety ve final restoration gate'lerini geçmiştir
+- V3 pooled finalist selection testli ve provenance-gated repo komutuyla türetilmiştir
+- Her arm için üç optimizer-only provisional nokta, shared validation için toplam altı finalist seçilmiştir
+- Üç ortak baseline ile shared validation seti dokuz canonical policy, `270` workload execution ve `6,480` Pod olarak sabitlenmiştir
+- V3 official search hâlâ `paperEvidenceEligible=false`; shared ten-repeat validation açık kapıdır
 - kind cluster pilot sonrasında canonical state doğrulanarak durdurulmuştur
 - Functional live smoke ve kind resource lifecycle komutları Makefile entrypoint'leri olarak eklenmiştir
 - Gate 6 CFP taslağı official V2 claim setine bağlı ve commitlidir; public paper
@@ -4032,8 +4144,10 @@ başlatılacaktır.
 - Üç V2 train workload üzerinde üç custom policy ve default kube-scheduler için üç tekrarlı official baseline protokolü tamamlanmıştır
 - Official baseline artifactleri, manifestleri ve mean/sample-SD/worst-case özetleri commitlenmiştir
 - Clean/tag/preflight hard gate'li ve interruption recovery destekli repo-içi official multi-seed runner tamamlanmıştır
-- Sıradaki iş stabil public paper PDF ve speaking sample hazırlayıp CFP taslağını
-  kullanıcı onayıyla Sessionize'a aktarmaktır
+- Sıradaki aktif araştırma işi V3 shared ten-repeat validation runner/protocol
+  gate'ini kapatmak ve false Pareto discovery proportion'ı hesaplamaktır
+- Ayrı CFP hattında stabil public paper PDF ve speaking sample hazırlayıp CFP
+  taslağını kullanıcı onayıyla Sessionize'a aktarma işi açıktır
 
 Başka bir ifadeyle:
 
@@ -4238,7 +4352,8 @@ Sonuç:
 - [x] Pilot süre tahminini kullanarak official protocol freeze/tag oluştur
 - [x] Pilot sonucuna göre yalnızca implementation-derived manifest alanlarını gözden geçir
 - [x] Official protocol tag ve yeni result dizinlerini sabitle
-- [ ] Counterbalanced üç-seed, iki-arm official search'ü koştur
+- [x] Counterbalanced üç-seed, iki-arm official search'ü koştur
+- [x] Pooled optimizer-only front'ları çıkar ve protocol cap kuralıyla validation finalistlerini sabitle
 - [ ] Shared ten-repeat finalist validation ve false-discovery analizini tamamla
 
 Çıkış koşulu:
