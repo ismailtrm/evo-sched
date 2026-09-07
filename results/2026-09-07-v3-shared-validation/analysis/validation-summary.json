@@ -1,0 +1,1253 @@
+{
+  "schemaVersion": "v3-validation-summary-v1",
+  "protocolVersion": "v3-budget-matched-resampling-shared-validation-official",
+  "generatedAt": "2026-09-07T23:10:37.439551326Z",
+  "generator": {
+    "command": "go run ./cmd/v3-validation-summary --inputs ../results/2026-09-07-v3-shared-validation/cpu-tight-train.json,../results/2026-09-07-v3-shared-validation/mem-tight-train.json,../results/2026-09-07-v3-shared-validation/fragmenting-mix-train.json --protocol ../experiments/protocol-v3-budget-matched-resampling.json --manifest ../results/2026-09-07-v3-shared-validation/manifest.json --search-summary ../results/2026-09-07-v3-budget-matched-official-search/analysis/search-summary.json --weights ../experiments/weights-v3-validation-finalists.json --output ../results/2026-09-07-v3-shared-validation/analysis/validation-summary.json --csv-output ../results/2026-09-07-v3-shared-validation/analysis/validation-summary.csv",
+    "workingDirectory": "/home/ismail/evo-sched/scheduler",
+    "gitSha": "c6a894501b817d3a41b1bbda3abd09caaee6427a",
+    "branch": "research/noise-aware-resampling-v3"
+  },
+  "inputs": [
+    {
+      "path": "../experiments/protocol-v3-budget-matched-resampling.json",
+      "sha256": "9d4c9660876cb44b8bdf93bed5c961a45e1157e27dc77be68000dce26b8b869f"
+    },
+    {
+      "path": "../experiments/weights-v3-validation-finalists.json",
+      "sha256": "2b0bb2507c719ad41b56daa380741cd2580325082e418315c3fadcbd7de54864"
+    },
+    {
+      "path": "../results/2026-09-07-v3-budget-matched-official-search/analysis/search-summary.json",
+      "sha256": "61594dbf51db3862e84c4045060aae19a6715dc85660b7729b308002ecfa20c7"
+    },
+    {
+      "path": "../results/2026-09-07-v3-shared-validation/cpu-tight-train.csv",
+      "sha256": "718e9dbf6515113417105c6103212e5493d7e364a385dd6e284c2140afbfdf06"
+    },
+    {
+      "path": "../results/2026-09-07-v3-shared-validation/cpu-tight-train.json",
+      "sha256": "eb5c8412cae4b006b4b4bc1c1f5c81c234e6e4ca6e9d58a4087f4ea1a2b5bc2f"
+    },
+    {
+      "path": "../results/2026-09-07-v3-shared-validation/fragmenting-mix-train.csv",
+      "sha256": "2e8abc30cbf5c3fb8be2b06f26d5e5f15467d69f8d6eb30204e329ab3a1aabb2"
+    },
+    {
+      "path": "../results/2026-09-07-v3-shared-validation/fragmenting-mix-train.json",
+      "sha256": "e910aa509bddb194f64cafcaf0bf883ede9d91289cc215f5a958480b31232902"
+    },
+    {
+      "path": "../results/2026-09-07-v3-shared-validation/manifest.json",
+      "sha256": "640f61aca14f03693b47f6cf153d346c7ad205fbb32527c1eea8f4bc65294df0"
+    },
+    {
+      "path": "../results/2026-09-07-v3-shared-validation/mem-tight-train.csv",
+      "sha256": "6c03b9ae73076c0a96ba37a4e1fdf2c4ca92394ef8eade67065171fa141415de"
+    },
+    {
+      "path": "../results/2026-09-07-v3-shared-validation/mem-tight-train.json",
+      "sha256": "27f276a3edcaf4a7a0221ad7338a9373f94249d57407e01d00556053bbadc5b2"
+    }
+  ],
+  "acceptance": {
+    "workloads": 3,
+    "policies": 9,
+    "repetitionsPerPolicyWorkload": 10,
+    "resultRows": 270,
+    "pods": 6480,
+    "scheduled": 6480,
+    "completed": 6480,
+    "decisionTimestamps": 6480,
+    "kubernetesScheduledTimestamps": 6480,
+    "evaluatorObservationTimestamps": 6480,
+    "unschedulable": 0
+  },
+  "policies": [
+    {
+      "name": "evok8s-v2-balanced",
+      "arm": "baseline",
+      "baseline": true,
+      "weights": {
+        "freeCPU": 0.25,
+        "freeMem": 0.25,
+        "balance": 0.25,
+        "consolidation": 0.25
+      },
+      "repeatedValidationObjectives": {
+        "repetitions": 10,
+        "averageP95SchedulingDecisionLatencySeconds": {
+          "mean": 1.3172832525483331,
+          "sampleStdDev": 0.116331905444633,
+          "minimum": 1.1792235210166666,
+          "maximum": 1.4851424392333332,
+          "confidence95Lower": 1.234070202211144,
+          "confidence95Upper": 1.4004963028855222
+        },
+        "averageMaxWorkloadOccupiedWorkerNodes": {
+          "mean": 3.6666666666666665,
+          "sampleStdDev": 0,
+          "minimum": 3.6666666666666665,
+          "maximum": 3.6666666666666665,
+          "confidence95Lower": 3.6666666666666665,
+          "confidence95Upper": 3.6666666666666665
+        }
+      },
+      "byWorkload": [
+        {
+          "workload": "cpu-tight-train",
+          "repetitions": 10,
+          "p95SchedulingDecisionLatencySeconds": {
+            "mean": 1.3421724599499998,
+            "sampleStdDev": 0.18075900043135895,
+            "minimum": 1.16772758485,
+            "maximum": 1.6213551837999987,
+            "confidence95Lower": 1.2128742442601217,
+            "confidence95Upper": 1.4714706756398779
+          },
+          "maxWorkloadOccupiedWorkerNodes": {
+            "mean": 4,
+            "sampleStdDev": 0,
+            "minimum": 4,
+            "maximum": 4,
+            "confidence95Lower": 4,
+            "confidence95Upper": 4
+          },
+          "meanWorkloadDominantRequestedLoadVariance": {
+            "mean": 0.013718504061576996,
+            "sampleStdDev": 0.0012607906122434583,
+            "minimum": 0.012074364406779661,
+            "maximum": 0.016534957627118638,
+            "confidence95Lower": 0.01281665145046161,
+            "confidence95Upper": 0.014620356672692382
+          }
+        },
+        {
+          "workload": "mem-tight-train",
+          "repetitions": 10,
+          "p95SchedulingDecisionLatencySeconds": {
+            "mean": 1.2845730640599997,
+            "sampleStdDev": 0.1748042867243129,
+            "minimum": 1.1629421347,
+            "maximum": 1.6334220965499986,
+            "confidence95Lower": 1.1595342979987862,
+            "confidence95Upper": 1.4096118301212133
+          },
+          "maxWorkloadOccupiedWorkerNodes": {
+            "mean": 4,
+            "sampleStdDev": 0,
+            "minimum": 4,
+            "maximum": 4,
+            "confidence95Lower": 4,
+            "confidence95Upper": 4
+          },
+          "meanWorkloadDominantRequestedLoadVariance": {
+            "mean": 0.012974780894680982,
+            "sampleStdDev": 0.0023559153819369943,
+            "minimum": 0.008924442311985251,
+            "maximum": 0.016536240422954564,
+            "confidence95Lower": 0.011289577643535184,
+            "confidence95Upper": 0.01465998414582678
+          }
+        },
+        {
+          "workload": "fragmenting-mix-train",
+          "repetitions": 10,
+          "p95SchedulingDecisionLatencySeconds": {
+            "mean": 1.3251042336349999,
+            "sampleStdDev": 0.16918772595010328,
+            "minimum": 1.1840126653,
+            "maximum": 1.60661890465,
+            "confidence95Lower": 1.204083033972616,
+            "confidence95Upper": 1.4461254332973836
+          },
+          "maxWorkloadOccupiedWorkerNodes": {
+            "mean": 3,
+            "sampleStdDev": 0,
+            "minimum": 3,
+            "maximum": 3,
+            "confidence95Lower": 3,
+            "confidence95Upper": 3
+          },
+          "meanWorkloadDominantRequestedLoadVariance": {
+            "mean": 0.10655863573360454,
+            "sampleStdDev": 0.003380482679148422,
+            "minimum": 0.10299547602424201,
+            "maximum": 0.11514046576355251,
+            "confidence95Lower": 0.10414055211098344,
+            "confidence95Upper": 0.10897671935622563
+          }
+        }
+      ],
+      "unschedulableTotal": 0,
+      "onRepeatedMeanPointEstimateParetoFront": false,
+      "dominatedBy": [
+        "v3-one-shot-s123-gen-03-010",
+        "v3-two-stage-s999-gen-05-003",
+        "v3-two-stage-s999-gen-05-006"
+      ]
+    },
+    {
+      "name": "evok8s-v2-spread-heavy",
+      "arm": "baseline",
+      "baseline": true,
+      "weights": {
+        "freeCPU": 0.35,
+        "freeMem": 0.35,
+        "balance": 0.25,
+        "consolidation": 0.05
+      },
+      "repeatedValidationObjectives": {
+        "repetitions": 10,
+        "averageP95SchedulingDecisionLatencySeconds": {
+          "mean": 1.2822205500366664,
+          "sampleStdDev": 0.12277259065144265,
+          "minimum": 1.1882931829833334,
+          "maximum": 1.4835802787999997,
+          "confidence95Lower": 1.1944004311547665,
+          "confidence95Upper": 1.3700406689185662
+        },
+        "averageMaxWorkloadOccupiedWorkerNodes": {
+          "mean": 4,
+          "sampleStdDev": 0,
+          "minimum": 4,
+          "maximum": 4,
+          "confidence95Lower": 4,
+          "confidence95Upper": 4
+        }
+      },
+      "byWorkload": [
+        {
+          "workload": "cpu-tight-train",
+          "repetitions": 10,
+          "p95SchedulingDecisionLatencySeconds": {
+            "mean": 1.2915474279449997,
+            "sampleStdDev": 0.16566327971139092,
+            "minimum": 1.1974258282499999,
+            "maximum": 1.641605113749999,
+            "confidence95Lower": 1.1730472900768996,
+            "confidence95Upper": 1.4100475658130998
+          },
+          "maxWorkloadOccupiedWorkerNodes": {
+            "mean": 4,
+            "sampleStdDev": 0,
+            "minimum": 4,
+            "maximum": 4,
+            "confidence95Lower": 4,
+            "confidence95Upper": 4
+          },
+          "meanWorkloadDominantRequestedLoadVariance": {
+            "mean": 0.003903603228550701,
+            "sampleStdDev": 0.0006005029373480064,
+            "minimum": 0.002792307692307693,
+            "maximum": 0.0049838114754098325,
+            "confidence95Lower": 0.003474059149803086,
+            "confidence95Upper": 0.004333147307298316
+          }
+        },
+        {
+          "workload": "mem-tight-train",
+          "repetitions": 10,
+          "p95SchedulingDecisionLatencySeconds": {
+            "mean": 1.2441886273449998,
+            "sampleStdDev": 0.13642111575368843,
+            "minimum": 1.1603138958499999,
+            "maximum": 1.6295018426999988,
+            "confidence95Lower": 1.146605620096227,
+            "confidence95Upper": 1.3417716345937727
+          },
+          "maxWorkloadOccupiedWorkerNodes": {
+            "mean": 4,
+            "sampleStdDev": 0,
+            "minimum": 4,
+            "maximum": 4,
+            "confidence95Lower": 4,
+            "confidence95Upper": 4
+          },
+          "meanWorkloadDominantRequestedLoadVariance": {
+            "mean": 0.004027245127229783,
+            "sampleStdDev": 0.0007546239796509152,
+            "minimum": 0.002870094441924852,
+            "maximum": 0.0050089951292609635,
+            "confidence95Lower": 0.0034874571562141443,
+            "confidence95Upper": 0.004567033098245421
+          }
+        },
+        {
+          "workload": "fragmenting-mix-train",
+          "repetitions": 10,
+          "p95SchedulingDecisionLatencySeconds": {
+            "mean": 1.3109255948199998,
+            "sampleStdDev": 0.17993623968993083,
+            "minimum": 1.15429168145,
+            "maximum": 1.62381316545,
+            "confidence95Lower": 1.1822159058178798,
+            "confidence95Upper": 1.4396352838221198
+          },
+          "maxWorkloadOccupiedWorkerNodes": {
+            "mean": 4,
+            "sampleStdDev": 0,
+            "minimum": 4,
+            "maximum": 4,
+            "confidence95Lower": 4,
+            "confidence95Upper": 4
+          },
+          "meanWorkloadDominantRequestedLoadVariance": {
+            "mean": 0.006114688808375571,
+            "sampleStdDev": 0.0006635546582819358,
+            "minimum": 0.004981508074615934,
+            "maximum": 0.007297472175668054,
+            "confidence95Lower": 0.005640043379247182,
+            "confidence95Upper": 0.006589334237503961
+          }
+        }
+      ],
+      "unschedulableTotal": 0,
+      "onRepeatedMeanPointEstimateParetoFront": false,
+      "dominatedBy": [
+        "v3-two-stage-s999-init-004"
+      ]
+    },
+    {
+      "name": "evok8s-v2-consolidation-heavy",
+      "arm": "baseline",
+      "baseline": true,
+      "weights": {
+        "freeCPU": 0.1,
+        "freeMem": 0.1,
+        "balance": 0.2,
+        "consolidation": 0.6
+      },
+      "repeatedValidationObjectives": {
+        "repetitions": 10,
+        "averageP95SchedulingDecisionLatencySeconds": {
+          "mean": 1.3187895550899995,
+          "sampleStdDev": 0.09416729968241512,
+          "minimum": 1.1837505258333334,
+          "maximum": 1.4883627021166663,
+          "confidence95Lower": 1.2514310069888561,
+          "confidence95Upper": 1.386148103191143
+        },
+        "averageMaxWorkloadOccupiedWorkerNodes": {
+          "mean": 3.1,
+          "sampleStdDev": 0.1610152971798827,
+          "minimum": 3,
+          "maximum": 3.3333333333333335,
+          "confidence95Lower": 2.9848245975334433,
+          "confidence95Upper": 3.215175402466557
+        }
+      },
+      "byWorkload": [
+        {
+          "workload": "cpu-tight-train",
+          "repetitions": 10,
+          "p95SchedulingDecisionLatencySeconds": {
+            "mean": 1.2868708220099996,
+            "sampleStdDev": 0.15707558961433685,
+            "minimum": 1.133336524,
+            "maximum": 1.5700034225499988,
+            "confidence95Lower": 1.1745135207574868,
+            "confidence95Upper": 1.3992281232625123
+          },
+          "maxWorkloadOccupiedWorkerNodes": {
+            "mean": 3,
+            "sampleStdDev": 0,
+            "minimum": 3,
+            "maximum": 3,
+            "confidence95Lower": 3,
+            "confidence95Upper": 3
+          },
+          "meanWorkloadDominantRequestedLoadVariance": {
+            "mean": 0.1263238729885198,
+            "sampleStdDev": 0.003704354159637475,
+            "minimum": 0.12110083333333299,
+            "maximum": 0.13453811475409802,
+            "confidence95Lower": 0.12367412176185054,
+            "confidence95Upper": 0.12897362421518907
+          }
+        },
+        {
+          "workload": "mem-tight-train",
+          "repetitions": 10,
+          "p95SchedulingDecisionLatencySeconds": {
+            "mean": 1.2442429961149999,
+            "sampleStdDev": 0.12833426834799727,
+            "minimum": 1.1478028521499999,
+            "maximum": 1.6021794613,
+            "confidence95Lower": 1.1524445690952445,
+            "confidence95Upper": 1.3360414231347553
+          },
+          "maxWorkloadOccupiedWorkerNodes": {
+            "mean": 3,
+            "sampleStdDev": 0,
+            "minimum": 3,
+            "maximum": 3,
+            "confidence95Lower": 3,
+            "confidence95Upper": 3
+          },
+          "meanWorkloadDominantRequestedLoadVariance": {
+            "mean": 0.12550337379352464,
+            "sampleStdDev": 0.0023439975566793636,
+            "minimum": 0.12252200462217047,
+            "maximum": 0.12934160144776105,
+            "confidence95Lower": 0.12382669544867417,
+            "confidence95Upper": 0.1271800521383751
+          }
+        },
+        {
+          "workload": "fragmenting-mix-train",
+          "repetitions": 10,
+          "p95SchedulingDecisionLatencySeconds": {
+            "mean": 1.4252548471449997,
+            "sampleStdDev": 0.17951984548152186,
+            "minimum": 1.2169119965,
+            "maximum": 1.8143387210499997,
+            "confidence95Lower": 1.2968430079209954,
+            "confidence95Upper": 1.553666686369004
+          },
+          "maxWorkloadOccupiedWorkerNodes": {
+            "mean": 3.3,
+            "sampleStdDev": 0.48304589153964794,
+            "minimum": 3,
+            "maximum": 4,
+            "confidence95Lower": 2.9544737926003295,
+            "confidence95Upper": 3.64552620739967
+          },
+          "meanWorkloadDominantRequestedLoadVariance": {
+            "mean": 0.08583655524771887,
+            "sampleStdDev": 0.029509780584538053,
+            "minimum": 0.04202284685047727,
+            "maximum": 0.10726613330575184,
+            "confidence95Lower": 0.06472799652657518,
+            "confidence95Upper": 0.10694511396886255
+          }
+        }
+      ],
+      "unschedulableTotal": 0,
+      "onRepeatedMeanPointEstimateParetoFront": false,
+      "dominatedBy": [
+        "v3-one-shot-s123-gen-03-010",
+        "v3-two-stage-s999-gen-05-003"
+      ]
+    },
+    {
+      "name": "v3-one-shot-s999-gen-01-001",
+      "arm": "one-shot-control",
+      "baseline": false,
+      "weights": {
+        "freeCPU": 0.4054859669343971,
+        "freeMem": 0.1993193641008743,
+        "balance": 0.27851644212584703,
+        "consolidation": 0.11667822683888159
+      },
+      "provisionalObjectives": {
+        "averageP95SchedulingDecisionLatencySeconds": 1.2559548545833332,
+        "averageMaxWorkloadOccupiedWorkerNodes": 4
+      },
+      "repeatedValidationObjectives": {
+        "repetitions": 10,
+        "averageP95SchedulingDecisionLatencySeconds": {
+          "mean": 1.2881936272399999,
+          "sampleStdDev": 0.08315804449136786,
+          "minimum": 1.1928015706833333,
+          "maximum": 1.4065487334499995,
+          "confidence95Lower": 1.2287100787177432,
+          "confidence95Upper": 1.3476771757622565
+        },
+        "averageMaxWorkloadOccupiedWorkerNodes": {
+          "mean": 4,
+          "sampleStdDev": 0,
+          "minimum": 4,
+          "maximum": 4,
+          "confidence95Lower": 4,
+          "confidence95Upper": 4
+        }
+      },
+      "byWorkload": [
+        {
+          "workload": "cpu-tight-train",
+          "repetitions": 10,
+          "p95SchedulingDecisionLatencySeconds": {
+            "mean": 1.290689037985,
+            "sampleStdDev": 0.17526237428204708,
+            "minimum": 1.1713061019,
+            "maximum": 1.6370413789999987,
+            "confidence95Lower": 1.1653225985924258,
+            "confidence95Upper": 1.4160554773775742
+          },
+          "maxWorkloadOccupiedWorkerNodes": {
+            "mean": 4,
+            "sampleStdDev": 0,
+            "minimum": 4,
+            "maximum": 4,
+            "confidence95Lower": 4,
+            "confidence95Upper": 4
+          },
+          "meanWorkloadDominantRequestedLoadVariance": {
+            "mean": 0.00382731879050906,
+            "sampleStdDev": 0.0007215709923883044,
+            "minimum": 0.002845550847457627,
+            "maximum": 0.0054347457627118645,
+            "confidence95Lower": 0.0033111738594863247,
+            "confidence95Upper": 0.004343463721531795
+          }
+        },
+        {
+          "workload": "mem-tight-train",
+          "repetitions": 10,
+          "p95SchedulingDecisionLatencySeconds": {
+            "mean": 1.2494968208050001,
+            "sampleStdDev": 0.1321642609498726,
+            "minimum": 1.19496101445,
+            "maximum": 1.6228957885500002,
+            "confidence95Lower": 1.1549587724754005,
+            "confidence95Upper": 1.3440348691345998
+          },
+          "maxWorkloadOccupiedWorkerNodes": {
+            "mean": 4,
+            "sampleStdDev": 0,
+            "minimum": 4,
+            "maximum": 4,
+            "confidence95Lower": 4,
+            "confidence95Upper": 4
+          },
+          "meanWorkloadDominantRequestedLoadVariance": {
+            "mean": 0.00374111563647062,
+            "sampleStdDev": 0.0004797096398846215,
+            "minimum": 0.0033328856666420058,
+            "maximum": 0.004975385964659096,
+            "confidence95Lower": 0.003397975873923255,
+            "confidence95Upper": 0.004084255399017985
+          }
+        },
+        {
+          "workload": "fragmenting-mix-train",
+          "repetitions": 10,
+          "p95SchedulingDecisionLatencySeconds": {
+            "mean": 1.3243950229299997,
+            "sampleStdDev": 0.15076870355828145,
+            "minimum": 1.20516960495,
+            "maximum": 1.6727237928499992,
+            "confidence95Lower": 1.2165490827254088,
+            "confidence95Upper": 1.4322409631345905
+          },
+          "maxWorkloadOccupiedWorkerNodes": {
+            "mean": 4,
+            "sampleStdDev": 0,
+            "minimum": 4,
+            "maximum": 4,
+            "confidence95Lower": 4,
+            "confidence95Upper": 4
+          },
+          "meanWorkloadDominantRequestedLoadVariance": {
+            "mean": 0.006410358818449928,
+            "sampleStdDev": 0.0008661460546315453,
+            "minimum": 0.0050957949018515325,
+            "maximum": 0.007636682552512793,
+            "confidence95Lower": 0.005790798303491152,
+            "confidence95Upper": 0.007029919333408704
+          }
+        }
+      ],
+      "unschedulableTotal": 0,
+      "onRepeatedMeanPointEstimateParetoFront": false,
+      "falseParetoDiscovery": true,
+      "dominatedBy": [
+        "evok8s-v2-spread-heavy",
+        "v3-two-stage-s999-init-004"
+      ]
+    },
+    {
+      "name": "v3-one-shot-s123-gen-03-010",
+      "arm": "one-shot-control",
+      "baseline": false,
+      "weights": {
+        "freeCPU": 0.18781491507028208,
+        "freeMem": 0.38017471475257847,
+        "balance": 0.059254137148709154,
+        "consolidation": 0.37275623302843025
+      },
+      "provisionalObjectives": {
+        "averageP95SchedulingDecisionLatencySeconds": 1.2753483097666665,
+        "averageMaxWorkloadOccupiedWorkerNodes": 3.3333333333333335
+      },
+      "repeatedValidationObjectives": {
+        "repetitions": 10,
+        "averageP95SchedulingDecisionLatencySeconds": {
+          "mean": 1.2984704170583332,
+          "sampleStdDev": 0.09161666241794925,
+          "minimum": 1.1844786658000002,
+          "maximum": 1.449114216166666,
+          "confidence95Lower": 1.2329363581742165,
+          "confidence95Upper": 1.36400447594245
+        },
+        "averageMaxWorkloadOccupiedWorkerNodes": {
+          "mean": 3.066666666666667,
+          "sampleStdDev": 0.14054567378526137,
+          "minimum": 3,
+          "maximum": 3.3333333333333335,
+          "confidence95Lower": 2.9661333333333335,
+          "confidence95Upper": 3.1672000000000002
+        }
+      },
+      "byWorkload": [
+        {
+          "workload": "cpu-tight-train",
+          "repetitions": 10,
+          "p95SchedulingDecisionLatencySeconds": {
+            "mean": 1.2450588054049998,
+            "sampleStdDev": 0.1090834534729221,
+            "minimum": 1.175982481,
+            "maximum": 1.552215455399999,
+            "confidence95Lower": 1.1670306250008124,
+            "confidence95Upper": 1.3230869858091872
+          },
+          "maxWorkloadOccupiedWorkerNodes": {
+            "mean": 3,
+            "sampleStdDev": 0,
+            "minimum": 3,
+            "maximum": 3,
+            "confidence95Lower": 3,
+            "confidence95Upper": 3
+          },
+          "meanWorkloadDominantRequestedLoadVariance": {
+            "mean": 0.12574893902389261,
+            "sampleStdDev": 0.0017166527492837467,
+            "minimum": 0.1217749999999997,
+            "maximum": 0.12725508474576241,
+            "confidence95Lower": 0.12452100494087694,
+            "confidence95Upper": 0.1269768731069083
+          }
+        },
+        {
+          "workload": "mem-tight-train",
+          "repetitions": 10,
+          "p95SchedulingDecisionLatencySeconds": {
+            "mean": 1.321296334555,
+            "sampleStdDev": 0.19930745240681277,
+            "minimum": 1.1284123652,
+            "maximum": 1.63254210595,
+            "confidence95Lower": 1.178730277493393,
+            "confidence95Upper": 1.463862391616607
+          },
+          "maxWorkloadOccupiedWorkerNodes": {
+            "mean": 3,
+            "sampleStdDev": 0,
+            "minimum": 3,
+            "maximum": 3,
+            "confidence95Lower": 3,
+            "confidence95Upper": 3
+          },
+          "meanWorkloadDominantRequestedLoadVariance": {
+            "mean": 0.12575492816634837,
+            "sampleStdDev": 0.0015493440485644934,
+            "minimum": 0.12372955628096352,
+            "maximum": 0.12934160144776105,
+            "confidence95Lower": 0.12464667120270581,
+            "confidence95Upper": 0.12686318512999092
+          }
+        },
+        {
+          "workload": "fragmenting-mix-train",
+          "repetitions": 10,
+          "p95SchedulingDecisionLatencySeconds": {
+            "mean": 1.329056111215,
+            "sampleStdDev": 0.11509287932357566,
+            "minimum": 1.2025910975999998,
+            "maximum": 1.5853385158499993,
+            "confidence95Lower": 1.24672934519153,
+            "confidence95Upper": 1.4113828772384698
+          },
+          "maxWorkloadOccupiedWorkerNodes": {
+            "mean": 3.2,
+            "sampleStdDev": 0.42163702135578385,
+            "minimum": 3,
+            "maximum": 4,
+            "confidence95Lower": 2.8984,
+            "confidence95Upper": 3.5016000000000003
+          },
+          "meanWorkloadDominantRequestedLoadVariance": {
+            "mean": 0.09830994011732656,
+            "sampleStdDev": 0.010433427956121823,
+            "minimum": 0.07861411664124356,
+            "maximum": 0.1050616229726226,
+            "confidence95Lower": 0.09084683390941346,
+            "confidence95Upper": 0.10577304632523966
+          }
+        }
+      ],
+      "unschedulableTotal": 0,
+      "onRepeatedMeanPointEstimateParetoFront": true,
+      "falseParetoDiscovery": false
+    },
+    {
+      "name": "v3-one-shot-s999-gen-03-009",
+      "arm": "one-shot-control",
+      "baseline": false,
+      "weights": {
+        "freeCPU": 0.16190834949410585,
+        "freeMem": 0.1453927613965776,
+        "balance": 0.18398084429137648,
+        "consolidation": 0.5087180448179401
+      },
+      "provisionalObjectives": {
+        "averageP95SchedulingDecisionLatencySeconds": 1.3091225563166664,
+        "averageMaxWorkloadOccupiedWorkerNodes": 3
+      },
+      "repeatedValidationObjectives": {
+        "repetitions": 10,
+        "averageP95SchedulingDecisionLatencySeconds": {
+          "mean": 1.4204271687733327,
+          "sampleStdDev": 0.2440827068857234,
+          "minimum": 1.2481733268166664,
+          "maximum": 2.084009079499998,
+          "confidence95Lower": 1.2458330494997873,
+          "confidence95Upper": 1.5950212880468781
+        },
+        "averageMaxWorkloadOccupiedWorkerNodes": {
+          "mean": 3.133333333333333,
+          "sampleStdDev": 0.17213259316477417,
+          "minimum": 3,
+          "maximum": 3.3333333333333335,
+          "confidence95Lower": 3.0102056489294315,
+          "confidence95Upper": 3.256461017737234
+        }
+      },
+      "byWorkload": [
+        {
+          "workload": "cpu-tight-train",
+          "repetitions": 10,
+          "p95SchedulingDecisionLatencySeconds": {
+            "mean": 1.3879249480249995,
+            "sampleStdDev": 0.19805531271324409,
+            "minimum": 1.20763265725,
+            "maximum": 1.6302710642499987,
+            "confidence95Lower": 1.2462545555100348,
+            "confidence95Upper": 1.5295953405399643
+          },
+          "maxWorkloadOccupiedWorkerNodes": {
+            "mean": 3,
+            "sampleStdDev": 0,
+            "minimum": 3,
+            "maximum": 3,
+            "confidence95Lower": 3,
+            "confidence95Upper": 3
+          },
+          "meanWorkloadDominantRequestedLoadVariance": {
+            "mean": 0.12520073914832192,
+            "sampleStdDev": 0.0030509751376461627,
+            "minimum": 0.12221495901639315,
+            "maximum": 0.13321816406249967,
+            "confidence95Lower": 0.1230183546448093,
+            "confidence95Upper": 0.12738312365183455
+          }
+        },
+        {
+          "workload": "mem-tight-train",
+          "repetitions": 10,
+          "p95SchedulingDecisionLatencySeconds": {
+            "mean": 1.2859350685949997,
+            "sampleStdDev": 0.1632112868736878,
+            "minimum": 1.1866451966999998,
+            "maximum": 1.6281694778499989,
+            "confidence95Lower": 1.1691888588745591,
+            "confidence95Upper": 1.4026812783154403
+          },
+          "maxWorkloadOccupiedWorkerNodes": {
+            "mean": 3,
+            "sampleStdDev": 0,
+            "minimum": 3,
+            "maximum": 3,
+            "confidence95Lower": 3,
+            "confidence95Upper": 3
+          },
+          "meanWorkloadDominantRequestedLoadVariance": {
+            "mean": 0.1260871433610051,
+            "sampleStdDev": 0.0027130117818349947,
+            "minimum": 0.12120776332587922,
+            "maximum": 0.12975180276057852,
+            "confidence95Lower": 0.12414650648151489,
+            "confidence95Upper": 0.1280277802404953
+          }
+        },
+        {
+          "workload": "fragmenting-mix-train",
+          "repetitions": 10,
+          "p95SchedulingDecisionLatencySeconds": {
+            "mean": 1.5874214896999992,
+            "sampleStdDev": 0.7934413653080066,
+            "minimum": 1.1747826788,
+            "maximum": 3.8246981702999947,
+            "confidence95Lower": 1.0198671629774223,
+            "confidence95Upper": 2.154975816422576
+          },
+          "maxWorkloadOccupiedWorkerNodes": {
+            "mean": 3.4,
+            "sampleStdDev": 0.5163977794943223,
+            "minimum": 3,
+            "maximum": 4,
+            "confidence95Lower": 3.030616946788297,
+            "confidence95Upper": 3.769383053211703
+          },
+          "meanWorkloadDominantRequestedLoadVariance": {
+            "mean": 0.0931625734125702,
+            "sampleStdDev": 0.017680721731781233,
+            "minimum": 0.0645765213166322,
+            "maximum": 0.11031767290902941,
+            "confidence95Lower": 0.08051542573763781,
+            "confidence95Upper": 0.10580972108750258
+          }
+        }
+      ],
+      "unschedulableTotal": 0,
+      "onRepeatedMeanPointEstimateParetoFront": false,
+      "falseParetoDiscovery": true,
+      "dominatedBy": [
+        "evok8s-v2-consolidation-heavy",
+        "v3-one-shot-s123-gen-03-010",
+        "v3-two-stage-s999-gen-05-003"
+      ]
+    },
+    {
+      "name": "v3-two-stage-s999-init-004",
+      "arm": "two-stage-resampling",
+      "baseline": false,
+      "weights": {
+        "freeCPU": 0.2896381121721976,
+        "freeMem": 0.40210443230694476,
+        "balance": 0.006283487846330932,
+        "consolidation": 0.3019739676745267
+      },
+      "provisionalObjectives": {
+        "averageP95SchedulingDecisionLatencySeconds": 1.3390659714666662,
+        "averageMaxWorkloadOccupiedWorkerNodes": 3.6666666666666665
+      },
+      "repeatedValidationObjectives": {
+        "repetitions": 10,
+        "averageP95SchedulingDecisionLatencySeconds": {
+          "mean": 1.2592143592866667,
+          "sampleStdDev": 0.06716356895430735,
+          "minimum": 1.1945649659,
+          "maximum": 1.352484545383333,
+          "confidence95Lower": 1.2111717743839374,
+          "confidence95Upper": 1.307256944189396
+        },
+        "averageMaxWorkloadOccupiedWorkerNodes": {
+          "mean": 3.7,
+          "sampleStdDev": 0.10540925533894602,
+          "minimum": 3.6666666666666665,
+          "maximum": 4,
+          "confidence95Lower": 3.6246,
+          "confidence95Upper": 3.7754000000000003
+        }
+      },
+      "byWorkload": [
+        {
+          "workload": "cpu-tight-train",
+          "repetitions": 10,
+          "p95SchedulingDecisionLatencySeconds": {
+            "mean": 1.279665791355,
+            "sampleStdDev": 0.17119170933550137,
+            "minimum": 1.1649460700999998,
+            "maximum": 1.603840101149999,
+            "confidence95Lower": 1.1572111279348736,
+            "confidence95Upper": 1.4021204547751265
+          },
+          "maxWorkloadOccupiedWorkerNodes": {
+            "mean": 3.1,
+            "sampleStdDev": 0.31622776601683794,
+            "minimum": 3,
+            "maximum": 4,
+            "confidence95Lower": 2.8738,
+            "confidence95Upper": 3.3262
+          },
+          "meanWorkloadDominantRequestedLoadVariance": {
+            "mean": 0.12028600342747127,
+            "sampleStdDev": 0.01630900496061693,
+            "minimum": 0.07406290983606549,
+            "maximum": 0.127541239316239,
+            "confidence95Lower": 0.10862005464454523,
+            "confidence95Upper": 0.1319519522103973
+          }
+        },
+        {
+          "workload": "mem-tight-train",
+          "repetitions": 10,
+          "p95SchedulingDecisionLatencySeconds": {
+            "mean": 1.2517102212949995,
+            "sampleStdDev": 0.1347177061873623,
+            "minimum": 1.16145277045,
+            "maximum": 1.6280283616999989,
+            "confidence95Lower": 1.1553456751850328,
+            "confidence95Upper": 1.3480747674049662
+          },
+          "maxWorkloadOccupiedWorkerNodes": {
+            "mean": 4,
+            "sampleStdDev": 0,
+            "minimum": 4,
+            "maximum": 4,
+            "confidence95Lower": 4,
+            "confidence95Upper": 4
+          },
+          "meanWorkloadDominantRequestedLoadVariance": {
+            "mean": 0.012468225763602113,
+            "sampleStdDev": 0.0018399735733316545,
+            "minimum": 0.009767918761466191,
+            "maximum": 0.015919677589037312,
+            "confidence95Lower": 0.01115207940640507,
+            "confidence95Upper": 0.013784372120799157
+          }
+        },
+        {
+          "workload": "fragmenting-mix-train",
+          "repetitions": 10,
+          "p95SchedulingDecisionLatencySeconds": {
+            "mean": 1.24626706521,
+            "sampleStdDev": 0.13472648720543332,
+            "minimum": 1.17932624305,
+            "maximum": 1.6284029399499986,
+            "confidence95Lower": 1.1498962379745248,
+            "confidence95Upper": 1.3426378924454754
+          },
+          "maxWorkloadOccupiedWorkerNodes": {
+            "mean": 4,
+            "sampleStdDev": 0,
+            "minimum": 4,
+            "maximum": 4,
+            "confidence95Lower": 4,
+            "confidence95Upper": 4
+          },
+          "meanWorkloadDominantRequestedLoadVariance": {
+            "mean": 0.014789195046824851,
+            "sampleStdDev": 0.001870041871586835,
+            "minimum": 0.012205157253176325,
+            "maximum": 0.018188495777681907,
+            "confidence95Lower": 0.013451540619191767,
+            "confidence95Upper": 0.016126849474457933
+          }
+        }
+      ],
+      "unschedulableTotal": 0,
+      "onRepeatedMeanPointEstimateParetoFront": true,
+      "falseParetoDiscovery": false
+    },
+    {
+      "name": "v3-two-stage-s999-gen-05-006",
+      "arm": "two-stage-resampling",
+      "baseline": false,
+      "weights": {
+        "freeCPU": 0,
+        "freeMem": 0.34532438234527846,
+        "balance": 0.3001748262701294,
+        "consolidation": 0.3545007913845922
+      },
+      "provisionalObjectives": {
+        "averageP95SchedulingDecisionLatencySeconds": 1.3681286224499996,
+        "averageMaxWorkloadOccupiedWorkerNodes": 3.3333333333333335
+      },
+      "repeatedValidationObjectives": {
+        "repetitions": 10,
+        "averageP95SchedulingDecisionLatencySeconds": {
+          "mean": 1.3059675152766665,
+          "sampleStdDev": 0.06656606701837228,
+          "minimum": 1.2167874626666666,
+          "maximum": 1.4031553633666662,
+          "confidence95Lower": 1.2583523278147468,
+          "confidence95Upper": 1.3535827027385863
+        },
+        "averageMaxWorkloadOccupiedWorkerNodes": {
+          "mean": 3.4333333333333336,
+          "sampleStdDev": 0.1610152971798825,
+          "minimum": 3.3333333333333335,
+          "maximum": 3.6666666666666665,
+          "confidence95Lower": 3.318157930866777,
+          "confidence95Upper": 3.5485087357998903
+        }
+      },
+      "byWorkload": [
+        {
+          "workload": "cpu-tight-train",
+          "repetitions": 10,
+          "p95SchedulingDecisionLatencySeconds": {
+            "mean": 1.2772689354049998,
+            "sampleStdDev": 0.13820488836738168,
+            "minimum": 1.1570481412,
+            "maximum": 1.583118745799999,
+            "confidence95Lower": 1.1784099827504844,
+            "confidence95Upper": 1.3761278880595151
+          },
+          "maxWorkloadOccupiedWorkerNodes": {
+            "mean": 3,
+            "sampleStdDev": 0,
+            "minimum": 3,
+            "maximum": 3,
+            "confidence95Lower": 3,
+            "confidence95Upper": 3
+          },
+          "meanWorkloadDominantRequestedLoadVariance": {
+            "mean": 0.12766238075853273,
+            "sampleStdDev": 0.0020646010346749926,
+            "minimum": 0.12429774590163904,
+            "maximum": 0.13202961538461505,
+            "confidence95Lower": 0.12618555675940732,
+            "confidence95Upper": 0.12913920475765814
+          }
+        },
+        {
+          "workload": "mem-tight-train",
+          "repetitions": 10,
+          "p95SchedulingDecisionLatencySeconds": {
+            "mean": 1.27860905223,
+            "sampleStdDev": 0.16532549637940017,
+            "minimum": 1.16176417965,
+            "maximum": 1.625372988,
+            "confidence95Lower": 1.1603505332135862,
+            "confidence95Upper": 1.3968675712464138
+          },
+          "maxWorkloadOccupiedWorkerNodes": {
+            "mean": 4,
+            "sampleStdDev": 0,
+            "minimum": 4,
+            "maximum": 4,
+            "confidence95Lower": 4,
+            "confidence95Upper": 4
+          },
+          "meanWorkloadDominantRequestedLoadVariance": {
+            "mean": 0.011904061711413954,
+            "sampleStdDev": 0.0022756122249831395,
+            "minimum": 0.008274146138882457,
+            "maximum": 0.016366023689664527,
+            "confidence95Lower": 0.010276299887160426,
+            "confidence95Upper": 0.013531823535667483
+          }
+        },
+        {
+          "workload": "fragmenting-mix-train",
+          "repetitions": 10,
+          "p95SchedulingDecisionLatencySeconds": {
+            "mean": 1.3620245581949997,
+            "sampleStdDev": 0.10892488111287588,
+            "minimum": 1.1753575321,
+            "maximum": 1.5223567938499993,
+            "confidence95Lower": 1.2841098057427416,
+            "confidence95Upper": 1.4399393106472578
+          },
+          "maxWorkloadOccupiedWorkerNodes": {
+            "mean": 3.3,
+            "sampleStdDev": 0.48304589153964794,
+            "minimum": 3,
+            "maximum": 4,
+            "confidence95Lower": 2.9544737926003295,
+            "confidence95Upper": 3.64552620739967
+          },
+          "meanWorkloadDominantRequestedLoadVariance": {
+            "mean": 0.08870225650197962,
+            "sampleStdDev": 0.027069712975589015,
+            "minimum": 0.028073252746553132,
+            "maximum": 0.10556613575230815,
+            "confidence95Lower": 0.06933909572642584,
+            "confidence95Upper": 0.1080654172775334
+          }
+        }
+      ],
+      "unschedulableTotal": 0,
+      "onRepeatedMeanPointEstimateParetoFront": false,
+      "falseParetoDiscovery": true,
+      "dominatedBy": [
+        "v3-one-shot-s123-gen-03-010",
+        "v3-two-stage-s999-gen-05-003"
+      ]
+    },
+    {
+      "name": "v3-two-stage-s999-gen-05-003",
+      "arm": "two-stage-resampling",
+      "baseline": false,
+      "weights": {
+        "freeCPU": 0,
+        "freeMem": 0.005896228037547725,
+        "balance": 0.3286896608635757,
+        "consolidation": 0.6654141110988766
+      },
+      "provisionalObjectives": {
+        "averageP95SchedulingDecisionLatencySeconds": 1.3765454000999997,
+        "averageMaxWorkloadOccupiedWorkerNodes": 3
+      },
+      "repeatedValidationObjectives": {
+        "repetitions": 10,
+        "averageP95SchedulingDecisionLatencySeconds": {
+          "mean": 1.2946283748183331,
+          "sampleStdDev": 0.06457502658066512,
+          "minimum": 1.2163492235166669,
+          "maximum": 1.4342856334999994,
+          "confidence95Lower": 1.2484373929303965,
+          "confidence95Upper": 1.3408193567062698
+        },
+        "averageMaxWorkloadOccupiedWorkerNodes": {
+          "mean": 3.1,
+          "sampleStdDev": 0.1610152971798827,
+          "minimum": 3,
+          "maximum": 3.3333333333333335,
+          "confidence95Lower": 2.9848245975334433,
+          "confidence95Upper": 3.215175402466557
+        }
+      },
+      "byWorkload": [
+        {
+          "workload": "cpu-tight-train",
+          "repetitions": 10,
+          "p95SchedulingDecisionLatencySeconds": {
+            "mean": 1.214208189675,
+            "sampleStdDev": 0.03192153750035517,
+            "minimum": 1.1577236749,
+            "maximum": 1.2863364323999997,
+            "confidence95Lower": 1.1913744838510913,
+            "confidence95Upper": 1.2370418954989089
+          },
+          "maxWorkloadOccupiedWorkerNodes": {
+            "mean": 3,
+            "sampleStdDev": 0,
+            "minimum": 3,
+            "maximum": 3,
+            "confidence95Lower": 3,
+            "confidence95Upper": 3
+          },
+          "meanWorkloadDominantRequestedLoadVariance": {
+            "mean": 0.12698334745762682,
+            "sampleStdDev": 0.0013510171120251948,
+            "minimum": 0.12433262711864378,
+            "maximum": 0.12879322033898277,
+            "confidence95Lower": 0.12601695518097952,
+            "confidence95Upper": 0.12794973973427412
+          }
+        },
+        {
+          "workload": "mem-tight-train",
+          "repetitions": 10,
+          "p95SchedulingDecisionLatencySeconds": {
+            "mean": 1.2377353971499998,
+            "sampleStdDev": 0.12509598589235335,
+            "minimum": 1.1490415706,
+            "maximum": 1.5808044569999988,
+            "confidence95Lower": 1.1482533369081942,
+            "confidence95Upper": 1.3272174573918054
+          },
+          "maxWorkloadOccupiedWorkerNodes": {
+            "mean": 3,
+            "sampleStdDev": 0,
+            "minimum": 3,
+            "maximum": 3,
+            "confidence95Lower": 3,
+            "confidence95Upper": 3
+          },
+          "meanWorkloadDominantRequestedLoadVariance": {
+            "mean": 0.12467809738879529,
+            "sampleStdDev": 0.0024810285392370965,
+            "minimum": 0.12133712103837582,
+            "maximum": 0.1278225208507673,
+            "confidence95Lower": 0.12290339979457597,
+            "confidence95Upper": 0.1264527949830146
+          }
+        },
+        {
+          "workload": "fragmenting-mix-train",
+          "repetitions": 10,
+          "p95SchedulingDecisionLatencySeconds": {
+            "mean": 1.4319415376299995,
+            "sampleStdDev": 0.13577968847271216,
+            "minimum": 1.24104252945,
+            "maximum": 1.6461262319999992,
+            "confidence95Lower": 1.3348173479379024,
+            "confidence95Upper": 1.5290657273220967
+          },
+          "maxWorkloadOccupiedWorkerNodes": {
+            "mean": 3.3,
+            "sampleStdDev": 0.48304589153964794,
+            "minimum": 3,
+            "maximum": 4,
+            "confidence95Lower": 2.9544737926003295,
+            "confidence95Upper": 3.64552620739967
+          },
+          "meanWorkloadDominantRequestedLoadVariance": {
+            "mean": 0.09575548215379594,
+            "sampleStdDev": 0.014570860992461191,
+            "minimum": 0.06882381496216554,
+            "maximum": 0.10732029048660972,
+            "confidence95Lower": 0.08533284027762614,
+            "confidence95Upper": 0.10617812402996574
+          }
+        }
+      ],
+      "unschedulableTotal": 0,
+      "onRepeatedMeanPointEstimateParetoFront": true,
+      "falseParetoDiscovery": false
+    }
+  ],
+  "repeatedMeanPointEstimateParetoFront": [
+    {
+      "meanP95SchedulingDecisionLatencySeconds": 1.2592143592866667,
+      "meanMaxWorkloadOccupiedWorkerNodes": 3.7,
+      "members": [
+        "v3-two-stage-s999-init-004"
+      ]
+    },
+    {
+      "meanP95SchedulingDecisionLatencySeconds": 1.2946283748183331,
+      "meanMaxWorkloadOccupiedWorkerNodes": 3.1,
+      "members": [
+        "v3-two-stage-s999-gen-05-003"
+      ]
+    },
+    {
+      "meanP95SchedulingDecisionLatencySeconds": 1.2984704170583332,
+      "meanMaxWorkloadOccupiedWorkerNodes": 3.066666666666667,
+      "members": [
+        "v3-one-shot-s123-gen-03-010"
+      ]
+    }
+  ],
+  "baselinesOnRepeatedMeanFront": [],
+  "arms": [
+    {
+      "name": "one-shot-control",
+      "validatedFinalists": 3,
+      "remainedNondominated": 1,
+      "falseParetoDiscoveries": 2,
+      "falseParetoDiscoveryProportion": 0.6666666666666666,
+      "nondominatedPolicies": [
+        "v3-one-shot-s123-gen-03-010"
+      ],
+      "falseDiscoveryPolicies": [
+        "v3-one-shot-s999-gen-01-001",
+        "v3-one-shot-s999-gen-03-009"
+      ]
+    },
+    {
+      "name": "two-stage-resampling",
+      "validatedFinalists": 3,
+      "remainedNondominated": 2,
+      "falseParetoDiscoveries": 1,
+      "falseParetoDiscoveryProportion": 0.3333333333333333,
+      "nondominatedPolicies": [
+        "v3-two-stage-s999-gen-05-003",
+        "v3-two-stage-s999-init-004"
+      ],
+      "falseDiscoveryPolicies": [
+        "v3-two-stage-s999-gen-05-006"
+      ]
+    }
+  ],
+  "comparison": {
+    "oneShotFalseParetoDiscoveryProportion": 0.6666666666666666,
+    "twoStageFalseParetoDiscoveryProportion": 0.3333333333333333,
+    "twoStageMinusOneShot": -0.3333333333333333,
+    "twoStageLower": true,
+    "descriptiveMitigationSupported": true
+  },
+  "notes": [
+    "The Pareto front uses repeated-mean point estimates and is not a statistical significance test.",
+    "Confidence intervals are marginal 95 percent Student-t intervals over ten repetition-level objectives, each averaged across the three workloads.",
+    "Two-stage mitigation is descriptively supported only when its false Pareto discovery proportion is lower than the one-shot control under the frozen shared-validation protocol.",
+    "Each arm contributes only three selected finalists, so false-discovery proportions are descriptive small-denominator outcomes rather than inferential estimates.",
+    "No V3 holdout is part of this protocol; surviving policies require a separately committed holdout before a generalization claim."
+  ]
+}
