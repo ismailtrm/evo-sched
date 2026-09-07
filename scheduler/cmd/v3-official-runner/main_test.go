@@ -297,3 +297,10 @@ func TestValidateProtocolContractRejectsDraftAndExecutionOrderDrift(t *testing.T
 		t.Fatalf("validateProtocolContract(identity drift) error = %v", err)
 	}
 }
+
+func TestRepositoryProtocolMatchesOfficialLauncherContract(t *testing.T) {
+	path := filepath.Join("..", "..", "..", "experiments", "protocol-v3-budget-matched-resampling.json")
+	if err := validateProtocolContract(path, officialExecutionPlan(), officialProtocolTag, officialRunName); err != nil {
+		t.Fatalf("repository protocol does not match official launcher: %v", err)
+	}
+}

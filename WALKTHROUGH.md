@@ -3810,6 +3810,55 @@ reddeder. Sıradaki kapı yalnızca implementation-derived alanları ve pilot s�
 tahminini protocolde son kez gözden geçirmek, açık kararları kapatmak, clean
 protocol freeze commit'i ve annotated tag oluşturmaktır.
 
+### 3.75. V3 official search protocolü execution öncesinde donduruldu
+
+Pilot acceptance, warning-free Pod-name smoke ve official launcher acceptance
+tamamlandıktan sonra `experiments/protocol-v3-budget-matched-resampling.json`
+official execution için son kez gözden geçirildi. Bu review primary research
+sorusunu, valid-negative koşullarını, arm algoritmalarını, `42/123/999`
+seed'lerini, objective tanımlarını, promotion rule'u veya sample bütçelerini
+değiştirmedi. Yalnızca pilot ve implementation'dan öğrenilebilen operasyonel
+alanlar kapatıldı.
+
+Freeze kararları:
+
+- protocol version `v3-budget-matched-resampling-official`, status
+  `official-frozen-before-execution` olarak sabitlendi
+- annotated tag adı `protocol-v3-official-search-2026-09-07` oldu
+- top-level run adı
+  `2026-09-07-v3-budget-matched-official-search` olarak sabitlendi
+- canlı çıktı önce `/tmp/evo-sched-v3-official` altında üretilecek; kabul sonrası
+  byte-preserving import hedefi
+  `results/2026-09-07-v3-budget-matched-official-search` olacak
+- fixed counterbalanced sıra korundu; üç seed ile iki arm'ın ilk sırada bulunma
+  sayısını tamamen eşitlemek mümkün olmadığından one-shot iki kez, two-stage bir
+  kez ilk sıradadır. Bu eksiklik açıkça kabul edilir; pilot sonucuna göre sıra
+  seçilmemiş ve sonradan randomize edilmemiştir
+- accepted pilotun `36 dakika 25 saniye` süresinden doğrusal ölçeklenen yaklaşık
+  `12 saat 24 dakika` official search süresi yalnızca kapasite tahmini olarak
+  kaydedildi; gerçek official wall time manifestten raporlanacaktır
+- dedicated deployment update ve actual Pod replacement rollout telemetry'si
+  freeze öncesi eklenmedi. Bu nedenle sample/workload/Pod bütçeleri exact gate,
+  rollout sayısı ise raporlanmayan support alanı olarak kaldı
+- top manifest alanları Git/tag identity, exact command, ortak input checksum,
+  explicit execution order, combined budget, child manifest/log checksum,
+  execution status/failure ve final restoration snapshot olarak kapatıldı
+
+Official launcher defaultları aynı tag ve run adına sabitlendi; CLI ile farklı
+bir kimlik verilirse execution başlamadan reddedilir. Protocol JSON da aynı
+kimlikleri taşır. `TestRepositoryProtocolMatchesOfficialLauncherContract`,
+repo'daki gerçek protocol dosyasını her testte launcher version, status, identity,
+seed/order ve budget contract'ına karşı doğrular. Böylece ileride protocol metni
+ve executable plan sessizce ayrışamaz.
+
+Freeze commit'i protocol JSON, bu ledger kaydı ve kalıcı repo-protocol contract
+testini birlikte taşır. Commit temiz doğrulamadan sonra
+`protocol-v3-official-search-2026-09-07` annotated tag'ini alacaktır; launcher
+tag'in doğrudan aynı HEAD'i göstermesini zorunlu tutar. Bu kayıt official V3
+search'ün çalıştığı anlamına gelmez. Cluster kapalıdır; yeni result dizini henüz
+yoktur ve shared validation tamamlanana kadar search artefact'leri tek başına
+paper evidence değildir.
+
 ## 4. Şu Anki Durum
 
 Şu anda proje durumu şöyledir:
@@ -4120,9 +4169,9 @@ Sonuç:
 - [x] İki arm'lı pilotu koştur ve acceptance'ı kapat
 - [x] Official run öncesi Pod adlarını DNS-label sınırına indir ve warning-free smoke yap
 - [x] Counterbalanced üç-seed official launcher ve manifest acceptance'ını ekle
-- [ ] Pilot süre tahminini kullanarak official protocol freeze/tag oluştur
-- [ ] Pilot sonucuna göre yalnızca implementation-derived manifest alanlarını gözden geçir
-- [ ] Official protocol tag ve yeni result dizinlerini sabitle
+- [x] Pilot süre tahminini kullanarak official protocol freeze/tag oluştur
+- [x] Pilot sonucuna göre yalnızca implementation-derived manifest alanlarını gözden geçir
+- [x] Official protocol tag ve yeni result dizinlerini sabitle
 - [ ] Counterbalanced üç-seed, iki-arm official search'ü koştur
 - [ ] Shared ten-repeat finalist validation ve false-discovery analizini tamamla
 

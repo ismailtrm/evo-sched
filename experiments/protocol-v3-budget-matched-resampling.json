@@ -1,8 +1,9 @@
 {
   "schemaVersion": "research-protocol-v1",
-  "protocolVersion": "v3-budget-matched-resampling-draft",
-  "status": "design-committed-before-implementation",
+  "protocolVersion": "v3-budget-matched-resampling-official",
+  "status": "official-frozen-before-execution",
   "createdAt": "2026-08-31",
+  "frozenAt": "2026-09-07",
   "base": {
     "branch": "research/noise-aware-resampling-v3",
     "v2SourceCommit": "cc26a0f",
@@ -72,7 +73,7 @@
     "officialSearchWorkloadExecutions": 1350,
     "officialSearchPods": 32400,
     "exclusions": "Post-search shared validation is reported separately and is not charged to either search arm.",
-    "rolloutTelemetry": "Fresh policy samples require deployment update and rollout convergence, but the pilot does not claim an exact rollout count. A deployment update can be a no-op when the Pod template is unchanged; actual rollout/update telemetry must be instrumented before it is reported as an observed budget."
+    "rolloutTelemetry": "Fresh policy samples require deployment update and rollout convergence, but neither the pilot nor official search claims an exact rollout count. A deployment update can be a no-op when the Pod template is unchanged; rollout/update telemetry was not instrumented before this freeze and is therefore not reported as an observed budget."
   },
   "arms": [
     {
@@ -169,6 +170,11 @@
   "official": {
     "class": "official",
     "paperEvidenceEligibleAtRunCompletion": false,
+    "protocolTag": "protocol-v3-official-search-2026-09-07",
+    "runName": "2026-09-07-v3-budget-matched-official-search",
+    "temporaryOutputRoot": "/tmp/evo-sched-v3-official",
+    "committedResultTarget": "results/2026-09-07-v3-budget-matched-official-search",
+    "estimatedSearchWallTime": "Approximately 12 hours 24 minutes for all six arm-seed executions, linearly scaled from the accepted 36 minute 25 second pilot. This is a capacity estimate, not an observed official duration.",
     "seeds": [42, 123, 999],
     "armExecutionOrder": [
       {
@@ -184,6 +190,7 @@
         "order": ["one-shot-control", "two-stage-resampling"]
       }
     ],
+    "armOrderDecision": "Use the fixed counterbalanced order committed in this protocol. Do not randomize after the pilot; fixed ordering is auditable, balances first-arm position across the two methods as far as three seeds permit, and introduces no result-dependent choice.",
     "runGate": [
       "Pilot acceptance is complete and committed.",
       "Implementation, tests, workloads, baselines, analysis schema, and this protocol are committed in a clean tree.",
@@ -220,7 +227,7 @@
       "number and proportion of finalists that remain nondominated",
       "unique canonical candidates explored",
       "fresh policy samples, workload executions, Pods, and wall time",
-      "scheduler deployment updates and actual rollouts only if dedicated telemetry is added before official freeze",
+      "scheduler deployment update and actual rollout counts are not reported because dedicated telemetry was not added before official freeze",
       "baseline survival and exact duplicate objective points",
       "repeated-mean objective coordinates and 95% Student-t confidence intervals",
       "unschedulable and invalid evaluation counts"
@@ -236,12 +243,14 @@
     "Unit tests prove promotion ordering, fresh sample collection, objective aggregation, rank recomputation, and failure on insufficient eligible candidates.",
     "Cluster evaluator tests prove cached V2 evaluation and fresh V3 evaluation are distinct operations.",
     "JSON and CSV outputs include mode, sample count, evaluation IDs, sample objectives, and cumulative budgets.",
-    "Pilot runner preserves clean/tag/checksum/preflight/postflight provenance and never labels pilot output as official evidence."
+    "Pilot runner preserves clean/tag/checksum/preflight/postflight provenance and never labels pilot output as official evidence.",
+    "Official launcher enforces the fixed three-seed counterbalanced order, exact per-arm and combined budgets, semantic protocol identity, child manifest acceptance, interruption recovery, and final 2s idle-cadence restoration.",
+    "Evaluator-generated Pod names are DNS-1123 labels no longer than 63 characters and pass a warning-free live debug smoke."
   ],
-  "openBeforeOfficialFreeze": [
-    "Review implementation-derived manifest fields after the pilot without changing the fixed official arm budgets or primary outcome.",
-    "Measure pilot wall time and publish an official duration estimate.",
-    "Select the final official protocol tag and run directory names.",
-    "Decide whether arm order should be randomized from a committed order seed instead of the fixed counterbalanced order."
+  "resolvedBeforeOfficialFreeze": [
+    "Implementation-derived top manifest fields are fixed as Git and tag identity, command, common input checksums, explicit execution order, exact combined budget, child manifest and launcher log checksums, execution status, failure detail, and final restoration snapshot.",
+    "The accepted pilot measured 36 minutes 25 seconds for 16 optimizer and 6 baseline samples; the official search capacity estimate is approximately 12 hours 24 minutes under linear scaling.",
+    "The official protocol tag is protocol-v3-official-search-2026-09-07 and the run name is 2026-09-07-v3-budget-matched-official-search.",
+    "The fixed counterbalanced arm order is retained rather than randomized."
   ]
 }
