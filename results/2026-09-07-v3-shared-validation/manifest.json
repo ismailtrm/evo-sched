@@ -1,0 +1,202 @@
+{
+  "schemaVersion": "v1",
+  "protocolVersion": "v3-budget-matched-resampling-shared-validation-official",
+  "class": "official",
+  "paperEvidenceEligible": true,
+  "runName": "2026-09-07-v3-shared-validation",
+  "status": "completed",
+  "startedAt": "2026-09-07T20:08:05.219597631Z",
+  "finishedAt": "2026-09-07T22:37:10.71016664Z",
+  "repository": "/home/ismail/evo-sched",
+  "workingDirectory": "/home/ismail/evo-sched/scheduler",
+  "git": {
+    "sha": "2cac198ce9d657b6dcebdfea6da2852d8f5cf3cb",
+    "branch": "research/noise-aware-resampling-v3",
+    "protocolTag": "protocol-v3-shared-validation-2026-09-07",
+    "dirtyAtStart": false
+  },
+  "command": [
+    "go",
+    "run",
+    "./cmd/repeated-validation-runner",
+    "--run-name",
+    "2026-09-07-v3-shared-validation",
+    "--workloads",
+    "../workloads/v2/cpu-tight-train.json,../workloads/v2/mem-tight-train.json,../workloads/v2/fragmenting-mix-train.json",
+    "--weights-file",
+    "../experiments/weights-v3-validation-finalists.json",
+    "--protocol-tag",
+    "protocol-v3-shared-validation-2026-09-07",
+    "--protocol-version",
+    "v3-budget-matched-resampling-shared-validation-official",
+    "--protocol-file",
+    "../experiments/protocol-v3-budget-matched-resampling.json",
+    "--execution-order",
+    "cyclic-rotation",
+    "--output-root",
+    "/tmp/evo-sched-v3-validation",
+    "--provenance-files",
+    "../kind-config-4workers.yaml,../deploy.yaml,../results/2026-09-07-v3-budget-matched-official-search/manifest.json,../results/2026-09-07-v3-budget-matched-official-search/analysis/search-summary.json",
+    "--repetitions",
+    "10",
+    "--poll-interval",
+    "250ms",
+    "--timeout",
+    "1m30s",
+    "--expect-workers",
+    "4",
+    "--expect-scheduler-interval",
+    "250ms",
+    "--final-scheduler-interval",
+    "2s",
+    "--expect-weights",
+    "0.25,0.25,0.25,0.25",
+    "--scheduler-namespace",
+    "evo-sched",
+    "--scheduler-deployment",
+    "evok8s-scheduler",
+    "--evaluator-namespace",
+    "evo-sched-eval",
+    "--scheduler-name",
+    "evok8s-scheduler",
+    "--image",
+    "busybox:1.36.1"
+  ],
+  "inputs": [
+    {
+      "path": "deploy.yaml",
+      "sha256": "3de13f7b422236a72f0d1cce608957e469d8124f0ab5ad2b26d6d2af80dbf91c"
+    },
+    {
+      "path": "experiments/protocol-v3-budget-matched-resampling.json",
+      "sha256": "9d4c9660876cb44b8bdf93bed5c961a45e1157e27dc77be68000dce26b8b869f"
+    },
+    {
+      "path": "experiments/weights-v3-validation-finalists.json",
+      "sha256": "2b0bb2507c719ad41b56daa380741cd2580325082e418315c3fadcbd7de54864"
+    },
+    {
+      "path": "kind-config-4workers.yaml",
+      "sha256": "d26c091ff873418387e8c45148283a71235a2190efe1d8f021fc566de0bd664f"
+    },
+    {
+      "path": "results/2026-09-07-v3-budget-matched-official-search/analysis/search-summary.json",
+      "sha256": "61594dbf51db3862e84c4045060aae19a6715dc85660b7729b308002ecfa20c7"
+    },
+    {
+      "path": "results/2026-09-07-v3-budget-matched-official-search/manifest.json",
+      "sha256": "9e45b175a1fc56fdca9a0c2932518d7e30b5199d9d4a78020fe4a45ed7332ba1"
+    },
+    {
+      "path": "workloads/v2/cpu-tight-train.json",
+      "sha256": "4f5f37555465b179c48b5e9a3bc1c738cddf03309c0823c9c55f51ec99374096"
+    },
+    {
+      "path": "workloads/v2/fragmenting-mix-train.json",
+      "sha256": "8dca751f14582c2fa56fa6f83d4bc58bb1d66a19e550716076715e9227143872"
+    },
+    {
+      "path": "workloads/v2/mem-tight-train.json",
+      "sha256": "9fbf91b4fe156c7100ed4363f674a3bddaaf56c572c1f23ba50e2fbb78f1c7b4"
+    }
+  ],
+  "executionOrder": "cyclic-rotation",
+  "repetitionsPerPolicyWorkload": 10,
+  "policyCount": 9,
+  "expectedResultRows": 270,
+  "expectedWorkloadRuns": 270,
+  "expectedPods": 6480,
+  "observedPods": 6480,
+  "preflight": {
+    "capturedAt": "2026-09-07T20:08:05.219568574Z",
+    "workerCount": 4,
+    "workerCpuMilli": 16000,
+    "workerMemoryMiB": 31712,
+    "schedulerRolloutReady": true,
+    "schedulerIntervalSeconds": 0.25,
+    "schedulerCanonicalWeights": {
+      "freeCPU": 0.25,
+      "freeMem": 0.25,
+      "balance": 0.25,
+      "consolidation": 0.25
+    },
+    "evaluatorPodCount": 0
+  },
+  "runs": [
+    {
+      "workload": "cpu-tight-train",
+      "path": "workloads/v2/cpu-tight-train.json",
+      "status": "completed",
+      "startedAt": "2026-09-07T20:08:05.219912737Z",
+      "finishedAt": "2026-09-07T20:58:01.116791431Z",
+      "expectedRows": 90,
+      "resultRows": 90,
+      "podCount": 2160,
+      "outputs": [
+        {
+          "path": "../../../tmp/evo-sched-v3-validation/2026-09-07-v3-shared-validation/cpu-tight-train.json",
+          "sha256": "eb5c8412cae4b006b4b4bc1c1f5c81c234e6e4ca6e9d58a4087f4ea1a2b5bc2f"
+        },
+        {
+          "path": "../../../tmp/evo-sched-v3-validation/2026-09-07-v3-shared-validation/cpu-tight-train.csv",
+          "sha256": "718e9dbf6515113417105c6103212e5493d7e364a385dd6e284c2140afbfdf06"
+        }
+      ]
+    },
+    {
+      "workload": "mem-tight-train",
+      "path": "workloads/v2/mem-tight-train.json",
+      "status": "completed",
+      "startedAt": "2026-09-07T20:58:01.245620699Z",
+      "finishedAt": "2026-09-07T21:47:25.888964962Z",
+      "expectedRows": 90,
+      "resultRows": 90,
+      "podCount": 2160,
+      "outputs": [
+        {
+          "path": "../../../tmp/evo-sched-v3-validation/2026-09-07-v3-shared-validation/mem-tight-train.json",
+          "sha256": "27f276a3edcaf4a7a0221ad7338a9373f94249d57407e01d00556053bbadc5b2"
+        },
+        {
+          "path": "../../../tmp/evo-sched-v3-validation/2026-09-07-v3-shared-validation/mem-tight-train.csv",
+          "sha256": "6c03b9ae73076c0a96ba37a4e1fdf2c4ca92394ef8eade67065171fa141415de"
+        }
+      ]
+    },
+    {
+      "workload": "fragmenting-mix-train",
+      "path": "workloads/v2/fragmenting-mix-train.json",
+      "status": "completed",
+      "startedAt": "2026-09-07T21:47:26.017131422Z",
+      "finishedAt": "2026-09-07T22:37:07.042184809Z",
+      "expectedRows": 90,
+      "resultRows": 90,
+      "podCount": 2160,
+      "outputs": [
+        {
+          "path": "../../../tmp/evo-sched-v3-validation/2026-09-07-v3-shared-validation/fragmenting-mix-train.json",
+          "sha256": "e910aa509bddb194f64cafcaf0bf883ede9d91289cc215f5a958480b31232902"
+        },
+        {
+          "path": "../../../tmp/evo-sched-v3-validation/2026-09-07-v3-shared-validation/fragmenting-mix-train.csv",
+          "sha256": "2e8abc30cbf5c3fb8be2b06f26d5e5f15467d69f8d6eb30204e329ab3a1aabb2"
+        }
+      ]
+    }
+  ],
+  "postflight": {
+    "capturedAt": "2026-09-07T22:37:10.71016585Z",
+    "workerCount": 4,
+    "workerCpuMilli": 16000,
+    "workerMemoryMiB": 31712,
+    "schedulerRolloutReady": true,
+    "schedulerIntervalSeconds": 2,
+    "schedulerCanonicalWeights": {
+      "freeCPU": 0.25,
+      "freeMem": 0.25,
+      "balance": 0.25,
+      "consolidation": 0.25
+    },
+    "evaluatorPodCount": 0
+  }
+}

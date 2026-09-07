@@ -1,0 +1,15 @@
+{
+  "schemaVersion": "artifact-import-v1",
+  "class": "official",
+  "paperEvidenceEligible": true,
+  "importedAt": "2026-09-07T22:47:55Z",
+  "sourceRoot": "/tmp/evo-sched-v3-validation/2026-09-07-v3-shared-validation",
+  "committedRoot": "results/2026-09-07-v3-shared-validation",
+  "sourceGitSha": "2cac198ce9d657b6dcebdfea6da2852d8f5cf3cb",
+  "protocolTag": "protocol-v3-shared-validation-2026-09-07",
+  "sourceManifestSha256": "640f61aca14f03693b47f6cf153d346c7ad205fbb32527c1eea8f4bc65294df0",
+  "copyMethod": "cp -a source destination",
+  "verification": "diff -qr source destination exited 0 before this metadata file was added",
+  "rawArtifactsModified": false,
+  "pathRelocationNote": "Paths inside the copied manifest preserve the original /tmp execution location. The committed files retain the original basenames beneath committedRoot; checksummed raw JSON, CSV, and manifest files were not rewritten."
+}
