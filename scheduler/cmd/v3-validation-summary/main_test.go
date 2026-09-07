@@ -1,8 +1,11 @@
 package main
 
 import (
+	"bytes"
 	"math"
+	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 	"time"
 
@@ -151,6 +154,34 @@ func TestOfficialSharedValidationArtifactsPassProvenanceGate(t *testing.T) {
 	}
 	if len(built.Policies) != 9 || len(built.Arms) != 2 || built.Arms[0].ValidatedFinalists != 3 || built.Arms[1].ValidatedFinalists != 3 || len(built.ParetoFront) == 0 {
 		t.Fatalf("unexpected official summary shape: policies=%d arms=%+v front=%+v", len(built.Policies), built.Arms, built.ParetoFront)
+	}
+
+	analysisRoot := filepath.Join(resultRoot, "analysis")
+	committed, err := loadJSON[output](filepath.Join(analysisRoot, "validation-summary.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	built.GeneratedAt = committed.GeneratedAt
+	built.Generator = committed.Generator
+	built.Inputs = committed.Inputs
+	if !reflect.DeepEqual(built, committed) {
+		t.Fatal("committed V3 validation JSON differs from regenerated analysis body")
+	}
+
+	regeneratedCSV := filepath.Join(t.TempDir(), "validation-summary.csv")
+	if err := writeCSV(regeneratedCSV, built.Policies); err != nil {
+		t.Fatal(err)
+	}
+	regeneratedData, err := os.ReadFile(regeneratedCSV)
+	if err != nil {
+		t.Fatal(err)
+	}
+	committedData, err := os.ReadFile(filepath.Join(analysisRoot, "validation-summary.csv"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(regeneratedData, committedData) {
+		t.Fatal("committed V3 validation CSV differs from regenerated output")
 	}
 }
 
