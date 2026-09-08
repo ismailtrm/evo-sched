@@ -1,10 +1,10 @@
 {
   "auditVersion": 3,
-  "auditedAt": "2026-09-08T09:51:17Z",
+  "auditedAt": "2026-09-08T16:13:43Z",
   "status": "closed",
   "auditedPaper": {
     "path": "paper/main.tex",
-    "gitCommit": "94e97b119301c71cef7652c63d9a58c8a2630d20",
+    "gitCommit": "7109c44dedc64b6fa58e49030222b38e8130661e",
     "role": "official V3 mitigation manuscript"
   },
   "preservationDecision": "Keep evidence-audit-v1.json, evidence-audit-v2.json, and all V1/V2 artifacts immutable. V3 adds a budget-matched mitigation experiment and does not rewrite earlier evidence.",
@@ -51,56 +51,56 @@
       "id": "V3-C-001",
       "claim": "Each arm and seed received exactly 72 fresh optimizer samples; one-shot evaluated 72 candidates while two-stage evaluated 42 candidates and used 30 additional promotion samples.",
       "strength": "frozen protocol and official observed budget",
-      "paperLines": [161, 170, 185, 238, 239],
+      "paperLines": [152, 154, 180, 241],
       "evidence": "experiments/protocol-v3-budget-matched-resampling.json and official V3 search summary"
     },
     {
       "id": "V3-C-002",
       "claim": "Across three seeds, each arm consumed 216 optimizer samples; one-shot evaluated 216 candidates and two-stage evaluated 126 candidates. Together the arms executed 1,350 workload replays and 32,400 Pods with zero unschedulable results.",
       "strength": "official three-seed search observation",
-      "paperLines": [54, 161, 185, 238, 239],
+      "paperLines": [56, 241, 259, 260],
       "evidence": "results/2026-09-07-v3-budget-matched-official-search/analysis/search-summary.json"
     },
     {
       "id": "V3-C-003",
       "claim": "Under shared ten-repeat validation, two of three one-shot finalists and one of three two-stage finalists were false Pareto discoveries under the repeated-mean point-estimate rule.",
       "strength": "official repeated shared validation; descriptive small-denominator comparison",
-      "paperLines": [54, 68, 73, 243, 244, 248, 257, 258, 292, 307],
+      "paperLines": [56, 75, 246, 259, 260, 299],
       "evidence": "results/2026-09-07-v3-shared-validation/analysis/validation-summary.json"
     },
     {
       "id": "V3-C-004",
       "claim": "Shared validation completed 270 workload executions and 6,480 Pods with complete decision, Kubernetes, and evaluator timestamps and zero unschedulable results.",
       "strength": "official repeated shared validation acceptance",
-      "paperLines": [170, 186, 243, 244],
+      "paperLines": [165, 181, 246],
       "evidence": "results/2026-09-07-v3-shared-validation/analysis/validation-summary.json"
     },
     {
       "id": "V3-C-005",
       "claim": "On the fixed mixed-burst holdout, one of three shared-validation survivors remained nondominated under the repeated-mean exact point-estimate rule.",
       "strength": "official repeated holdout; descriptive support for one fixed workload",
-      "paperLines": [54, 70, 170, 187, 263, 266, 270, 271, 292, 294, 302, 307],
+      "paperLines": [56, 165, 182, 266, 299],
       "evidence": "results/2026-09-08-v3-survivor-holdout/analysis/holdout-summary.json"
     },
     {
       "id": "V3-C-006",
       "claim": "The surviving two-stage policy and consolidation-heavy baseline both averaged 2.1 occupied workers; their mean p95 values differed by 42.985865 microseconds and their marginal 95 percent Student-t intervals overlapped strongly.",
       "strength": "official repeated holdout exact point estimates; no practical or statistical superiority claim",
-      "paperLines": [54, 70, 265, 273, 275, 284, 285, 286, 294, 307],
+      "paperLines": [56, 268, 271, 280, 281, 287],
       "evidence": "results/2026-09-08-v3-survivor-holdout/analysis/holdout-summary.json"
     },
     {
       "id": "V3-C-007",
       "claim": "The holdout workload was unseen to V3 search and policy selection, but earlier V2 baseline-only results were known before the V3 holdout protocol was frozen.",
       "strength": "protocol provenance boundary",
-      "paperLines": [170, 302],
+      "paperLines": [165, 295],
       "evidence": "experiments/protocol-v3-survivor-holdout.json and V3 holdout summary notes"
     },
     {
       "id": "V3-C-008",
       "claim": "The default kube-scheduler is retained only as a common placement reference because it does not emit the custom scheduler's decision timestamp.",
       "strength": "official V2 external-reference observation and measurement-source boundary",
-      "paperLines": [166, 211, 212, 226, 234, 300, 302],
+      "paperLines": [159, 207, 221, 229, 293],
       "evidence": "results/2026-08-28-v2-official-baselines/analysis-manifest.json"
     }
   ],
@@ -126,8 +126,9 @@
     ],
     "checks": [
       "Left-panel counts are 2/3 for one-shot and 1/3 for two-stage.",
-      "Right-panel point estimates and marginal intervals match the committed holdout summary.",
-      "Marker shapes distinguish baselines, dropped survivors, and the remaining survivor in grayscale.",
+      "Right-panel point estimates and marginal intervals on both axes match the committed holdout summary; zero-width intervals are omitted.",
+      "The external legend does not cover observations. Open squares and smaller filled triangles expose near-coincident policies without jittering objective coordinates.",
+      "Marker shapes and dashed survivor intervals distinguish series in grayscale.",
       "The caption states that confidence intervals do not define Pareto dominance."
     ]
   },
@@ -139,7 +140,7 @@
     "overfullBoxes": 0,
     "pdfStructure": "qpdf --check passed",
     "fonts": "all embedded Type 1",
-    "visualInspection": "all six pages rendered; the V3 two-panel figure was reviewed at 150 dpi with no clipping or label overlap",
+    "visualInspection": "All six pages visually reviewed after layout revision; final baseline and balanced reference pages rechecked. The V3 panel was also inspected in a 1600-pixel grayscale page render. No clipping or label overlap observed.",
     "numericAudit": "paper values and figure coordinates cross-checked against committed V3 search, shared-validation, and holdout summaries"
   },
   "residualLimitations": [
@@ -154,6 +155,7 @@
   "decision": {
     "submissionEvidenceReady": true,
     "paperSubmissionBlocked": false,
-    "nextAction": "Add V3 regeneration and paper-audit checks to the repository verification entrypoint, then update the KubeCon proposal from the same bounded claim set."
+    "publicSubmissionReady": false,
+    "nextAction": "Keep the existing private release immutable. Package this post-release editorial revision separately if needed; anonymous artifact access and CFP submission remain separate gates."
   }
 }
