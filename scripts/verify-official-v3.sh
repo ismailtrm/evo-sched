@@ -13,7 +13,7 @@ require_command() {
   fi
 }
 
-for command in go git jq rg latexmk qpdf pdfinfo pdffonts cmp; do
+for command in go git jq rg latexmk qpdf pdfinfo pdffonts cmp sha256sum realpath; do
   require_command "$command"
 done
 
@@ -69,7 +69,7 @@ echo "[3/7] Regenerate official V3 analyses"
 
 echo "[4/7] Compare regenerated V3 analyses"
 normalize_summary() {
-  jq -S 'del(.generatedAt, .generator)' "$1"
+  jq -S 'del(.generatedAt, .generator, .inputs)' "$1"
 }
 
 normalize_summary "$repo_root/results/2026-09-07-v3-budget-matched-official-search/analysis/search-summary.json" >"$tmp_dir/search-committed.json"
@@ -87,6 +87,31 @@ normalize_summary "$repo_root/results/2026-09-08-v3-survivor-holdout/analysis/ho
 normalize_summary "$tmp_dir/holdout-summary.json" >"$tmp_dir/holdout-regenerated.json"
 cmp "$tmp_dir/holdout-committed.json" "$tmp_dir/holdout-regenerated.json"
 cmp "$repo_root/results/2026-09-08-v3-survivor-holdout/analysis/holdout-summary.csv" "$tmp_dir/holdout-summary.csv"
+
+verify_current_inputs() {
+  local summary="$1"
+  local excluded_path="${2:-}"
+  local path expected resolved actual
+
+  while IFS=$'\t' read -r path expected; do
+    if [[ "$path" == "$excluded_path" ]]; then
+      continue
+    fi
+    resolved="$(realpath -m "$repo_root/scheduler/$path")"
+    actual="$(sha256sum "$resolved" | awk '{print $1}')"
+    test "$actual" = "$expected"
+  done < <(jq -r '.inputs[] | [.path, .sha256] | @tsv' "$summary")
+}
+
+search_summary="$repo_root/results/2026-09-07-v3-budget-matched-official-search/analysis/search-summary.json"
+search_protocol_path="../experiments/protocol-v3-budget-matched-resampling.json"
+verify_current_inputs "$search_summary" "$search_protocol_path"
+verify_current_inputs "$repo_root/results/2026-09-07-v3-shared-validation/analysis/validation-summary.json"
+verify_current_inputs "$repo_root/results/2026-09-08-v3-survivor-holdout/analysis/holdout-summary.json"
+
+expected_search_protocol_sha="$(jq -r --arg path "$search_protocol_path" '.inputs[] | select(.path == $path) | .sha256' "$search_summary")"
+tagged_search_protocol_sha="$(git -C "$repo_root" show protocol-v3-official-search-2026-09-07:experiments/protocol-v3-budget-matched-resampling.json | sha256sum | awk '{print $1}')"
+test "$tagged_search_protocol_sha" = "$expected_search_protocol_sha"
 
 echo "[5/7] Verify protocol identities and evidence audit"
 audit="$repo_root/paper/evidence-audit-v3.json"
