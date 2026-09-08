@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "cfp-draft-v1",
+  "schemaVersion": "cfp-draft-v2",
   "status": "draft",
   "event": {
     "name": "KubeCon + CloudNativeCon Europe 2027",
@@ -13,7 +13,7 @@
       "reviewerGuidelines": "https://events.linuxfoundation.org/kubecon-cloudnativecon-europe/program/submission-reviewer-guidelines/",
       "submissionPortal": "https://sessionize.com/kubecon-cloudnativecon-europe-2027/"
     },
-    "verifiedOn": "2026-08-29"
+    "verifiedOn": "2026-09-08"
   },
   "positioning": {
     "primaryTrack": "Emerging + Advanced",
@@ -24,19 +24,19 @@
     "experienceLevel": "Intermediate",
     "caseStudy": false,
     "caseStudyRationale": "This is reproducible experimental systems research on a live Kubernetes control-plane path, not a report about an organization's production deployment.",
-    "decisionRationale": "The primary track explicitly welcomes cloud native research, academic papers, proof-of-concept projects, and advanced niche topics. A 30-minute session can turn the negative validation result into a practical measurement and experimentation lesson; the poster remains a suitable fallback for the research artifact."
+    "decisionRationale": "The primary track explicitly welcomes cloud native research, academic papers, proof-of-concept projects, and advanced niche topics. A 30-minute session can connect the initial validation failure, an equal-budget mitigation experiment, and practical live-system tuning guidance; the poster remains a suitable fallback for the research artifact."
   },
   "proposal": {
     "title": "Searching the Kubernetes Scheduler Policy Space: Lessons From Noisy Live Optimization",
-    "sessionDescription": "When an optimizer reports a better Kubernetes scheduling policy, did it improve placement or learn the timing noise of the control plane? This session follows an end-to-end experiment that exposed a four-weight custom scheduler policy to NSGA-II-style search on a live four-worker kind cluster. Every candidate triggered a scheduler deployment rollout, real Pod bindings, and three resource-pressure workload replays.\n\nThe first result looked compelling: all three search seeds produced apparently novel Pareto points beyond hand-designed policies. The experiment then separated scheduler-decision timestamps from Kubernetes API observation time, removed equivalent dimensions from the policy representation, and re-evaluated five finalists ten times per workload. None remained nondominated. An unseen holdout workload still revealed a reproducible consolidation tradeoff: spread, balanced, and consolidation-heavy policies occupied four, three, and two workers, while their latency confidence intervals overlapped.\n\nThe session presents the architecture, the misleading result, the validation protocol that overturned it, and the engineering changes that made the conclusion auditable. Attendees will leave with a concrete checklist for parameterizing scheduler policies, instrumenting live decisions, preserving experiment provenance, and preventing expensive black-box search from optimizing measurement noise.",
-    "benefitsToEcosystem": "Kubernetes operators and platform engineers increasingly automate tuning decisions around scheduling, autoscaling, and other control loops. A search algorithm can exploit timing jitter, coarse observations, equivalent parameters, or incomplete runs just as easily as it can exploit a useful policy signal. This session contributes a reusable failure analysis and an open, reproducible experiment path rather than claiming a universally superior scheduler. It shows how to separate feasibility from scoring, make a policy space identifiable, compare tradeoffs with Pareto analysis, and require repeated validation before promoting an automatically discovered configuration.",
+    "sessionDescription": "When a live optimizer reports a better Kubernetes policy, did it improve the system or learn the benchmark noise? This session follows that question through a custom four-weight scheduler, an NSGA-II-style optimizer, and real Pod bindings on a four-worker kind cluster. Each policy sample patches and rolls out the scheduler, replays three 24-Pod resource-pressure workloads, and records scheduler-side decision latency plus workload-occupied workers.\n\nThe first search appeared to beat the hand-designed policies across three seeds, but none of its five finalists remained nondominated after ten repetitions on each training workload. The follow-up experiment tests a practical mitigation: spend the same 72 live samples per seed either on one-shot exploration or on a deterministic two-stage strategy that re-evaluates promising policies. Across three seeds, shared validation removes two of three one-shot finalists and one of three two-stage finalists. Holdout testing is stricter: only one of the three survivors remains nondominated, and its apparent latency advantage over the consolidation policy at the same worker count is a 43-microsecond near-tie with overlapping intervals.\n\nThe session turns this reversal into an engineering playbook. Attendees will see how policy-space redundancy, timestamp provenance, exact evaluation budgets, immutable artifacts, repeated promotion, and held-out validation affect automated tuning of a live Kubernetes control loop. The conclusion is not a universally better scheduler; it is a reproducible account of how to detect and reduce false optimization discoveries before deploying them.",
+    "benefitsToEcosystem": "Platform teams increasingly use search and automated tuning around scheduling, autoscaling, databases, runtimes, and other live control loops. Those optimizers can exploit timing jitter, equivalent parameters, or incomplete runs as efficiently as they exploit useful system behavior. This session contributes both a failure analysis and a budget-matched mitigation experiment: reserve part of the search budget for re-evaluating promising candidates, then validate all arms under the same repeated protocol. The open experiment also shows how to separate scheduler feasibility from tunable scoring, measure the decision rather than the observer, preserve sample-level provenance, and avoid turning exact Pareto arithmetic into an unsupported superiority claim.",
     "targetAudience": "Kubernetes platform engineers, SREs, scheduler and controller developers, performance engineers, and researchers who evaluate or tune policies against live clusters.",
     "prerequisites": "Attendees should understand basic Kubernetes Pod scheduling and be comfortable reading latency and resource-usage metrics. No prior evolutionary-computation knowledge is required.",
     "takeaways": [
       "How to expose a Kubernetes scheduler scoring policy to search without retaining scale-equivalent or linearly redundant weight dimensions.",
       "How to distinguish scheduler decision latency, Kubernetes timestamp resolution, and evaluator observation lag in a live experiment.",
-      "Why one evaluation per candidate can create convincing but non-reproducible Pareto improvements, and how repeated finalist validation changes the conclusion.",
-      "How to interpret latency-versus-consolidation fronts conservatively when placement differences are clear but latency confidence intervals overlap."
+      "Why one evaluation per candidate can create convincing but non-reproducible Pareto improvements, and how to compare exploration with resampling under an equal live-evaluation budget.",
+      "How repeated promotion, shared validation, and holdout testing expose false Pareto discoveries without overstating near-ties as scheduler superiority."
     ],
     "openSourceProjects": [
       {
@@ -70,15 +70,19 @@
         "topic": "Measurement repair: decision annotations, observation lag, hard validity gates, and provenance"
       },
       {
-        "minutes": "16-19",
-        "topic": "The apparently successful three-seed evolutionary search"
+        "minutes": "16-18",
+        "topic": "The apparent win: three seeds, five finalists, zero repeated survivors"
       },
       {
-        "minutes": "19-23",
-        "topic": "The repeated-validation failure and the holdout policy tradeoff"
+        "minutes": "18-22",
+        "topic": "The equal-budget mitigation: one-shot exploration versus two-stage resampling"
       },
       {
-        "minutes": "23-25",
+        "minutes": "22-24",
+        "topic": "Shared validation, holdout near-tie, and the limits of exact Pareto claims"
+      },
+      {
+        "minutes": "24-25",
         "topic": "A practical live-control-loop optimization checklist"
       },
       {
@@ -89,15 +93,17 @@
   },
   "evidenceBoundaries": {
     "supportedClaims": [
-      "The official search evaluated 216 optimizer candidates across seeds 42, 123, and 999 on a four-worker kind cluster.",
-      "Each one-shot seed produced optimizer-only Pareto points relative to the per-seed baseline references.",
-      "None of the five optimizer finalists remained nondominated after ten repetitions per policy-workload pair.",
-      "The independent holdout produced a three-point baseline front occupying four, three, and two workload worker nodes.",
-      "The holdout latency confidence intervals overlap, so latency ordering is descriptive rather than a statistical superiority claim."
+      "The V2 one-shot search evaluated 216 optimizer candidates; none of its five finalists remained nondominated after ten repetitions per policy-workload pair.",
+      "The official V3 experiment gave each arm exactly 216 fresh optimizer samples across seeds 42, 123, and 999; together the arms completed 1,350 workload replays and 32,400 Pods without unschedulable results.",
+      "Shared ten-repeat validation classified two of three one-shot finalists and one of three two-stage finalists as false Pareto discoveries under the repeated-mean point-estimate rule.",
+      "Only one of three shared-validation survivors remained nondominated on the fixed holdout workload.",
+      "The holdout survivor and consolidation baseline used the same mean 2.1 workers; their mean p95 difference was about 43 microseconds and their confidence intervals overlapped."
     ],
     "excludedClaims": [
       "Evolutionary search found a scheduler that is superior to Kubernetes defaults.",
-      "The optimizer finalists generalize beyond the training workloads.",
+      "Two-stage resampling is statistically or generally superior to one-shot search.",
+      "The surviving optimizer policy is practically superior to the consolidation baseline.",
+      "The optimizer finalists generalize beyond the fixed holdout workload.",
       "The kind results establish production-cluster performance.",
       "Maximum workload-occupied workers is equivalent to powered-node cost.",
       "The observed holdout latency means are statistically distinct."
@@ -120,13 +126,13 @@
     },
     {
       "label": "IEEE paper source",
-      "url": "https://github.com/ismailtrm/evo-sched/blob/research/policy-space-v2/paper/main.tex",
+      "url": "https://github.com/ismailtrm/evo-sched/blob/research/noise-aware-resampling-v3/paper/main.tex",
       "availability": "private-pending-public-release",
       "submissionReady": false
     },
     {
       "label": "Machine-readable paper evidence audit",
-      "url": "https://github.com/ismailtrm/evo-sched/blob/research/policy-space-v2/paper/evidence-audit-v2.json",
+      "url": "https://github.com/ismailtrm/evo-sched/blob/research/noise-aware-resampling-v3/paper/evidence-audit-v3.json",
       "availability": "private-pending-public-release",
       "submissionReady": false
     }
@@ -136,7 +142,7 @@
       "Track and format selected from the current official CFP.",
       "Title uses title case and avoids an optimizer-superiority claim.",
       "Session description is written in third person and states the problem, contribution, relevance, and audience benefit.",
-      "Claims are bounded by committed official V2 artifacts.",
+      "Claims are bounded by committed official V2 and V3 artifacts and the closed V3 evidence audit.",
       "Relevant open-source projects and repository resources are listed."
     ],
     "requiresUserConfirmation": [
@@ -148,7 +154,7 @@
       "Publish a stable public paper PDF URL, preferably a tagged GitHub release or preprint, and replace the source-only paper link if appropriate.",
       "Provide a previous speaking recording or record a brief public or unlisted YouTube speaking sample.",
       "Recheck all Sessionize fields, limits, and event dates immediately before submission.",
-      "Ensure the referenced branch or release is publicly accessible and contains the committed V2 evidence."
+      "Ensure the referenced release is publicly accessible and contains the committed V2 baseline plus official V3 search, shared-validation, holdout, paper, and evidence-audit artifacts."
     ]
   }
 }
