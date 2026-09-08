@@ -4263,6 +4263,94 @@ oluşturulmamış, cluster kapalı ve canlı holdout koşusu başlamamıştır. 
 kapı clean docs commit, exact-HEAD annotated tag, cluster preflight ve tmux
 içinde tek official holdout koşusudur.
 
+### 3.82. Official V3 survivor holdout bir policy'yi point-estimate front'ta tuttu
+
+Holdout freeze kaydı `3a8b12f` commit'inde kapatıldı ve annotated
+`protocol-v3-survivor-holdout-2026-09-08` tag'i tam bu SHA'ya bağlandı. Cluster
+yeniden başlatıldıktan sonra preflight dört Ready worker, healthy `1/1`
+scheduler deployment, canonical `0.25/0.25/0.25/0.25` weights, boş evaluator
+namespace ve `250ms` measurement cadence ile geçti. Official command
+`evo-v3-holdout` tmux session'ında çalıştırıldı.
+
+Run `2026-09-07T23:37:17Z` ile `2026-09-08T00:10:23Z` arasında yaklaşık
+`33 dakika 5 saniye` sürdü. Manifest acceptance sonucu:
+
+- `60/60` policy-workload replay
+- `1,440/1,440` submitted, scheduled ve completed Pod
+- `1,440/1,440` scheduler-decision, Kubernetes-scheduled ve
+  evaluator-observation timestamp
+- sıfır unschedulable Pod
+- altı policy için eksiksiz `r01`--`r10` kapsamı
+- postflight'ta dört worker, healthy scheduler, canonical weights, boş evaluator
+  namespace ve restore edilmiş `2s` idle cadence
+- `status=completed` ve `paperEvidenceEligible=true`
+
+Dokuz input ile iki raw output checksum'ı doğrulandı. Raw JSON içindeki 1,440
+Pod'un her birinde submission, scheduler-decision, Kubernetes-scheduled ve
+evaluator-observation timestamp, node adı ve `Succeeded` phase mevcuttur. Ham
+artefact'lar `/tmp` kaynağından byte-for-byte taşındı ve şu commit'te saklandı:
+
+- `3cc2a7d results: record V3 survivor holdout`
+
+Provenance-gated `cmd/v3-holdout-summary`, frozen protocol/tag/manifest/input
+setini, shared-validation survivor kaynağını, raw RunResult ile flattened row
+eşitliğini, exact budget ve safety alanlarını yeniden doğrular. On bağımsız
+repetition üzerinden mean, sample standard deviation ve yüzde 95 Student-t
+confidence interval üretir. Analyzer, result ve regeneration gate commit'leri:
+
+- `8ccc0e7 feat: add V3 survivor holdout analysis`
+- `071e308 results: analyze V3 survivor holdout`
+- `d9d9125 test: verify committed V3 holdout analysis`
+
+Committed CSV tekrar üretimde byte-for-byte aynı, JSON analysis gövdesi yalnızca
+runtime generator provenance alanları çıkarıldığında birebir aynı çıktı. Normal
+`go test ./...` artık committed holdout JSON gövdesi ile CSV'yi raw evidence'dan
+yeniden hesaplamaktadır.
+
+Repeated-mean point-estimate Pareto front iki unique noktadan oluştu:
+
+| Policy | Tür | Mean p95 decision latency (s) | Mean occupied workers |
+|---|---|---:|---:|
+| `evok8s-v2-balanced` | baseline | `1.245857` | `3.0` |
+| `v3-two-stage-s999-gen-05-003` | two-stage survivor | `1.373787` | `2.1` |
+
+Frozen üç survivor'dan yalnızca `v3-two-stage-s999-gen-05-003` nondominated
+kaldı. `v3-one-shot-s123-gen-03-010` ve `v3-two-stage-s999-init-004` holdout
+repeated-mean point estimates altında domine edildi. Böylece survivor sonucu
+`1/3`, yani `0.333` oldu. Baseline'lardan yalnızca `evok8s-v2-balanced` front'ta
+kaldı.
+
+Bu survivor sonucu özellikle dikkatli yorumlanmalıdır. Consolidation baseline ile
+survivor'ın mean occupied-worker değeri aynıdır (`2.1`). Survivor'ın mean p95'i
+`1.3737872747s`, consolidation baseline'ınki `1.3738302605s` olup point-estimate
+fark yalnızca yaklaşık `0.000043s`, yani `43` mikrosaniyedir. İki latency yüzde
+95 confidence interval'ı geniş biçimde örtüşmektedir:
+
+- survivor: `[1.2812, 1.4664]s`
+- consolidation baseline: `[1.2984, 1.4493]s`
+
+Dolayısıyla frozen exact-dominance kuralı survivor'ı front'ta tutsa da pratik veya
+istatistiksel üstünlük kanıtlanmamıştır. En güçlü savunulabilir sonuç, üç frozen
+survivor'dan birinin bu fixed mixed-burst workload üzerinde **repeated-mean
+point-estimate bakımından nondominated kaldığı**, fakat node-eşdeğer baseline'a
+karşı latency marjının ölçüm belirsizliğine göre ihmal edilebilir olduğudur.
+
+Ek sınırlar:
+
+- Workload V3 search ve policy selection'a unseen'dır; V2 baseline-only sonucu
+  daha önce bilindiği için tamamen kör değildir.
+- Bu holdout sonucu descriptive generalization desteğidir; production veya
+  workload-family genellemesi değildir.
+- Üç seçilmiş survivor üzerinden arm-level başarı oranı ya da statistical
+  significance sonucu çıkarılmaz.
+- Her replay yalnızca 24 Pod içerir; interpolated p95 üst sıralardaki birkaç
+  gözleme duyarlıdır.
+- Point-estimate front'ta kalmak, equivalence veya superiority testi değildir.
+
+Analysis ve full repository doğrulaması `go test ./...`, focused race testi,
+`go vet ./...` ve `make verify` ile geçti. Son canlı kontrolün ardından beş kind
+container'ı silinmeden durduruldu.
+
 ## 4. Şu Anki Durum
 
 Şu anda proje durumu şöyledir:
@@ -4358,11 +4446,17 @@ içinde tek official holdout koşusudur.
 - False Pareto discovery proportion one-shot için `2/3`, two-stage için `1/3`
   ölçülmüş; mitigation küçük finalist paydası altında yalnızca tanımlayıcı olarak
   desteklenmiştir
-- V3 survivor holdout policy seti ve exact `60` workload execution / `1,440` Pod
-  protokolü commitlenmiştir; annotated tag ve canlı koşu henüz başlamamıştır
+- V3 survivor holdout annotated protocol tag üzerinden `60/60` workload
+  execution ve `1,440/1,440` Pod ile tamamlanmış, raw ve analysis artefact'ları
+  commitlenmiştir
 - V3 holdout, pre-existing mixed-burst workload'un baseline davranışı daha önce
   görüldüğü için tam kör değil, V3 search ve policy selection'a unseen olarak
   sınırlandırılmıştır
+- Frozen üç survivor'dan yalnızca `v3-two-stage-s999-gen-05-003` holdout
+  repeated-mean point-estimate front'unda kalmıştır; survivor oranı `1/3`tür
+- Holdout survivor ile consolidation baseline arasındaki aynı `2.1` occupied
+  worker seviyesindeki p95 farkı yalnızca yaklaşık `43` mikrosaniye ve CI'lar
+  örtüşmektedir; statistical veya practical superiority iddiası yoktur
 - kind cluster official shared-validation postflight'i ve raw acceptance sonrası
   canonical state korunarak durdurulmuştur
 - Functional live smoke ve kind resource lifecycle komutları Makefile entrypoint'leri olarak eklenmiştir
@@ -4393,9 +4487,9 @@ içinde tek official holdout koşusudur.
 - Üç V2 train workload üzerinde üç custom policy ve default kube-scheduler için üç tekrarlı official baseline protokolü tamamlanmıştır
 - Official baseline artifactleri, manifestleri ve mean/sample-SD/worst-case özetleri commitlenmiştir
 - Clean/tag/preflight hard gate'li ve interruption recovery destekli repo-içi official multi-seed runner tamamlanmıştır
-- Sıradaki aktif araştırma adımı, V3 survivor holdout freeze commit'i üzerinde
-  annotated protocol tag oluşturup cluster preflight sonrası official koşuyu
-  başlatmaktır
+- Sıradaki aktif araştırma kararı, V3 search/shared-validation/holdout sonucunu
+  paper ve KubeCon anlatısına evidence-audit ile işlemek; near-tie survivor'ı
+  olduğundan güçlü göstermemektir
 - Ayrı CFP hattında stabil public paper PDF ve speaking sample hazırlayıp CFP
   taslağını kullanıcı onayıyla Sessionize'a aktarma işi açıktır
 
@@ -4609,9 +4703,9 @@ Sonuç:
   machine-readable protocolü sonuç görülmeden önce sabitle
 - [x] Holdout contract selection ve exact `60` workload / `1,440` Pod budget
   testini ekle
-- [ ] Clean docs commit ve annotated holdout protocol tag oluştur
-- [ ] Official survivor holdout'u tmux içinde koştur ve raw acceptance'ı kapat
-- [ ] Repeated-mean point-estimate front, uncertainty ve survivor genelleme
+- [x] Clean docs commit ve annotated holdout protocol tag oluştur
+- [x] Official survivor holdout'u tmux içinde koştur ve raw acceptance'ı kapat
+- [x] Repeated-mean point-estimate front, uncertainty ve survivor genelleme
   sonucunu analiz et
 
 Çıkış koşulu:
@@ -4629,8 +4723,10 @@ Sonuç:
 - two-stage mitigation bu sınırlı official deneyde tanımlayıcı olarak desteklendi
 - combined repeated-mean point-estimate front üç optimizer policy'den oluştu;
   hiçbir baseline front'ta kalmadı
-- survivor holdout protokolü donduruldu fakat henüz çalıştırılmadı
-- statistical superiority ve holdout generalization iddiaları açık değildir
+- survivor holdout'ta üç policy'den biri point-estimate front'ta kaldı; aynı node
+  seviyesindeki baseline'a latency farkı yaklaşık `43` mikrosaniyedir
+- fixed mixed-burst workload'a descriptive holdout desteği vardır; statistical
+  superiority ve daha geniş generalization iddiaları açık değildir
 
 ## 6. Bu Dosya Nasıl Kullanılmalı
 
