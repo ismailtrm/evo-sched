@@ -1,8 +1,11 @@
 package main
 
 import (
+	"bytes"
 	"math"
+	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 
 	"evok8s-scheduler/pkg/evaluator"
@@ -60,6 +63,34 @@ func TestOfficialHoldoutArtifactsPassProvenanceAndSafetyGates(t *testing.T) {
 	}
 	if built.Acceptance.ResultRows != 60 || built.Acceptance.Pods != 1440 || built.Acceptance.Unschedulable != 0 || len(built.Policies) != 6 || built.Survivors.FrozenSurvivors != 3 {
 		t.Fatalf("unexpected official holdout shape: acceptance=%+v policies=%d survivors=%+v", built.Acceptance, len(built.Policies), built.Survivors)
+	}
+
+	analysisRoot := filepath.Join(resultRoot, "analysis")
+	committed, err := loadJSON[output](filepath.Join(analysisRoot, "holdout-summary.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	built.GeneratedAt = committed.GeneratedAt
+	built.Generator = committed.Generator
+	built.Inputs = committed.Inputs
+	if !reflect.DeepEqual(built, committed) {
+		t.Fatal("committed V3 holdout JSON differs from regenerated analysis body")
+	}
+
+	regeneratedCSV := filepath.Join(t.TempDir(), "holdout-summary.csv")
+	if err := writeCSV(regeneratedCSV, built.Policies); err != nil {
+		t.Fatal(err)
+	}
+	regeneratedData, err := os.ReadFile(regeneratedCSV)
+	if err != nil {
+		t.Fatal(err)
+	}
+	committedData, err := os.ReadFile(filepath.Join(analysisRoot, "holdout-summary.csv"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(regeneratedData, committedData) {
+		t.Fatal("committed V3 holdout CSV differs from regenerated output")
 	}
 }
 
