@@ -4554,6 +4554,45 @@ commit'indedir. Sıradaki adım bu ledger commit'inden sonra clean final SHA'ya
 local annotated release tag koymak, `/tmp` altında paketi üretmek ve checksum,
 manifest, PDF ve iki tar arşivini bağımsız kabul etmektir.
 
+### 3.86. V3 local release snapshot'i tag'lendi ve paket bağımsız kabul edildi
+
+Release paketleyici ve ledger clean `41f26955b710d1e7f432a952e010c60fb7f8b5a7`
+commit'inde birleşti. Bu snapshot üzerine 8 Eylül 2026 14:20 TRT'de local
+annotated `v3-evidence-2026-09-08` tag'i kondu. Tag object tipi `tag` olarak ve
+peeled commit'i tam `41f2695` olacak şekilde doğrulandı; tag veya branch remote'a
+pushlanmadı.
+
+Ardından aşağıdaki komutla yeni bir çıktı dizininde end-to-end paketleme yapıldı:
+
+```bash
+make release-package-v3 \
+  RELEASE_OUTPUT=/tmp/evo-sched-v3-release-2026-09-08
+```
+
+Paketleyicinin çalıştırdığı `make verify`; Go testleri, `go vet`, resmi V3 analiz
+regeneration/tutarlılık kontrolleri, protocol/audit provenance, race testleri ve
+altı sayfalık paper build kontrolünün tamamında geçti. Paketleyicinin kendi
+kontrollerinden sonra SHA256, tag/HEAD eşitliği, manifest alanları, PDF özellikleri
+ve arşiv kapsamı ikinci kez bağımsız kontrol edildi:
+
+- `evo-sched-v3-paper.pdf`: `243710` byte,
+  `b957173e444bd969efd53a513e9920c59bedf2f9c0cf8ecef60390b8946482bd`
+- `evo-sched-v3-official-evidence.tar.gz`: `3382562` byte, `118` arşiv girdisi,
+  `554a5efc4a31c8e7c9e913683e67f8f1ac1826fd28f63e85228df6064a914dd9`
+- `evo-sched-v3-reproducibility-source.tar.gz`: `336357` byte, `115` arşiv
+  girdisi,
+  `0d699ae542678cc0d274215f9610406642d93e411bb54674d631763509d6d14c`
+- `evo-sched-v3-release-manifest.json`:
+  `2c4d37713c35a1589b69021685873b9024cd637744e50a674b14d198041d1912`
+
+Paketlenmiş PDF ile working-copy `paper/main.pdf` SHA256 değerleri aynıdır. PDF
+`6` sayfa, US Letter, PDF 1.7 ve embedded Type 1 fontlarla doğrulandı. Manifest
+`headCommit=41f2695`, `packagingStatus=locally-verified` ve
+`publicationStatus=not-verified-by-packager` taşır. Bu kabul yalnızca local ve
+committed release snapshot'ini kapatır: `/tmp` dizini kalıcı yayın değildir,
+GitHub V3 release oluşturulmadı, remote branch/tag erişilebilirliği ve anonim
+public URL doğrulanmadı.
+
 ## 4. Şu Anki Durum
 
 Şu anda proje durumu şöyledir:
@@ -4673,6 +4712,8 @@ manifest, PDF ve iki tar arşivini bağımsız kabul etmektir.
   muhafazakar claim setine yükseltilmiştir
 - KubeCon ana görseli paper ile ortak TikZ kaynağı kullanır; standalone ve paper
   render'larında başlık/annotation hizası görsel olarak doğrulanmıştır
+- V3 evidence snapshot'i local annotated `v3-evidence-2026-09-08` tag'iyle
+  sabitlenmiş ve checksum doğrulamalı local release package kabul edilmiştir
 - Stabil public V3 release/PDF, speaking sample, kullanıcı teyitleri ve
   Sessionize gönderimi açıktır
 - Scheduler interval testli admin komutuyla canonical `2s` değerine restore edilmiştir
@@ -4702,11 +4743,8 @@ manifest, PDF ve iki tar arşivini bağımsız kabul etmektir.
 - Clean/tag/preflight hard gate'li ve interruption recovery destekli repo-içi official multi-seed runner tamamlanmıştır
 - V3 search/shared-validation/holdout sonucu paper, evidence audit, CFP, talk
   package ve README'ye aynı bounded claim setiyle işlenmiştir
-- Sıradaki aktif artefact işi reproducible V3 release package hazırlamak ve
-  private görünürlük sınırında doğrulamaktır; public erişim ayrıca kullanıcı
-  kararı gerektirir
-- V3 release paketleyici ve README sözleşmesi commitlenmiştir; local annotated
-  release tag ile end-to-end package acceptance henüz yapılmamıştır
+- Reproducible V3 release package local olarak kabul edilmiştir; tag/branch push,
+  GitHub V3 release ve public erişim ayrıca kullanıcı kararı gerektirir
 - Ayrı CFP hattında stabil public paper PDF ve speaking sample hazırlayıp CFP
   taslağını kullanıcı onayıyla Sessionize'a aktarma işi açıktır
 
@@ -4900,7 +4938,7 @@ Sonuç:
   eşleştir
 - [x] V2 paketleyiciyi değiştirmeden clean/tag/checksum gated V3 release
   paketleyicisini ekle
-- [ ] Local annotated V3 release tag oluştur ve package acceptance'ı tamamla
+- [x] Local annotated V3 release tag oluştur ve package acceptance'ı tamamla
 - [ ] Stabil public paper PDF, speaking sample ve kullanıcı teyitlerini tamamla
 - [ ] Sessionize formunu son resmi gereksinim kontrolünden sonra gönder
 
