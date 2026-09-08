@@ -1,0 +1,15 @@
+{
+  "schemaVersion": "artifact-import-v1",
+  "class": "official",
+  "paperEvidenceEligible": true,
+  "importedAt": "2026-09-08T00:12:35Z",
+  "sourceRoot": "/tmp/evo-sched-v3-holdout/2026-09-08-v3-survivor-holdout",
+  "committedRoot": "results/2026-09-08-v3-survivor-holdout",
+  "sourceGitSha": "3a8b12fe6b7940be48503b9f8dce5c1982397bf6",
+  "protocolTag": "protocol-v3-survivor-holdout-2026-09-08",
+  "sourceManifestSha256": "45d39ed83cfdecf63939a6a76db210fc0d4e3de7caa8fab80ea722e948d53e18",
+  "copyMethod": "cp -a source destination",
+  "verification": "diff -qr source destination exited 0 before this metadata file was added",
+  "rawArtifactsModified": false,
+  "pathRelocationNote": "Paths inside the copied manifest preserve the original /tmp execution location. The committed files retain the original basenames beneath committedRoot; checksummed raw JSON, CSV, and manifest files were not rewritten."
+}

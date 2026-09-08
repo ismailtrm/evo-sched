@@ -1,0 +1,164 @@
+{
+  "schemaVersion": "v1",
+  "protocolVersion": "v3-survivor-holdout-official",
+  "class": "official",
+  "paperEvidenceEligible": true,
+  "runName": "2026-09-08-v3-survivor-holdout",
+  "status": "completed",
+  "startedAt": "2026-09-07T23:37:17.993072906Z",
+  "finishedAt": "2026-09-08T00:10:23.36643199Z",
+  "repository": "/home/ismail/evo-sched",
+  "workingDirectory": "/home/ismail/evo-sched/scheduler",
+  "git": {
+    "sha": "3a8b12fe6b7940be48503b9f8dce5c1982397bf6",
+    "branch": "research/noise-aware-resampling-v3",
+    "protocolTag": "protocol-v3-survivor-holdout-2026-09-08",
+    "dirtyAtStart": false
+  },
+  "command": [
+    "go",
+    "run",
+    "./cmd/repeated-validation-runner",
+    "--run-name",
+    "2026-09-08-v3-survivor-holdout",
+    "--workloads",
+    "../workloads/v2/mixed-burst-holdout.json",
+    "--weights-file",
+    "../experiments/weights-v3-holdout-survivors.json",
+    "--protocol-tag",
+    "protocol-v3-survivor-holdout-2026-09-08",
+    "--protocol-version",
+    "v3-survivor-holdout-official",
+    "--protocol-file",
+    "../experiments/protocol-v3-survivor-holdout.json",
+    "--protocol-contract",
+    "holdout",
+    "--execution-order",
+    "cyclic-rotation",
+    "--output-root",
+    "/tmp/evo-sched-v3-holdout",
+    "--provenance-files",
+    "../kind-config-4workers.yaml,../deploy.yaml,../experiments/protocol-v3-budget-matched-resampling.json,../results/2026-09-07-v3-budget-matched-official-search/manifest.json,../results/2026-09-07-v3-shared-validation/manifest.json,../results/2026-09-07-v3-shared-validation/analysis/validation-summary.json",
+    "--repetitions",
+    "10",
+    "--poll-interval",
+    "250ms",
+    "--timeout",
+    "1m30s",
+    "--expect-workers",
+    "4",
+    "--expect-scheduler-interval",
+    "250ms",
+    "--final-scheduler-interval",
+    "2s",
+    "--expect-weights",
+    "0.25,0.25,0.25,0.25",
+    "--scheduler-namespace",
+    "evo-sched",
+    "--scheduler-deployment",
+    "evok8s-scheduler",
+    "--evaluator-namespace",
+    "evo-sched-eval",
+    "--scheduler-name",
+    "evok8s-scheduler",
+    "--image",
+    "busybox:1.36.1"
+  ],
+  "inputs": [
+    {
+      "path": "deploy.yaml",
+      "sha256": "3de13f7b422236a72f0d1cce608957e469d8124f0ab5ad2b26d6d2af80dbf91c"
+    },
+    {
+      "path": "experiments/protocol-v3-budget-matched-resampling.json",
+      "sha256": "9d4c9660876cb44b8bdf93bed5c961a45e1157e27dc77be68000dce26b8b869f"
+    },
+    {
+      "path": "experiments/protocol-v3-survivor-holdout.json",
+      "sha256": "a77fbeedd5c9dd417952e84704448519c4a4f4165175e128320e323bf6913f4a"
+    },
+    {
+      "path": "experiments/weights-v3-holdout-survivors.json",
+      "sha256": "54dc72e678022deac3295abceaa72059660ede4770e1c7a3de3803f7e7666091"
+    },
+    {
+      "path": "kind-config-4workers.yaml",
+      "sha256": "d26c091ff873418387e8c45148283a71235a2190efe1d8f021fc566de0bd664f"
+    },
+    {
+      "path": "results/2026-09-07-v3-budget-matched-official-search/manifest.json",
+      "sha256": "9e45b175a1fc56fdca9a0c2932518d7e30b5199d9d4a78020fe4a45ed7332ba1"
+    },
+    {
+      "path": "results/2026-09-07-v3-shared-validation/analysis/validation-summary.json",
+      "sha256": "a7f1668b81cb6ef04481a054c6986c5987ec64db5c2828ee95cb839b02e02ada"
+    },
+    {
+      "path": "results/2026-09-07-v3-shared-validation/manifest.json",
+      "sha256": "640f61aca14f03693b47f6cf153d346c7ad205fbb32527c1eea8f4bc65294df0"
+    },
+    {
+      "path": "workloads/v2/mixed-burst-holdout.json",
+      "sha256": "6d7c5766ec294392fba459beaa96fe946d82f0ce4e7ed4c4934b581f3bccab49"
+    }
+  ],
+  "executionOrder": "cyclic-rotation",
+  "repetitionsPerPolicyWorkload": 10,
+  "policyCount": 6,
+  "expectedResultRows": 60,
+  "expectedWorkloadRuns": 60,
+  "expectedPods": 1440,
+  "observedPods": 1440,
+  "preflight": {
+    "capturedAt": "2026-09-07T23:37:17.993034655Z",
+    "workerCount": 4,
+    "workerCpuMilli": 16000,
+    "workerMemoryMiB": 31712,
+    "schedulerRolloutReady": true,
+    "schedulerIntervalSeconds": 0.25,
+    "schedulerCanonicalWeights": {
+      "freeCPU": 0.25,
+      "freeMem": 0.25,
+      "balance": 0.25,
+      "consolidation": 0.25
+    },
+    "evaluatorPodCount": 0
+  },
+  "runs": [
+    {
+      "workload": "mixed-burst-holdout",
+      "path": "workloads/v2/mixed-burst-holdout.json",
+      "status": "completed",
+      "startedAt": "2026-09-07T23:37:17.993415815Z",
+      "finishedAt": "2026-09-08T00:10:19.755974515Z",
+      "expectedRows": 60,
+      "resultRows": 60,
+      "podCount": 1440,
+      "outputs": [
+        {
+          "path": "../../../tmp/evo-sched-v3-holdout/2026-09-08-v3-survivor-holdout/mixed-burst-holdout.json",
+          "sha256": "85d15fdcd72963b20321631e34f4c07049acf0e888a0b97c1c7745e4aac3e9c8"
+        },
+        {
+          "path": "../../../tmp/evo-sched-v3-holdout/2026-09-08-v3-survivor-holdout/mixed-burst-holdout.csv",
+          "sha256": "72990268c19354f33d6936f4a0f338735b1e99d89102c9dbeaf36ccad6328b28"
+        }
+      ]
+    }
+  ],
+  "postflight": {
+    "capturedAt": "2026-09-08T00:10:23.36643125Z",
+    "workerCount": 4,
+    "workerCpuMilli": 16000,
+    "workerMemoryMiB": 31712,
+    "schedulerRolloutReady": true,
+    "schedulerIntervalSeconds": 2,
+    "schedulerCanonicalWeights": {
+      "freeCPU": 0.25,
+      "freeMem": 0.25,
+      "balance": 0.25,
+      "consolidation": 0.25
+    },
+    "evaluatorPodCount": 0
+  }
+}
