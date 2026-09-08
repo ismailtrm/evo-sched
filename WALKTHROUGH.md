@@ -4272,6 +4272,16 @@ scheduler deployment, canonical `0.25/0.25/0.25/0.25` weights, boş evaluator
 namespace ve `250ms` measurement cadence ile geçti. Official command
 `evo-v3-holdout` tmux session'ında çalıştırıldı.
 
+Reboot sonrası host `PATH` içinde `kind` ve `kubectl` bulunmadığı için ilk
+`make cluster-up` çağrısı container'ları başarıyla başlattıktan sonra `kubectl
+wait` adımında çıktı. Bu partial startup deney olarak sayılmadı. Cluster ile aynı
+v1.35.0 `kubectl`, control-plane container'ındaki `/usr/bin/kubectl` yolundan
+geçici `/tmp/evo-sched-tools/kubectl` konumuna kopyalandı; node readiness ve iki
+preflight bu explicit binary ile tekrar geçtikten sonra official run başlatıldı.
+Bu, result semantiğini değiştirmeyen host tooling recovery'sidir. Sonraki live
+çalışmadan önce kalıcı host `kubectl`/`kind` PATH kurulumu ayrıca kontrol
+edilmelidir.
+
 Run `2026-09-07T23:37:17Z` ile `2026-09-08T00:10:23Z` arasında yaklaşık
 `33 dakika 5 saniye` sürdü. Manifest acceptance sonucu:
 
