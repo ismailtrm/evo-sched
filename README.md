@@ -195,8 +195,31 @@ audit are versioned.
 
 ## Package release artifacts
 
-The current packaging target preserves the historical V2 evidence release. From
-a clean `research/policy-space-v2` checkout:
+V3 packaging requires a clean `research/noise-aware-resampling-v3` checkout and
+an annotated `v3-evidence-2026-09-08` tag pointing exactly at `HEAD`:
+
+```bash
+make release-package-v3 RELEASE_OUTPUT=/tmp/evo-sched-v3-release
+```
+
+The command reruns `make verify` and creates:
+
+- `evo-sched-v3-paper.pdf`
+- `evo-sched-v3-official-evidence.tar.gz`
+- `evo-sched-v3-reproducibility-source.tar.gz`
+- `evo-sched-v3-release-manifest.json`
+- `SHA256SUMS`
+
+The evidence archive contains the V2 baseline reference plus official V3 search,
+shared-validation, holdout, protocols, workloads, and evidence audit. The source
+archive contains the committed scheduler, experiment tooling, paper source,
+submission package, and ledger. The manifest records source commits, protocol
+tags, artifact sizes and hashes, claim boundaries, and known limitations.
+Packaging proves only local completeness; it does not push the branch or tag,
+create a GitHub release, upload assets, or prove public reachability.
+
+The older target preserves the historical V2 evidence release. From a clean
+`research/policy-space-v2` checkout:
 
 ```bash
 make release-package RELEASE_OUTPUT=/tmp/evo-sched-v2-release
@@ -210,12 +233,11 @@ ancestors of `HEAD`, and produces:
 - `evo-sched-v2-release-manifest.json`
 - `SHA256SUMS`
 
-The evidence archive contains only the four V2 official result directories and
+That evidence archive contains only the four V2 official result directories and
 `paper/evidence-audit-v2.json`; pilot and debug artifacts are excluded. Packaging
 does not push refs, create a GitHub release, or upload assets. Public availability
-must be verified separately against the intended remote release. A stable V3
-release bundle is still a publication gate; do not use the V2 bundle as support
-for V3 claims.
+must be verified separately against the intended remote release. Do not use the
+V2 bundle as support for V3 claims.
 
 ## Build the KubeCon evidence figure
 
