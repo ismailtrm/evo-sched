@@ -1,35 +1,31 @@
 \begin{tikzpicture}[
-  node distance=6mm and 9mm,
   every node/.style={font=\footnotesize},
-  block/.style={box, text width=2.55cm, minimum height=1.45cm},
-  wideblock/.style={databox, text width=2.7cm, minimum height=1.55cm},
-  metricblock/.style={databox, text width=2.8cm, minimum height=1.55cm},
-  flowlabel/.style={font=\scriptsize, fill=white, inner sep=1pt}
+  stage/.style={box, text width=3.0cm, minimum height=1.15cm, inner sep=4pt},
+  labeltext/.style={font=\footnotesize, align=center}
 ]
-\node[wideblock] (workloads) {Versioned workloads\\3 training regimes\\1 unseen holdout};
-\node[block, right=13mm of workloads] (evaluator) {Evaluator\\patch, rollout,\\replay, collect};
-\node[block, below=10mm of evaluator] (optimizer) {Evolutionary\\optimizer\\policy weights $\mathbf{w}$};
-\node[block, right=14mm of evaluator] (scheduler) {Custom scheduler\\deployment\\\texttt{evo-sched}};
-\node[block, right=9mm of scheduler] (cluster) {kind cluster\\4 workers\\real Pod binding};
-\node[metricblock, below=10mm of cluster] (metrics) {Versioned artifacts\\decision latency, occupancy\\variance, JSON / CSV};
+\node[stage] (optimizer) at (0,0) {Evolutionary search\\normalized policy weights};
+\node[stage] (evaluator) at (4,0) {Live evaluator\\configure and wait;\\replay 3 training workloads};
+\node[stage] (cluster) at (8,0) {Custom scheduler + kind\\4 workers\\real Pod binding};
+\node[stage] (metrics) at (12,0) {Measurements\\decision latency\\occupied workers};
+\draw[line] (optimizer) -- (evaluator);
+\draw[line] (evaluator) -- (cluster);
+\draw[line] (cluster) -- (metrics);
+\draw[line] (metrics.south) -- ++(0,-0.65cm)
+  -| (optimizer.south);
+\node[labeltext, fill=white, inner sep=2pt]
+  at ($(optimizer.south)!0.5!(metrics.south)+(0,-0.65cm)$)
+  {Training fitness only: one-shot or resampled mean};
+\node[labeltext, anchor=south, font=\small\bfseries]
+  at ($(optimizer.north)!0.5!(metrics.north)+(0,0.18cm)$) {Live search loop};
 
-\draw[line] (workloads) -- (evaluator);
-\draw[line] (optimizer.north) -- (evaluator.south);
-\node[flowlabel, left=1mm of $(optimizer.north)!0.5!(evaluator.south)$] {candidate weights};
-\draw[line] (evaluator) -- node[flowlabel, above] {env patch} (scheduler);
-\draw[line] (scheduler) -- node[flowlabel, above] {bind decisions} (cluster);
-\draw[line] (cluster.south) -- (metrics.north);
-\node[flowlabel, right=1mm of $(cluster.south)!0.5!(metrics.north)$] {runtime metrics};
-\draw[line] (metrics.west) -- (optimizer.east);
-\node[flowlabel, above=1mm of $(metrics.west)!0.5!(optimizer.east)$] {objectives};
-
-\begin{scope}[on background layer]
-  \node[
-    draw=softgray,
-    rounded corners=3pt,
-    fit=(scheduler)(cluster),
-    inner sep=6pt,
-    label={[font=\scriptsize]above:live Kubernetes experiment loop}
-  ] {};
-\end{scope}
+\node[stage] (frozen) at (0,-3.0) {Freeze finalists\\canonical deduplication\\add manual baselines};
+\node[stage] (validation) at (4,-3.0) {Shared validation\\3 training workloads\\10 repeats per policy};
+\node[stage] (holdout) at (8,-3.0) {Survivors + baselines\\fixed holdout workload\\10 repeats per policy};
+\node[stage] (report) at (12,-3.0) {Evidence and reporting\\point-estimate fronts\\JSON / CSV};
+\draw[line] (frozen) -- (validation);
+\draw[line] (validation) -- (holdout);
+\draw[line] (holdout) -- (report);
+\node[labeltext, anchor=south, font=\small\bfseries]
+  at ($(frozen.north)!0.5!(report.north)+(0,0.18cm)$)
+  {Post-search evaluation: fixed policies, no feedback to search};
 \end{tikzpicture}

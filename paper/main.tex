@@ -92,7 +92,7 @@ The objectives are not collapsed into a scalar fitness. Pareto analysis preserve
 
 \begin{figure}[t]
 \centering
-\resizebox{\linewidth}{!}{\input{figures/scheduler-flow}}
+\input{figures/scheduler-flow}
 \caption{Scheduler decision pipeline. The optimized policy operates only after feasibility filtering has reduced the candidate node set.}
 \label{fig:scheduler-flow}
 \end{figure}
@@ -116,7 +116,7 @@ The evaluator operates in namespace \texttt{evo-sched-eval}. For each candidate 
 \begin{figure*}[t]
 \centering
 \resizebox{0.93\textwidth}{!}{\input{figures/system-architecture}}
-\caption{Live evaluation architecture. Every candidate causes a scheduler rollout and real Pod bindings; raw timings, placement samples, and provenance are retained as JSON and CSV artifacts.}
+\caption{Live search and post-search evaluation. Each fresh sample requires deployment configuration, convergence checks, and real workload replay; an unchanged configuration need not replace the scheduler Pod. Validation and holdout results are reported without feedback to search.}
 \label{fig:system-architecture}
 \end{figure*}
 

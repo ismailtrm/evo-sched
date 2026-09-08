@@ -1,20 +1,17 @@
 \begin{tikzpicture}[
-  node distance=6mm and 7mm,
-  every node/.style={font=\footnotesize}
+  every node/.style={font=\footnotesize},
+  flowstep/.style={box, text width=2.25cm, minimum height=1.10cm, inner sep=3pt},
+  node distance=5mm and 3mm
 ]
-\node[box, minimum width=0.18\linewidth] (watch) {Poll unbound Pods\\\texttt{schedulerName=evok8s-scheduler}};
-\node[box, right=of watch, minimum width=0.16\linewidth] (filter) {Feasibility filter\\Ready, schedulable,\\taints, fit};
-\node[box, right=of filter, minimum width=0.15\linewidth] (state) {Node state\\allocatable, used,\\free, pod count};
-\node[box, right=of state, minimum width=0.14\linewidth] (score) {Score feasible nodes\\free, balance,\\consolidation};
-\node[box, right=of score, minimum width=0.13\linewidth] (bind) {Choose best\\create Binding};
-
-\draw[line] (watch) -- (filter);
-\draw[line] (filter) -- (state);
-\draw[line] (state) -- (score);
+\node[flowstep] (poll) {Poll unbound Pods\\for this scheduler};
+\node[flowstep, right=of poll] (state) {Node snapshot\\capacity, requests,\\free resources};
+\node[flowstep, right=of state] (filter) {Filter nodes\\Ready, taints,\\CPU/memory fit};
+\node[flowstep, below=of filter] (score) {Score nodes\\capacity, balance,\\consolidation};
+\node[flowstep, left=of score] (bind) {Choose and bind\\record decision;\\update local state};
+\node[flowstep, left=of bind] (note)
+  {Search changes\\only score weights};
+\draw[line] (poll) -- (state);
+\draw[line] (state) -- (filter);
+\draw[line] (filter) -- (score);
 \draw[line] (score) -- (bind);
-
-\node[smallbox, below=5mm of filter, text width=0.24\linewidth] (note1) {Hard constraints are enforced before optimization.};
-\node[smallbox, below=5mm of score, text width=0.24\linewidth] (note2) {Only the scoring weights change across experiments.};
-\draw[line] (note1.north) -- ($(filter.south)+(0,-1mm)$);
-\draw[line] (note2.north) -- ($(score.south)+(0,-1mm)$);
 \end{tikzpicture}
