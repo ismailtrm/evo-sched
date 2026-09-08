@@ -4,6 +4,7 @@ set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 tmp_dir="$(mktemp -d "${TMPDIR:-/tmp}/evo-sched-v3-verify.XXXXXX")"
 trap 'rm -rf "$tmp_dir"' EXIT
+export GOCACHE="$tmp_dir/go-build"
 
 require_command() {
   if ! command -v "$1" >/dev/null 2>&1; then
