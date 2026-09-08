@@ -4,9 +4,12 @@ CLUSTER_NAME ?= evo-sched
 SCHEDULER_IMAGE ?= evok8s-scheduler:0.1.0
 KIND_NODE_IMAGE ?= kindest/node:v1.35.0
 
-.PHONY: verify test vet paper killer-figure release-package cluster-up cluster-stop scheduler-image scheduler-deploy live-smoke
+.PHONY: verify verify-v2 test vet paper killer-figure release-package cluster-up cluster-stop scheduler-image scheduler-deploy live-smoke
 
 verify:
+	./scripts/verify-official-v3.sh
+
+verify-v2:
 	./scripts/verify-official-v2.sh
 
 test:
