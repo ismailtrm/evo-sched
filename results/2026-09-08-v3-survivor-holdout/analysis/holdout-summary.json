@@ -1,0 +1,392 @@
+{
+  "schemaVersion": "v3-holdout-summary-v1",
+  "protocolVersion": "v3-survivor-holdout-official",
+  "generatedAt": "2026-09-08T00:24:08.62677627Z",
+  "generator": {
+    "command": "go run ./cmd/v3-holdout-summary --input ../results/2026-09-08-v3-survivor-holdout/mixed-burst-holdout.json --protocol ../experiments/protocol-v3-survivor-holdout.json --manifest ../results/2026-09-08-v3-survivor-holdout/manifest.json --shared-summary ../results/2026-09-07-v3-shared-validation/analysis/validation-summary.json --weights ../experiments/weights-v3-holdout-survivors.json --output ../results/2026-09-08-v3-survivor-holdout/analysis/holdout-summary.json --csv-output ../results/2026-09-08-v3-survivor-holdout/analysis/holdout-summary.csv",
+    "workingDirectory": "/home/ismail/evo-sched/scheduler",
+    "gitSha": "8ccc0e7c8b557ad736bd588ba526a51fc3e0c3b4",
+    "branch": "research/noise-aware-resampling-v3"
+  },
+  "inputs": [
+    {
+      "path": "../experiments/protocol-v3-survivor-holdout.json",
+      "sha256": "a77fbeedd5c9dd417952e84704448519c4a4f4165175e128320e323bf6913f4a"
+    },
+    {
+      "path": "../experiments/weights-v3-holdout-survivors.json",
+      "sha256": "54dc72e678022deac3295abceaa72059660ede4770e1c7a3de3803f7e7666091"
+    },
+    {
+      "path": "../results/2026-09-07-v3-shared-validation/analysis/validation-summary.json",
+      "sha256": "a7f1668b81cb6ef04481a054c6986c5987ec64db5c2828ee95cb839b02e02ada"
+    },
+    {
+      "path": "../results/2026-09-08-v3-survivor-holdout/manifest.json",
+      "sha256": "45d39ed83cfdecf63939a6a76db210fc0d4e3de7caa8fab80ea722e948d53e18"
+    },
+    {
+      "path": "../results/2026-09-08-v3-survivor-holdout/mixed-burst-holdout.csv",
+      "sha256": "72990268c19354f33d6936f4a0f338735b1e99d89102c9dbeaf36ccad6328b28"
+    },
+    {
+      "path": "../results/2026-09-08-v3-survivor-holdout/mixed-burst-holdout.json",
+      "sha256": "85d15fdcd72963b20321631e34f4c07049acf0e888a0b97c1c7745e4aac3e9c8"
+    }
+  ],
+  "acceptance": {
+    "policies": 6,
+    "repetitionsPerPolicy": 10,
+    "resultRows": 60,
+    "pods": 1440,
+    "scheduled": 1440,
+    "completed": 1440,
+    "decisionTimestamps": 1440,
+    "kubernetesScheduledTimestamps": 1440,
+    "evaluatorObservationTimestamps": 1440,
+    "unschedulable": 0
+  },
+  "policies": [
+    {
+      "name": "evok8s-v2-balanced",
+      "arm": "baseline",
+      "baseline": true,
+      "frozenSharedValidationSurvivor": false,
+      "weights": {
+        "freeCPU": 0.25,
+        "freeMem": 0.25,
+        "balance": 0.25,
+        "consolidation": 0.25
+      },
+      "repetitions": 10,
+      "p95SchedulingDecisionLatencySeconds": {
+        "mean": 1.2458568018649998,
+        "sampleStdDev": 0.1345682013108241,
+        "minimum": 1.16594710225,
+        "maximum": 1.62612770535,
+        "confidence95Lower": 1.149599197670662,
+        "confidence95Upper": 1.3421144060593375
+      },
+      "maxWorkloadOccupiedWorkerNodes": {
+        "mean": 3,
+        "sampleStdDev": 0,
+        "minimum": 3,
+        "maximum": 3,
+        "confidence95Lower": 3,
+        "confidence95Upper": 3
+      },
+      "meanWorkloadDominantRequestedLoadVariance": {
+        "mean": 0.06989851118645854,
+        "sampleStdDev": 0.001165948686021483,
+        "minimum": 0.0678072255173367,
+        "maximum": 0.07145476767563905,
+        "confidence95Lower": 0.0690644996886699,
+        "confidence95Upper": 0.07073252268424718
+      },
+      "meanWorkloadCpuToMemoryImbalance": {
+        "mean": 0.06378853292889916,
+        "sampleStdDev": 0.001804313244020667,
+        "minimum": 0.060942604079108,
+        "maximum": 0.06712705396566328,
+        "confidence95Lower": 0.06249789466225263,
+        "confidence95Upper": 0.06507917119554568
+      },
+      "unschedulableTotal": 0,
+      "onRepeatedMeanPointEstimateParetoFront": true
+    },
+    {
+      "name": "evok8s-v2-spread-heavy",
+      "arm": "baseline",
+      "baseline": true,
+      "frozenSharedValidationSurvivor": false,
+      "weights": {
+        "freeCPU": 0.35,
+        "freeMem": 0.35,
+        "balance": 0.25,
+        "consolidation": 0.05
+      },
+      "repetitions": 10,
+      "p95SchedulingDecisionLatencySeconds": {
+        "mean": 1.4258926584999996,
+        "sampleStdDev": 0.11782288220890874,
+        "minimum": 1.3602472151999994,
+        "maximum": 1.6758942426499992,
+        "confidence95Lower": 1.3416131017382569,
+        "confidence95Upper": 1.5101722152617423
+      },
+      "maxWorkloadOccupiedWorkerNodes": {
+        "mean": 4,
+        "sampleStdDev": 0,
+        "minimum": 4,
+        "maximum": 4,
+        "confidence95Lower": 4,
+        "confidence95Upper": 4
+      },
+      "meanWorkloadDominantRequestedLoadVariance": {
+        "mean": 0.00158170468812431,
+        "sampleStdDev": 0.000158069219673511,
+        "minimum": 0.001387960125439121,
+        "maximum": 0.0018986166296245295,
+        "confidence95Lower": 0.0014686366361296463,
+        "confidence95Upper": 0.001694772740118974
+      },
+      "meanWorkloadCpuToMemoryImbalance": {
+        "mean": 0.010865769895717286,
+        "sampleStdDev": 0.0014037095082396066,
+        "minimum": 0.008908683297985462,
+        "maximum": 0.013040010857644505,
+        "confidence95Lower": 0.009861686368317949,
+        "confidence95Upper": 0.011869853423116623
+      },
+      "unschedulableTotal": 0,
+      "onRepeatedMeanPointEstimateParetoFront": false,
+      "dominatedBy": [
+        "evok8s-v2-balanced",
+        "evok8s-v2-consolidation-heavy",
+        "v3-two-stage-s999-gen-05-003",
+        "v3-two-stage-s999-init-004"
+      ]
+    },
+    {
+      "name": "evok8s-v2-consolidation-heavy",
+      "arm": "baseline",
+      "baseline": true,
+      "frozenSharedValidationSurvivor": false,
+      "weights": {
+        "freeCPU": 0.1,
+        "freeMem": 0.1,
+        "balance": 0.2,
+        "consolidation": 0.6
+      },
+      "repetitions": 10,
+      "p95SchedulingDecisionLatencySeconds": {
+        "mean": 1.3738302605399997,
+        "sampleStdDev": 0.10543703072843526,
+        "minimum": 1.20834074755,
+        "maximum": 1.6188229981999989,
+        "confidence95Lower": 1.2984103926037283,
+        "confidence95Upper": 1.449250128476271
+      },
+      "maxWorkloadOccupiedWorkerNodes": {
+        "mean": 2.1,
+        "sampleStdDev": 0.31622776601683794,
+        "minimum": 2,
+        "maximum": 3,
+        "confidence95Lower": 1.8738000000000001,
+        "confidence95Upper": 2.3262
+      },
+      "meanWorkloadDominantRequestedLoadVariance": {
+        "mean": 0.17840384557325073,
+        "sampleStdDev": 0.013326981060518318,
+        "minimum": 0.15709600169773869,
+        "maximum": 0.19831893244802143,
+        "confidence95Lower": 0.1688709599767066,
+        "confidence95Upper": 0.18793673116979487
+      },
+      "meanWorkloadCpuToMemoryImbalance": {
+        "mean": 0.04680704066832893,
+        "sampleStdDev": 0.037025506887276766,
+        "minimum": 0.0028710378670874707,
+        "maximum": 0.13015223738542475,
+        "confidence95Lower": 0.020322428759025374,
+        "confidence95Upper": 0.07329165257763248
+      },
+      "unschedulableTotal": 0,
+      "onRepeatedMeanPointEstimateParetoFront": false,
+      "dominatedBy": [
+        "v3-two-stage-s999-gen-05-003"
+      ]
+    },
+    {
+      "name": "v3-one-shot-s123-gen-03-010",
+      "arm": "one-shot-control",
+      "baseline": false,
+      "frozenSharedValidationSurvivor": true,
+      "weights": {
+        "freeCPU": 0.18781491507028208,
+        "freeMem": 0.38017471475257847,
+        "balance": 0.059254137148709154,
+        "consolidation": 0.37275623302843025
+      },
+      "repetitions": 10,
+      "p95SchedulingDecisionLatencySeconds": {
+        "mean": 1.4727909246299995,
+        "sampleStdDev": 0.14286151570337693,
+        "minimum": 1.272927857,
+        "maximum": 1.6489058633999991,
+        "confidence95Lower": 1.3706010528829904,
+        "confidence95Upper": 1.5749807963770086
+      },
+      "maxWorkloadOccupiedWorkerNodes": {
+        "mean": 3,
+        "sampleStdDev": 0,
+        "minimum": 3,
+        "maximum": 3,
+        "confidence95Lower": 3,
+        "confidence95Upper": 3
+      },
+      "meanWorkloadDominantRequestedLoadVariance": {
+        "mean": 0.10281613010514781,
+        "sampleStdDev": 0.008038197237035822,
+        "minimum": 0.09039293646489213,
+        "maximum": 0.11356984991582934,
+        "confidence95Lower": 0.0970663496923782,
+        "confidence95Upper": 0.10856591051791742
+      },
+      "meanWorkloadCpuToMemoryImbalance": {
+        "mean": 0.07908682640603046,
+        "sampleStdDev": 0.021006389928748138,
+        "minimum": 0.0340716859504906,
+        "maximum": 0.09471073097060768,
+        "confidence95Lower": 0.06406080430261459,
+        "confidence95Upper": 0.09411284850944633
+      },
+      "unschedulableTotal": 0,
+      "onRepeatedMeanPointEstimateParetoFront": false,
+      "dominatedBy": [
+        "evok8s-v2-balanced",
+        "evok8s-v2-consolidation-heavy",
+        "v3-two-stage-s999-gen-05-003"
+      ]
+    },
+    {
+      "name": "v3-two-stage-s999-init-004",
+      "arm": "two-stage-resampling",
+      "baseline": false,
+      "frozenSharedValidationSurvivor": true,
+      "weights": {
+        "freeCPU": 0.2896381121721976,
+        "freeMem": 0.40210443230694476,
+        "balance": 0.006283487846330932,
+        "consolidation": 0.3019739676745267
+      },
+      "repetitions": 10,
+      "p95SchedulingDecisionLatencySeconds": {
+        "mean": 1.3996822633749995,
+        "sampleStdDev": 0.1761992789161822,
+        "minimum": 1.1554002006,
+        "maximum": 1.6502419580499992,
+        "confidence95Lower": 1.2736456493456096,
+        "confidence95Upper": 1.5257188774043893
+      },
+      "maxWorkloadOccupiedWorkerNodes": {
+        "mean": 4,
+        "sampleStdDev": 0,
+        "minimum": 4,
+        "maximum": 4,
+        "confidence95Lower": 4,
+        "confidence95Upper": 4
+      },
+      "meanWorkloadDominantRequestedLoadVariance": {
+        "mean": 0.020032712544364496,
+        "sampleStdDev": 0.007862357132316073,
+        "minimum": 0.0070333997050819165,
+        "maximum": 0.03057504950741922,
+        "confidence95Lower": 0.014408711825733105,
+        "confidence95Upper": 0.025656713262995887
+      },
+      "meanWorkloadCpuToMemoryImbalance": {
+        "mean": 0.10648974348830546,
+        "sampleStdDev": 0.05443291492805925,
+        "minimum": 0.0025103719224961437,
+        "maximum": 0.1856311055314518,
+        "confidence95Lower": 0.06755348715693893,
+        "confidence95Upper": 0.145425999819672
+      },
+      "unschedulableTotal": 0,
+      "onRepeatedMeanPointEstimateParetoFront": false,
+      "dominatedBy": [
+        "evok8s-v2-balanced",
+        "evok8s-v2-consolidation-heavy",
+        "v3-two-stage-s999-gen-05-003"
+      ]
+    },
+    {
+      "name": "v3-two-stage-s999-gen-05-003",
+      "arm": "two-stage-resampling",
+      "baseline": false,
+      "frozenSharedValidationSurvivor": true,
+      "weights": {
+        "freeCPU": 0,
+        "freeMem": 0.005896228037547725,
+        "balance": 0.3286896608635757,
+        "consolidation": 0.6654141110988766
+      },
+      "repetitions": 10,
+      "p95SchedulingDecisionLatencySeconds": {
+        "mean": 1.3737872746749995,
+        "sampleStdDev": 0.12944613925881057,
+        "minimum": 1.2300025542,
+        "maximum": 1.636641863199999,
+        "confidence95Lower": 1.2811935183797858,
+        "confidence95Upper": 1.4663810309702132
+      },
+      "maxWorkloadOccupiedWorkerNodes": {
+        "mean": 2.1,
+        "sampleStdDev": 0.31622776601683794,
+        "minimum": 2,
+        "maximum": 3,
+        "confidence95Lower": 1.8738000000000001,
+        "confidence95Upper": 2.3262
+      },
+      "meanWorkloadDominantRequestedLoadVariance": {
+        "mean": 0.17425428541940347,
+        "sampleStdDev": 0.009762042736240073,
+        "minimum": 0.15796287908618808,
+        "maximum": 0.18893919326309713,
+        "confidence95Lower": 0.16727142589776384,
+        "confidence95Upper": 0.1812371449410431
+      },
+      "meanWorkloadCpuToMemoryImbalance": {
+        "mean": 0.03870101360703008,
+        "sampleStdDev": 0.03583504178811069,
+        "minimum": 0.0018852270043499529,
+        "maximum": 0.12031609472551306,
+        "confidence95Lower": 0.013067949962520666,
+        "confidence95Upper": 0.06433407725153949
+      },
+      "unschedulableTotal": 0,
+      "onRepeatedMeanPointEstimateParetoFront": true
+    }
+  ],
+  "repeatedMeanPointEstimateParetoFront": [
+    {
+      "meanP95SchedulingDecisionLatencySeconds": 1.2458568018649998,
+      "meanMaxWorkloadOccupiedWorkerNodes": 3,
+      "members": [
+        "evok8s-v2-balanced"
+      ]
+    },
+    {
+      "meanP95SchedulingDecisionLatencySeconds": 1.3737872746749995,
+      "meanMaxWorkloadOccupiedWorkerNodes": 2.1,
+      "members": [
+        "v3-two-stage-s999-gen-05-003"
+      ]
+    }
+  ],
+  "baselinesOnRepeatedMeanFront": [
+    "evok8s-v2-balanced"
+  ],
+  "survivorOutcome": {
+    "frozenSurvivors": 3,
+    "remainedNondominated": 1,
+    "didNotRemainNondominated": 2,
+    "survivalProportion": 0.3333333333333333,
+    "nondominatedPolicies": [
+      "v3-two-stage-s999-gen-05-003"
+    ],
+    "dominatedPolicies": [
+      "v3-one-shot-s123-gen-03-010",
+      "v3-two-stage-s999-init-004"
+    ],
+    "descriptiveHoldoutSupport": true
+  },
+  "notes": [
+    "This pre-existing workload was unseen to V3 search and policy selection, but its baseline-only V2 outcomes were known before the V3 holdout protocol; this is not a fully blinded holdout.",
+    "The Pareto front uses repeated-mean point estimates and is not a statistical significance test.",
+    "Confidence intervals are marginal 95 percent Student-t intervals over ten independent holdout repetitions.",
+    "Each replay contains 24 Pods, so interpolated p95 remains sensitive to a few upper-tail observations.",
+    "A survivor on this front supports only descriptive generalization to the fixed mixed-burst workload."
+  ]
+}
