@@ -6,28 +6,33 @@ policies are deployed into a running kind cluster, evaluated through real Pod
 bindings, and compared using scheduling-decision latency and workload
 consolidation.
 
-The central result is deliberately negative: none of the five optimizer
-finalists that looked Pareto-optimal after one live evaluation remained
-nondominated when the same policies were evaluated ten times per training
-workload. An independent holdout still produced a stable hand-designed policy
-tradeoff spanning four, three, and two workload-occupied workers. The project
-therefore demonstrates both a real policy surface and the need to model
-measurement uncertainty during live-cluster optimization.
+The central result is methodological. V2 showed that none of five optimizer
+finalists selected from one-shot live measurements remained nondominated under
+ten-repeat validation. V3 then compared one-shot search with deterministic
+two-stage resampling under equal live-evaluation budgets. The observed false
+Pareto discovery count fell from two of three finalists to one of three, but
+holdout validation retained only one survivor and exposed a 43-microsecond
+near-tie with a hand-designed consolidation policy. The project therefore tests
+a practical noise mitigation while preserving the limits of the evidence.
 
 ## Research status
 
-The official V2 evidence is complete and frozen in version-controlled artifacts.
+The official V2 and V3 evidence is complete and frozen in version-controlled
+artifacts.
 
 | Stage | Protocol | Main outcome |
 | --- | --- | --- |
 | Baselines | 4 schedulers x 3 workloads x 3 repeats | Placement character separates; default kube-scheduler is an external placement reference |
-| Evolutionary search | 216 optimizer candidates, seeds 42/123/999 | Every one-shot seed appears to find novel Pareto points |
-| Repeated validation | 8 policies x 3 workloads x 10 repeats | None of 5 optimizer finalists remains nondominated |
-| Independent holdout | 3 baselines x 1 unseen workload x 10 repeats | Spread, balanced, and consolidation policies occupy 4, 3, and 2 workers |
+| V2 one-shot search | 216 optimizer candidates, seeds 42/123/999 | Apparent gains do not survive repeated validation |
+| V3 equal-budget search | 216 fresh optimizer samples per arm, seeds 42/123/999 | One-shot evaluates 216 candidates; two-stage evaluates 126 and reallocates 90 samples to promotion |
+| V3 shared validation | 6 finalists + 3 baselines x 3 workloads x 10 repeats | False Pareto discoveries are 2/3 for one-shot and 1/3 for two-stage |
+| V3 survivor holdout | 3 survivors + 3 baselines x 1 workload x 10 repeats | 1/3 survivor remains; its same-worker baseline difference is a 43-microsecond near-tie |
 
-The latency confidence intervals overlap. The paper does not claim statistical
-latency superiority, optimizer generalization, or superiority over the default
-Kubernetes scheduler.
+The latency confidence intervals overlap. The false-discovery comparison has
+only three finalists per arm, and the holdout is unseen to V3 selection but not
+fully blinded because earlier baseline outcomes were known. The paper does not
+claim statistical superiority, general optimizer effectiveness, production
+generalization, or superiority over the default Kubernetes scheduler.
 
 ## System
 
@@ -60,13 +65,14 @@ workloads, cadence, and measurement contracts remain fixed.
 | `scheduler/main.go` | Custom scheduler and V2 scoring implementation |
 | `scheduler/cmd/evaluator` | Workload replay, rollout, cleanup, and measurements |
 | `scheduler/cmd/optimizer` | NSGA-II-style candidate search |
-| `scheduler/cmd/multi-seed-runner` | Provenance-gated official multi-seed runs |
+| `scheduler/cmd/v3-official-runner` | Budget-matched, provenance-gated V3 search arms |
 | `scheduler/cmd/repeated-validation-runner` | Repeated finalist and holdout protocols |
 | `workloads/v2/` | Three training regimes and one unseen holdout workload |
 | `experiments/weights-v2.json` | Canonical V2 baseline policies |
 | `results/` | Raw JSON/CSV, summaries, checksums, and run manifests |
 | `paper/main.tex` | IEEE conference paper source |
-| `paper/evidence-audit-v2.json` | Machine-readable claim-to-evidence closure audit |
+| `experiments/protocol-v3-*.json` | Frozen search, shared-validation, and holdout contracts |
+| `paper/evidence-audit-v3.json` | Machine-readable V3 claim-to-evidence closure audit |
 | `WALKTHROUGH.md` | Full decision, failure, recovery, and experiment ledger |
 
 ## Tested environment
@@ -97,8 +103,10 @@ make verify
 ```
 
 This command writes only to a temporary directory and ignored LaTeX build files.
-It handles the documented schema evolution between the original baseline summary
-and the current summarizer while requiring all shared numerical fields to match.
+It reruns Go tests and vet, regenerates all three V3 analyses, verifies current
+input checksums plus the tagged historical search-protocol snapshot, race-checks
+the V3 analyzers, rebuilds the six-page paper, and checks the PDF and evidence
+audit. The historical V2 gate remains available as `make verify-v2`.
 
 Individual checks are also available:
 
@@ -132,12 +140,13 @@ Stop the kind containers without deleting cluster state when finished:
 make cluster-stop
 ```
 
-## Reproduce live protocols
+## Live protocol reproduction
 
-Official runners intentionally refuse dirty working trees and require an
-annotated protocol tag at `HEAD`. They also refuse cluster topology, scheduler
-cadence, canonical-weight, rollout, or namespace-cleanliness drift. Use a new run
-name and tag; never overwrite the committed official directories.
+Official runners intentionally refuse dirty working trees and require the
+annotated protocol tag at `HEAD`. They also reject cluster topology, scheduler
+cadence, canonical-weight, rollout, namespace-cleanliness, checksum, or command
+drift. Never overwrite the committed official directories or reuse an archived
+run identity for new evidence.
 
 Prepare the cluster and the 250 ms experiment cadence:
 
@@ -148,43 +157,37 @@ make scheduler-deploy
 cd scheduler
 go run ./cmd/scheduler-admin --interval 250ms
 cd ..
-git tag -a protocol-v2-reproduction-YYYYMMDD -m "V2 reproduction protocol"
 ```
 
-Run the three-seed search from `scheduler/`:
+The archived V3 identities and exact command arrays are in
+`experiments/protocol-v3-budget-matched-resampling.json` and
+`experiments/protocol-v3-survivor-holdout.json`. Search uses
+`scheduler/cmd/v3-official-runner`; shared validation and holdout use
+`scheduler/cmd/repeated-validation-runner`. New official evidence requires a new
+protocol version, run name, result directory, annotated tag, and matching
+contract tests before execution. `WALKTHROUGH.md` records the full freeze,
+preflight, tmux, interruption recovery, acceptance, and postflight sequence.
 
-```bash
-go run ./cmd/multi-seed-runner \
-  --run-name YYYY-MM-DD-v2-reproduction-optimizer \
-  --seeds 42,123,999 \
-  --workloads ../workloads/v2/cpu-tight-train.json,../workloads/v2/mem-tight-train.json,../workloads/v2/fragmenting-mix-train.json \
-  --baseline-file ../experiments/weights-v2.json \
-  --protocol-tag protocol-v2-reproduction-YYYYMMDD \
-  --population 12 \
-  --generations 5 \
-  --mutation-rate 0.8 \
-  --mutation-sigma 0.25 \
-  --min-weight 0 \
-  --max-weight 2 \
-  --poll-interval 250ms \
-  --timeout 90s
-```
-
-Repeated validation and holdout use
-`scheduler/cmd/repeated-validation-runner`. Exact commands, acceptance rules,
-run durations, interruption recovery, and postflight behavior were pre-specified,
-committed before execution, and are recorded in `WALKTHROUGH.md`. A full
-optimizer reproduction is expensive: each candidate triggers scheduler rollout
-and three real workload replays.
+A full V3 reproduction is expensive. The official search alone executes 1,350
+workload replays and 32,400 Pods; shared validation adds 270 replays and 6,480
+Pods, and survivor holdout adds 60 replays and 1,440 Pods. Use `make live-smoke`
+for wiring checks and `make verify` for committed evidence unless a new live
+protocol has deliberately been frozen.
 
 ## Evidence and paper
 
-The four official evidence directories are:
+The historical V2 evidence directories are:
 
 - `results/2026-08-28-v2-official-baselines`
 - `results/2026-08-28-v2-official-optimizer-3seed`
 - `results/2026-08-28-v2-official-finalist-validation`
 - `results/2026-08-29-v2-official-holdout-baselines`
+
+The official V3 evidence directories are:
+
+- `results/2026-09-07-v3-budget-matched-official-search`
+- `results/2026-09-07-v3-shared-validation`
+- `results/2026-09-08-v3-survivor-holdout`
 
 Build the six-page paper with `make paper`. The generated `paper/main.pdf` is
 ignored; the LaTeX source, figures, IEEE class file, raw artifacts, and closure
@@ -192,8 +195,8 @@ audit are versioned.
 
 ## Package release artifacts
 
-Create a locally verified release bundle from a clean
-`research/policy-space-v2` checkout:
+The current packaging target preserves the historical V2 evidence release. From
+a clean `research/policy-space-v2` checkout:
 
 ```bash
 make release-package RELEASE_OUTPUT=/tmp/evo-sched-v2-release
@@ -207,15 +210,17 @@ ancestors of `HEAD`, and produces:
 - `evo-sched-v2-release-manifest.json`
 - `SHA256SUMS`
 
-The evidence archive contains only the four official result directories and
+The evidence archive contains only the four V2 official result directories and
 `paper/evidence-audit-v2.json`; pilot and debug artifacts are excluded. Packaging
 does not push refs, create a GitHub release, or upload assets. Public availability
-must be verified separately against the intended remote release.
+must be verified separately against the intended remote release. A stable V3
+release bundle is still a publication gate; do not use the V2 bundle as support
+for V3 claims.
 
 ## Build the KubeCon evidence figure
 
-The standalone two-panel figure contrasts provisional one-shot Pareto points
-with the shared ten-repeat validation result:
+The standalone two-panel figure contrasts V3 shared-validation false discoveries
+with the survivor holdout result:
 
 ```bash
 make killer-figure
@@ -223,10 +228,9 @@ make killer-figure
 
 The vector PDF is written to
 `presentation/kubecon-europe-2027/killer-figure.pdf` and is intentionally
-ignored. Its LaTeX source names the official optimizer and repeated-validation
-artifacts used for every plotted coordinate. The released V2 paper remains
-immutable; this presentation asset is derived separately from the same committed
-evidence.
+ignored. It imports the same TikZ source used by the paper, preventing numerical
+or visual drift between the manuscript and presentation. The historical V2
+one-shot collapse figure remains versioned separately for the talk's motivation.
 
 The 25-minute talk plan, 5-minute question window, claim boundaries, and
 time-coded four-minute English speaking sample are stored in
@@ -242,8 +246,12 @@ time-coded four-minute English speaking sample are stored in
   utilization.
 - The default kube-scheduler does not emit the custom decision timestamp, so it
   is not used as a direct latency baseline.
-- Optimizer hyperparameters were fixed, and candidate fitness used one live
-  evaluation per training workload.
+- Optimizer hyperparameters were fixed. One-shot candidates use one live sample;
+  two-stage promotion averages four samples but explores fewer unique candidates.
+- Each replay contains 24 Pods, so interpolated p95 remains sensitive to a few
+  upper-tail observations.
+- V3 compares only three selected finalists per arm and supports descriptive,
+  not inferential, mitigation conclusions.
 
 ## License
 
