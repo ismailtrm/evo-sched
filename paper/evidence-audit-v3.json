@@ -1,10 +1,10 @@
 {
   "auditVersion": 3,
-  "auditedAt": "2026-09-08T09:17:00Z",
+  "auditedAt": "2026-09-08T09:51:17Z",
   "status": "closed",
   "auditedPaper": {
     "path": "paper/main.tex",
-    "gitCommit": "97db2cf6f97c34558ed3699b6f733c253adf574d",
+    "gitCommit": "94e97b119301c71cef7652c63d9a58c8a2630d20",
     "role": "official V3 mitigation manuscript"
   },
   "preservationDecision": "Keep evidence-audit-v1.json, evidence-audit-v2.json, and all V1/V2 artifacts immutable. V3 adds a budget-matched mitigation experiment and does not rewrite earlier evidence.",
