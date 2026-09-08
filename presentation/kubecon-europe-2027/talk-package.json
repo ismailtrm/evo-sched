@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "kubecon-talk-package-v1",
+  "schemaVersion": "kubecon-talk-package-v2",
   "status": "draft",
   "event": "KubeCon + CloudNativeCon Europe 2027",
   "proposalTitle": "Searching the Kubernetes Scheduler Policy Space: Lessons From Noisy Live Optimization",
@@ -9,20 +9,25 @@
   "durationMinutes": 30,
   "contentMinutes": 25,
   "questionMinutes": 5,
-  "coreClaim": "One-shot live-cluster fitness produced apparently novel Pareto points across three seeds, but none of the five optimizer finalists remained nondominated under shared ten-repeat validation.",
+  "coreClaim": "Under equal live-evaluation budgets, two-stage resampling produced fewer false Pareto discoveries than one-shot search among three finalists per arm, but holdout validation showed that the remaining apparent gain was a baseline near-tie rather than robust scheduler superiority.",
   "claimBoundaries": [
     "Do not claim that evolutionary search found a scheduler superior to the default Kubernetes scheduler.",
     "Call one-shot fronts provisional and repeated-mean fronts point-estimate Pareto fronts.",
     "Do not treat overlapping latency confidence intervals as statistically distinct.",
+    "Treat the 2/3 versus 1/3 false-discovery comparison as descriptive because each arm contributes only three finalists.",
+    "Describe the mixed-burst holdout as unseen to V3 selection, not fully blinded, because its earlier V2 baseline outcomes were known.",
     "Describe maximum workload-occupied workers as a consolidation proxy, not powered-node cost.",
     "Describe kind as a reproducible testbed, not production-scale evidence."
   ],
   "evidence": {
-    "optimizerSummary": "results/2026-08-28-v2-official-optimizer-3seed/summary.json",
-    "repeatedValidationSummary": "results/2026-08-28-v2-official-finalist-validation/summary.json",
-    "holdoutSummary": "results/2026-08-29-v2-official-holdout-baselines/summary.json",
-    "killerFigureSource": "presentation/kubecon-europe-2027/figures/search-validation-collapse.tex",
-    "paperAudit": "paper/evidence-audit-v2.json"
+    "v2OptimizerSummary": "results/2026-08-28-v2-official-optimizer-3seed/summary.json",
+    "v2RepeatedValidationSummary": "results/2026-08-28-v2-official-finalist-validation/summary.json",
+    "v3SearchSummary": "results/2026-09-07-v3-budget-matched-official-search/analysis/search-summary.json",
+    "v3SharedValidationSummary": "results/2026-09-07-v3-shared-validation/analysis/validation-summary.json",
+    "v3HoldoutSummary": "results/2026-09-08-v3-survivor-holdout/analysis/holdout-summary.json",
+    "v2CollapseFigureSource": "presentation/kubecon-europe-2027/figures/search-validation-collapse.tex",
+    "v3KillerFigureSource": "paper/figures/v3-mitigation-holdout.tex",
+    "paperAudit": "paper/evidence-audit-v3.json"
   },
   "slides": [
     {
@@ -59,51 +64,51 @@
     },
     {
       "number": 5,
-      "minutes": "10:00-12:00",
-      "title": "Four V2 policy signals",
-      "purpose": "Explain only the policy semantics needed to read the results.",
-      "visual": "FreeCPU, FreeMem, Balance, and Consolidation as four compact cards.",
-      "speakerPoint": "Feasibility stays fixed; the optimizer changes only four nonnegative weights normalized to sum to one."
-    },
-    {
-      "number": 6,
-      "minutes": "12:00-16:00",
+      "minutes": "10:00-13:00",
       "title": "Measure the decision, not the observer",
       "purpose": "Separate scheduler decision time, Kubernetes timestamps, and evaluator observation lag.",
       "visual": "A timing line with submission, scheduler decision, PodScheduled, and evaluator observation.",
-      "speakerPoint": "We reduced cadence, added scheduler-side decision annotations, and rejected incomplete or protocol-drifted evaluations."
+      "speakerPoint": "Feasibility stays fixed; decision timestamps come from the scheduler, and incomplete or protocol-drifted evaluations are rejected."
+    },
+    {
+      "number": 6,
+      "minutes": "13:00-16:00",
+      "title": "The first win disappeared under repetition",
+      "purpose": "Use V2 as the falsifiable motivation for noise-aware search.",
+      "visual": "The V2 one-shot-to-repeated-validation collapse figure: five selected finalists to zero survivors.",
+      "speakerPoint": "Three seeds looked convincing, but none of five finalists remained nondominated when every policy-workload pair was repeated ten times."
     },
     {
       "number": 7,
-      "minutes": "16:00-19:00",
-      "title": "Three seeds all appeared to win",
-      "purpose": "Let the audience believe the provisional result before overturning it.",
-      "visual": "Left panel of the killer figure with 216 candidates and five selected front points summarized in the footer.",
-      "speakerPoint": "Every seed produced optimizer-only one-shot front points, and no baseline survived those provisional fronts."
+      "minutes": "16:00-18:00",
+      "title": "Can resampling help without buying more cluster time?",
+      "purpose": "State the V3 mitigation question and its equal-budget constraint.",
+      "visual": "Budget diagram: 72 one-shot candidates versus 42 candidates plus 30 promotion samples per arm and seed.",
+      "speakerPoint": "Both arms receive 72 fresh samples per seed; two-stage search trades exploration breadth for repeated estimates of promoted candidates."
     },
     {
       "number": 8,
-      "minutes": "19:00-22:00",
-      "title": "Ten repeats changed the front",
-      "purpose": "Deliver the central negative result.",
-      "visual": "Full killer figure, then emphasize the right panel and overlapping confidence intervals.",
-      "speakerPoint": "None of five finalists remained nondominated; the repeated-mean front contained two hand-designed baselines."
+      "minutes": "18:00-21:00",
+      "title": "Same budget, fewer observed false discoveries",
+      "purpose": "Present the shared-validation result without turning a small denominator into inference.",
+      "visual": "Left panel of the V3 killer figure: one-shot 2/3 and two-stage 1/3 false Pareto discoveries.",
+      "speakerPoint": "Two-stage produced fewer observed failures among three finalists per arm, a directional result rather than statistical proof."
     },
     {
       "number": 9,
-      "minutes": "22:00-23:30",
-      "title": "The policy surface was still real",
-      "purpose": "Separate optimizer failure from the existence of a placement tradeoff.",
-      "visual": "Holdout baseline front at four, three, and two occupied workers.",
-      "speakerPoint": "An unseen workload preserved a descriptive consolidation tradeoff, while latency intervals still overlapped."
+      "minutes": "21:00-23:30",
+      "title": "Holdout turns the survivor into a near-tie",
+      "purpose": "Show why promotion still requires held-out evidence.",
+      "visual": "Right panel of the V3 killer figure with six policies, confidence intervals, and the 43-microsecond annotation.",
+      "speakerPoint": "Only one of three survivors remains nondominated, and it differs from consolidation by 43 microseconds at the same mean worker count with overlapping intervals."
     },
     {
       "number": 10,
       "minutes": "23:30-25:00",
       "title": "A checklist for noisy live optimization",
       "purpose": "Convert the study into reusable practitioner guidance.",
-      "visual": "Five checks: identifiable policy, timestamp provenance, hard validity gates, repeated promotion, immutable artifacts.",
-      "speakerPoint": "Repeated validation is part of the optimizer design, not a cosmetic reporting step."
+      "visual": "Seven checks: identifiable policy, timestamp provenance, equal budgets, hard validity gates, repeated promotion, held-out validation, immutable artifacts.",
+      "speakerPoint": "Replication must be budgeted into search and promotion, not added only after an attractive result appears."
     },
     {
       "number": 11,
@@ -117,7 +122,7 @@
   "speakingSample": {
     "videoTitle": "When the Optimizer Learns the Noise: A Four-Minute EvoSched Preview",
     "targetDuration": "4:00",
-    "targetWords": "420-470",
+    "targetWords": "400-430",
     "recordingPlan": [
       "Open on camera for the first 20 seconds.",
       "Switch to the killer figure and keep the pointer movements deliberate.",
@@ -129,37 +134,37 @@
       {
         "time": "0:00-0:25",
         "onScreen": "Speaker on camera",
-        "script": "What happens when an optimizer reports a better Kubernetes scheduling policy? The tempting answer is that it found a smarter scheduler. In this project, that was also our first answer. Then we repeated the experiment, and every apparent optimizer improvement disappeared."
+        "script": "What happens when an optimizer reports a better Kubernetes scheduling policy? The tempting answer is that it found a smarter scheduler. That was also my first result. Then I repeated every finalist, and all five apparent improvements disappeared. The next question was harder: can we reduce these false discoveries without buying more cluster time?"
       },
       {
         "time": "0:25-0:55",
         "onScreen": "Simple live-loop architecture",
-        "script": "I built a custom Kubernetes scheduler with four normalized policy weights. An NSGA-II-style optimizer generated candidate policies, and an evaluator patched each policy into a running scheduler deployment on a four-worker kind cluster. Every candidate caused a real rollout, three resource-pressure workload replays, and real Pod bindings. We measured p95 scheduler-decision latency and the maximum number of workers occupied by the workload."
+        "script": "I built a custom Kubernetes scheduler with four normalized policy weights. An NSGA-II-style optimizer generated candidates, and an evaluator patched each policy into a running deployment on a four-worker kind cluster. Every sample caused real rollouts, three 24-Pod workload replays, and real Pod bindings. We measured p95 scheduler-decision latency and the maximum workers occupied by the workload."
       },
       {
         "time": "0:55-1:35",
-        "onScreen": "Killer figure, left panel",
-        "script": "This left panel shows why the first result looked strong. Across seeds 42, 123, and 999, the search evaluated 216 optimizer candidates. Each candidate was measured once per workload. The three runs produced five optimizer-only provisional Pareto points, and none of the hand-designed baseline references remained on those one-shot fronts. If we had stopped here, the conclusion would have been that evolutionary search found better tradeoffs."
+        "onScreen": "V2 collapse figure",
+        "script": "The initial three-seed search evaluated 216 candidates once per workload and produced five optimizer-only provisional Pareto points. If I had stopped there, the conclusion would have been that evolutionary search found better tradeoffs. Instead, I ran each finalist and baseline ten times on every training workload. None of the five optimizer finalists remained nondominated. The optimizer had found timing luck, not a robust policy improvement."
       },
       {
         "time": "1:35-2:25",
-        "onScreen": "Killer figure, right panel",
-        "script": "We did not stop there. We selected the five finalists, added the three baselines, and evaluated every policy ten times on every training workload. The right panel shows the repeated means and 95 percent confidence intervals. None of the five optimizer finalists remained nondominated. The point-estimate front collapsed to two hand-designed baselines. The latency intervals overlap, so this is not a statistical superiority claim. It is a warning that one-shot live fitness was not robust enough for promotion."
+        "onScreen": "Equal-budget V3 design",
+        "script": "For the follow-up, I fixed the live-evaluation budget. In each seed, one-shot search spent 72 samples on 72 candidates. Two-stage search evaluated 42 candidates and spent the remaining 30 samples re-evaluating promoted policies. Across seeds 42, 123, and 999, each arm consumed 216 optimizer samples. Together they executed 1,350 workload replays and 32,400 Pods without an unschedulable result."
       },
       {
         "time": "2:25-3:05",
-        "onScreen": "Three measurement layers",
-        "script": "Several engineering details were necessary before we could trust even that negative result. We removed scale-equivalent policy representations, separated resource balance from consolidation, reduced the scheduler cadence, and recorded the scheduler decision timestamp directly. We also kept Kubernetes condition time and evaluator observation lag as separate measurements, and rejected incomplete, unschedulable, or protocol-drifted runs instead of assigning them convenient fitness values."
+        "onScreen": "V3 killer figure, left panel",
+        "script": "Shared validation then measured three finalists from each arm ten times on each workload. Two of three one-shot finalists were false Pareto discoveries, compared with one of three two-stage finalists. That direction is encouraging, but three finalists per arm are too few for a statistical claim. The result says that resampling helped in this frozen experiment, not that it is universally better."
       },
       {
         "time": "3:05-3:35",
-        "onScreen": "Holdout baseline tradeoff",
-        "script": "The optimizer failure did not mean the policy surface was fake. On an unseen mixed-burst workload, the spread, balanced, and consolidation-heavy baselines occupied four, three, and two workers. Their latency intervals still overlapped, but the placement tradeoff remained visible. The system had a real policy surface; the search procedure had an uncertainty problem."
+        "onScreen": "V3 killer figure, right panel",
+        "script": "The fixed holdout was stricter. Only one of the three validation survivors remained nondominated. At the same mean 2.1 occupied workers, its p95 latency differed from the hand-designed consolidation policy by only 43 microseconds, with strongly overlapping intervals. Exact Pareto arithmetic kept the point; practical evidence did not support a superiority claim."
       },
       {
         "time": "3:35-4:00",
-        "onScreen": "Speaker on camera with five-item checklist",
-        "script": "The practical lesson is broader than scheduling. If you tune a live control loop, make the policy identifiable, know where every timestamp comes from, reject invalid evaluations, repeat before promotion, and preserve the raw evidence. Otherwise, an optimizer can learn your measurement noise as efficiently as it learns your system. That is the story I would like to share at KubeCon Europe."
+        "onScreen": "Speaker on camera with seven-item checklist",
+        "script": "The lesson is broader than scheduling. Make the policy identifiable, know where every timestamp comes from, compare methods under equal budgets, reject invalid samples, repeat before promotion, validate on held-out workloads, and preserve raw evidence. Otherwise, an optimizer can learn measurement noise as efficiently as it learns the system. That is the experiment and practical playbook I want to share at KubeCon Europe."
       }
     ]
   },
