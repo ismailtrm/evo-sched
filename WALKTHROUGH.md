@@ -4624,6 +4624,83 @@ anonim reviewer erişimine açık değildir; CFP'de stabil public artefact olara
 kullanılamaz. Public visibility ve Sessionize submission ayrı kullanıcı gate'i
 olarak açık kalır.
 
+### 3.88. Release sonrası paper ve figür review'u görsel kabulü yeniden açtı
+
+Kullanıcının overall review isteği üzerine `5bacf19` checkout'undaki altı sayfalık
+`paper/main.pdf` Poppler ile yeniden render edildi ve bütün sayfalar incelendi.
+Figür kaynakları, paper metni, scheduler/optimizer kodu, frozen protokol ve V3
+summary JSON'ları karşılaştırıldı. `make verify` yeniden geçti: official analiz
+regeneration, provenance, test/vet/race ve PDF build kontrollerinde hata yoktu.
+İncelenen ana sayılar (`216` sample/arm, `2/3` ve `1/3` false discovery, holdout
+`1/3` survivor ve yaklaşık `43` mikrosaniyelik fark) summary'lerle uyumludur.
+
+Buna rağmen önceki "PDF final" ve "no clipping or label overlap" görsel kabulü
+fazla güçlüydü. Aşağıdaki açık bulgular teslim öncesi editorial/figure revizyonu
+gerektirir; başarılı build ve checksum bunların yokluğunu kanıtlamaz:
+
+1. **P1, Fig. 4 veri görünürlüğü:**
+   `paper/figures/v3-mitigation-holdout.tex:64` içindeki legend, holdout'ta
+   `(1.4259,4)` spread baseline marker'ını ve interval'in bir bölümünü örter.
+   `(1.3738,2.1)` civarında triangle ve Pareto halkası consolidation baseline
+   karesini kapatır; altı policy'nin ikisi ayrı seçilemez. Legend veri alanı
+   dışına alınmalı; near-tie iki policy olarak açıkça etiketlenmeli, noktalar
+   görünür fark yaratmak amacıyla yapay biçimde kaydırılmamalıdır.
+2. **P2, Fig. 4 yerleşim:** aynı kaynakta `:145` annotation'ı sağ eksen dışına
+   taşar; `:157` alt mesaj kutusu x-axis başlığına çok yakındır. Paper için uzun
+   annotation ve mesaj caption'a taşınmalı, iki panelin çizim alanı korunmalıdır.
+3. **P2, Fig. 4 mesaj ve uncertainty:** `:166` içindeki "resampling reduces
+   apparent discoveries" yanlış değişkeni adlandırır: her iki arm üç finalist
+   üretmiştir, düşen sayı false discoveries'dir. Mesaj "Observed false
+   discoveries: 2/3 vs 1/3" gibi sınırlandırılmalıdır. Yalnızca latency için
+   horizontal CI çizilmiştir; worker objective'inde iki `2.1` noktasının da
+   CI'sı `[1.8738,2.3262]` olmasına rağmen görünmez. Ya y-error bar eklenmeli ya
+   da caption açıkça yalnızca latency belirsizliğinin gösterildiğini söylemelidir.
+4. **P1, Fig. 1 okunabilirlik ve sıra:**
+   `paper/figures/scheduler-flow.tex:5` yatay beş kutu tek sütuna resize edilince
+   font yaklaşık 4 pt olur (Poppler 1.5x XML'de 6 px, body 15 px). Ayrıca fit
+   kontrolü node state'ten önce çizilmiştir; kod `scheduler/main.go:99` ile
+   snapshot'ı önce kurar ve `:155` ile fit kontrolünü bu state üzerinde yapar.
+   Diyagram dikey/iki satırlı kurulmalı ve gerçek bağımlılık sırası gösterilmelidir.
+5. **P2, Fig. 2 yöntem sınırı:**
+   `paper/figures/system-architecture.tex:9` training ve holdout'u tek girişte
+   birleştirip `:23` ile bütün objectives'i optimizer'a döndürür. Bu, metindeki
+   holdout search'e kullanılmadı sınırını görsel olarak göstermiyor. Training
+   fitness feedback ile frozen-policy validation/holdout raporlama yolları
+   ayrılmalıdır. Metrics/optimizer merkez yüksekliği de eşitlenerek hafif eğik
+   feedback oku yatay yapılabilir.
+6. **P2, rollout cümlesi:** `paper/main.tex:119` "Every candidate causes a
+   scheduler rollout" derken protocol `budgetDefinition.rolloutTelemetry`
+   aynı Pod template için update'in no-op olabileceğini açıkça kaydeder.
+   Caption deployment configuration/convergence ve fresh replay şeklinde
+   düzeltilmeli; kesin rollout sayısı ima edilmemelidir.
+7. **P2, finalist seçiminin anlatımı:** `paper/main.tex:170,241` eşit üç
+   finalist planlanmış izlenimi verir. Frozen rule en fazla beş finalist,
+   canonical deduplication ve extreme/crowding seçimi içerir; her pooled front'un
+   üç nokta üretmesi gözlenen sonuçtur. Önceden sabit kural ve gerçekleşen sayı
+   ayrı yazılmalı, counterbalanced arm order ve cyclic validation order da
+   yöntem metnine kısaca eklenmelidir.
+8. **P2, dış erişim iddiası:** `paper/main.tex:309` kaynakları GitHub'da
+   "available" diye bildirir; 3.87'de doğrulanan yayın private'dır. Public
+   submission öncesi erişim dili düzeltilmeli veya anonim erişim sağlanmalıdır.
+   Mevcut private release kullanıcı kararına uygundur.
+9. **P3, genel sayfa düzeni:** Fig. 3'ün `font=\tiny` legend'i ve birbirine
+   yakın gri kodları küçük baskıda güç okunur; basit dot plot veya daha büyük
+   legend düşünülebilir. Fig. 4 Results yerine Conclusion sonrasına düşer.
+   `paper/main.tex:312` içindeki `\IEEEtriggeratref{2}` son sayfada yalnızca ilk
+   referansı sol sütunda bırakarak belirgin boşluk oluşturur. Table V'de
+   yuvarlatılmış iki `1.374 / 2.1` satırına farklı Front statüsü verilmesi için
+   exact unrounded dominance dipnotu eklenmelidir. Aynı `43` mikrosaniye sonucu
+   abstract, results, discussion, conclusion ve figürde fazla
+   tekrarlanır; açılacak alan yöntem ayrıntılarına ayrılabilir.
+
+Bu review paper/TikZ kaynaklarını, audit JSON'unu, raw evidence'ı veya release
+asset'lerini değiştirmedi. `paper/evidence-audit-v3.json` içindeki kapalı durum
+release snapshot'ının tarihsel kabulüdür; bu kayıt görsel/editorial kabulü
+yeniden açar. Sonraki adım figür ve yöntem anlatımı revizyonu, yeni PDF'nin
+gerçek baskı boyutunda yeniden görsel kontrolü ve audit'in yeni source commit'ine
+bağlanmasıdır. Mevcut release korunmalı; düzeltilmiş PDF ayrı revision olarak
+paketlenmelidir. Yeni canlı deney bu bulguların giderilmesi için gerekli değildir.
+
 ## 4. Şu Anki Durum
 
 Şu anda proje durumu şöyledir:
@@ -4747,6 +4824,10 @@ olarak açık kalır.
   sabitlenmiş ve checksum doğrulamalı local release package kabul edilmiştir
 - V3 branch/tag ve beş asset'li release private GitHub remote'una aktarılmış;
   authenticated geri indirme ile remote checksum kabulü tamamlanmıştır
+- Release sonrası overall review (3.88) Fig. 1/4 okunabilirlik, Fig. 2 holdout
+  sınırı ve yöntem anlatımı için editorial kabulü yeniden açmıştır; mevcut PDF
+  teknik olarak doğrulanmış release snapshot'ıdır, görsel olarak koşulsuz final
+  değildir. Sıradaki paper işi bu bulguları düzeltip yeni revision üretmektir.
 - Stabil public V3 release/PDF, speaking sample, kullanıcı teyitleri ve
   Sessionize gönderimi açıktır
 - Scheduler interval testli admin komutuyla canonical `2s` değerine restore edilmiştir
@@ -4975,6 +5056,8 @@ Sonuç:
 - [x] Local annotated V3 release tag oluştur ve package acceptance'ı tamamla
 - [x] V3 branch/tag ve checksum doğrulamalı asset'leri private GitHub release'e
   aktar
+- [ ] Release sonrası 3.88 review bulgularını gider; paper/figure görsel kabulünü
+  yeni source commit'iyle yeniden kapat
 - [ ] Stabil public paper PDF, speaking sample ve kullanıcı teyitlerini tamamla
 - [ ] Sessionize formunu son resmi gereksinim kontrolünden sonra gönder
 
