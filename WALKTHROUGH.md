@@ -4435,6 +4435,79 @@ Son tam `make verify` yedi aşamanın tamamını geçti. Böylece paper'daki V3 
 seti, makine-okunabilir audit, versioned raw artefact'lar ve yeniden üretim kapısı
 aynı Git geçmişinde kapanmış oldu.
 
+### 3.84. CFP, talk package ve README aynı V3 claim setine taşındı
+
+Paper kapanışından sonra dış anlatı yüzeyleri audit edildi. CFP JSON, KubeCon talk
+package ve public-facing README hâlâ V2'nin "beş one-shot finalistten hiçbiri
+tekrarda kalmadı" sonucunu ana son durum olarak gösteriyordu. Bu tarihsel bulgu
+korundu, fakat ana anlatı official V3 budget-matched mitigation ve survivor
+holdout sonucuna yükseltildi.
+
+KubeCon Europe 2027 bilgileri 8 Eylül 2026 tarihinde resmi CFP, reviewer guidance
+ve Sessionize sayfalarından tekrar doğrulandı:
+
+- kapanış: 11 Ekim 2026, 23:59 CEST
+- ana track: `Emerging + Advanced`; research ve academic paper açıkça kabul
+  ediliyor
+- format: 30 dakikalık `Session Presentation`
+- reviewer eksenleri: content, originality, relevance ve speaker
+
+CFP taslağında şu anlatı zinciri sabitlendi:
+
+1. V2 one-shot search ikna edici görünen fakat tekrar validation'da kaybolan beş
+   finalist üretti.
+2. V3, aynı `72` fresh sample/seed bütçesini one-shot exploration ile two-stage
+   resampling arasında karşılaştırdı.
+3. Shared validation false Pareto discovery sayısını one-shot için `2/3`,
+   two-stage için `1/3` ölçtü; küçük payda nedeniyle sonuç descriptive tutuldu.
+4. Holdout üç validation survivor'ından yalnızca birini front'ta bıraktı ve onun
+   consolidation baseline farkı aynı worker seviyesinde `43` mikrosaniyelik,
+   örtüşen CI'lı bir near-tie oldu.
+5. Talk'ın katkısı "daha iyi scheduler" değil, noisy live control-loop tuning
+   için identifiable policy, timestamp provenance, equal budget, repeated
+   promotion, holdout ve immutable evidence playbook'udur.
+
+Bu revizyon `e0947ba docs: update KubeCon proposal with V3 evidence` commit'inde
+tutuldu. Branch ve kaynaklar private kaldığı için proposal resource link'leri
+`submissionReady=false` durumundadır; Sessionize gönderimi yapılmadı.
+
+Standalone KubeCon `killer-figure` önce paper'dan ayrı V2 TikZ verisini
+derliyordu. Numerical ve visual drift'i engellemek için wrapper, paper'ın ortak
+`paper/figures/v3-mitigation-holdout.tex` kaynağını import edecek şekilde
+değiştirildi. İlk standalone render başlıkların ortada çakıştığını ve sol panel
+notunun eksen dışına taştığını görünür kıldı. Ortak kaynakta başlıklar iki satıra
+bölündü ve budget annotation kısaltıldı. Hem standalone PDF hem paper'ın altıncı
+sayfası yeniden render edilip görsel olarak incelendi; çakışma ve clipping
+kalmadı. Bu düzeltme:
+
+- `94e97b1 docs: align V3 paper and KubeCon evidence figure`
+- `a0143fe docs: refresh V3 paper audit provenance`
+
+commitlerinde tutuldu. İkinci commit audit'in `auditedPaper.gitCommit` alanını
+görsel kaynağın son SHA'sına taşıdı. Ardından tam `make verify` tekrar geçti.
+
+Talk package 11 slide, 25 dakika içerik, 5 dakika soru ve 411 kelimelik yaklaşık
+4 dakikalık speaking sample olarak yeniden kuruldu. V2 collapse figürü failure
+motivation olarak korunurken V3 figürü mitigation/holdout sonucu için ana görsel
+oldu. Sekiz evidence path'i gerçek repository artefact'larına karşı doğrulandı.
+Bu değişiklik `d4ef59f docs: update KubeCon talk package for V3` commit'indedir.
+
+README de aynı sınırlarla güncellendi:
+
+- V2 ve V3 official status ayrı gösteriliyor
+- `make verify` V3 ana kapı, `make verify-v2` historical kapı olarak tanımlanıyor
+- üç official V3 result dizini ve exact bütçeler listeleniyor
+- frozen official runner'ın genel amaçlı bir yeniden-koşu CLI'si olmadığı,
+  yeni evidence için yeni protocol/run/tag/contract gerektiği açıklanıyor
+- mevcut release packaging'in yalnızca V2'yi kapsadığı ve V3 claim'i için
+  kullanılamayacağı açıkça yazılıyor
+
+README revizyonu `c751d9f docs: update repository guide for V3 evidence`
+commit'indedir. Bu aşamanın sonunda repo, paper, CFP, talk package ve README aynı
+muhafazakar V3 claim setini kullanmaktadır. Açık kalan işler stable public V3
+release, erişilebilir paper PDF, speaking sample kaydı, kullanıcı teyitleri ve
+Sessionize gönderimidir.
+
 ## 4. Şu Anki Durum
 
 Şu anda proje durumu şöyledir:
@@ -4550,9 +4623,12 @@ aynı Git geçmişinde kapanmış oldu.
 - kind cluster official shared-validation postflight'i ve raw acceptance sonrası
   canonical state korunarak durdurulmuştur
 - Functional live smoke ve kind resource lifecycle komutları Makefile entrypoint'leri olarak eklenmiştir
-- Gate 6 CFP taslağı hâlâ official V2 claim setine bağlıdır; V3 paper ile aynı
-  claim setine yükseltilmesi, stabil public PDF, speaking sample, kullanıcı
-  teyitleri ve Sessionize gönderimi açıktır
+- Gate 6 CFP taslağı, README ve KubeCon talk package official V3 paper ile aynı
+  muhafazakar claim setine yükseltilmiştir
+- KubeCon ana görseli paper ile ortak TikZ kaynağı kullanır; standalone ve paper
+  render'larında başlık/annotation hizası görsel olarak doğrulanmıştır
+- Stabil public V3 release/PDF, speaking sample, kullanıcı teyitleri ve
+  Sessionize gönderimi açıktır
 - Scheduler interval testli admin komutuyla canonical `2s` değerine restore edilmiştir
 - `evo-sched` kind container'ları Gate 5 search postflight sonrasında silinmeden durdurulmuştur
 - Scheduler experiment preflight skill'i V2 contract, canonical weights ve exact worker-count kontrolüyle güncellenmiştir
@@ -4578,9 +4654,11 @@ aynı Git geçmişinde kapanmış oldu.
 - Üç V2 train workload üzerinde üç custom policy ve default kube-scheduler için üç tekrarlı official baseline protokolü tamamlanmıştır
 - Official baseline artifactleri, manifestleri ve mean/sample-SD/worst-case özetleri commitlenmiştir
 - Clean/tag/preflight hard gate'li ve interruption recovery destekli repo-içi official multi-seed runner tamamlanmıştır
-- V3 search/shared-validation/holdout sonucu paper ve evidence audit'e işlenmiş;
-  sıradaki aktif anlatı işi CFP ve public repo yüzeyini aynı muhafazakar claim
-  setine taşımaktır
+- V3 search/shared-validation/holdout sonucu paper, evidence audit, CFP, talk
+  package ve README'ye aynı bounded claim setiyle işlenmiştir
+- Sıradaki aktif artefact işi reproducible V3 release package hazırlamak ve
+  private görünürlük sınırında doğrulamaktır; public erişim ayrıca kullanıcı
+  kararı gerektirir
 - Ayrı CFP hattında stabil public paper PDF ve speaking sample hazırlayıp CFP
   taslağını kullanıcı onayıyla Sessionize'a aktarma işi açıktır
 
@@ -4770,7 +4848,7 @@ Sonuç:
   ayrı evidence audit'e işle
 - [x] Tek-komut official verification kapısını V3'e yükselt ve V2 kapısını ayrı
   entrypoint olarak koru
-- [ ] CFP taslağı, README/reproduction yüzeyi ve sunum figürlerini V3 claim setiyle
+- [x] CFP taslağı, README/reproduction yüzeyi ve sunum figürlerini V3 claim setiyle
   eşleştir
 - [ ] Stabil public paper PDF, speaking sample ve kullanıcı teyitlerini tamamla
 - [ ] Sessionize formunu son resmi gereksinim kontrolünden sonra gönder
