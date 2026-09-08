@@ -1,0 +1,159 @@
+{
+  "auditVersion": 3,
+  "auditedAt": "2026-09-08T09:17:00Z",
+  "status": "closed",
+  "auditedPaper": {
+    "path": "paper/main.tex",
+    "gitCommit": "97db2cf6f97c34558ed3699b6f733c253adf574d",
+    "role": "official V3 mitigation manuscript"
+  },
+  "preservationDecision": "Keep evidence-audit-v1.json, evidence-audit-v2.json, and all V1/V2 artifacts immutable. V3 adds a budget-matched mitigation experiment and does not rewrite earlier evidence.",
+  "officialEvidenceSources": [
+    {
+      "name": "official-v2-baselines-and-default-reference",
+      "path": "results/2026-08-28-v2-official-baselines/analysis-manifest.json",
+      "runClass": "official",
+      "role": "canonical custom baselines and default kube-scheduler placement reference"
+    },
+    {
+      "name": "official-v3-budget-matched-search",
+      "manifest": "results/2026-09-07-v3-budget-matched-official-search/manifest.json",
+      "summary": "results/2026-09-07-v3-budget-matched-official-search/analysis/search-summary.json",
+      "rawArtifactCommit": "0943ec5fde68de4f1ce202ad1ca1304a5f46d2f7",
+      "analysisArtifactCommit": "df1cdb65df24586a192b6c948665af835981591a",
+      "protocolTag": "protocol-v3-official-search-2026-09-07",
+      "protocolTagCommit": "5cae8720dea6689f1adafa85604159d340e96137",
+      "runClass": "official"
+    },
+    {
+      "name": "official-v3-shared-validation",
+      "manifest": "results/2026-09-07-v3-shared-validation/manifest.json",
+      "summary": "results/2026-09-07-v3-shared-validation/analysis/validation-summary.json",
+      "rawArtifactCommit": "8f352ab3810b7444616ce1a6ed88130b141eb792",
+      "analysisArtifactCommit": "b1a65cab0e5c4c7afff11724a72ea24f66bd0c75",
+      "protocolTag": "protocol-v3-shared-validation-2026-09-07",
+      "protocolTagCommit": "2cac198ce9d657b6dcebdfea6da2852d8f5cf3cb",
+      "runClass": "official"
+    },
+    {
+      "name": "official-v3-survivor-holdout",
+      "manifest": "results/2026-09-08-v3-survivor-holdout/manifest.json",
+      "summary": "results/2026-09-08-v3-survivor-holdout/analysis/holdout-summary.json",
+      "rawArtifactCommit": "3cc2a7d171091c1694b4eb90fc7a9090d2e716ae",
+      "analysisArtifactCommit": "071e308790d091c141a95a12fd1ebb790ff94aba",
+      "protocolTag": "protocol-v3-survivor-holdout-2026-09-08",
+      "protocolTagCommit": "3a8b12fe6b7940be48503b9f8dce5c1982397bf6",
+      "runClass": "official"
+    }
+  ],
+  "verifiedClaims": [
+    {
+      "id": "V3-C-001",
+      "claim": "Each arm and seed received exactly 72 fresh optimizer samples; one-shot evaluated 72 candidates while two-stage evaluated 42 candidates and used 30 additional promotion samples.",
+      "strength": "frozen protocol and official observed budget",
+      "paperLines": [161, 170, 185, 238, 239],
+      "evidence": "experiments/protocol-v3-budget-matched-resampling.json and official V3 search summary"
+    },
+    {
+      "id": "V3-C-002",
+      "claim": "Across three seeds, each arm consumed 216 optimizer samples; one-shot evaluated 216 candidates and two-stage evaluated 126 candidates. Together the arms executed 1,350 workload replays and 32,400 Pods with zero unschedulable results.",
+      "strength": "official three-seed search observation",
+      "paperLines": [54, 161, 185, 238, 239],
+      "evidence": "results/2026-09-07-v3-budget-matched-official-search/analysis/search-summary.json"
+    },
+    {
+      "id": "V3-C-003",
+      "claim": "Under shared ten-repeat validation, two of three one-shot finalists and one of three two-stage finalists were false Pareto discoveries under the repeated-mean point-estimate rule.",
+      "strength": "official repeated shared validation; descriptive small-denominator comparison",
+      "paperLines": [54, 68, 73, 243, 244, 248, 257, 258, 292, 307],
+      "evidence": "results/2026-09-07-v3-shared-validation/analysis/validation-summary.json"
+    },
+    {
+      "id": "V3-C-004",
+      "claim": "Shared validation completed 270 workload executions and 6,480 Pods with complete decision, Kubernetes, and evaluator timestamps and zero unschedulable results.",
+      "strength": "official repeated shared validation acceptance",
+      "paperLines": [170, 186, 243, 244],
+      "evidence": "results/2026-09-07-v3-shared-validation/analysis/validation-summary.json"
+    },
+    {
+      "id": "V3-C-005",
+      "claim": "On the fixed mixed-burst holdout, one of three shared-validation survivors remained nondominated under the repeated-mean exact point-estimate rule.",
+      "strength": "official repeated holdout; descriptive support for one fixed workload",
+      "paperLines": [54, 70, 170, 187, 263, 266, 270, 271, 292, 294, 302, 307],
+      "evidence": "results/2026-09-08-v3-survivor-holdout/analysis/holdout-summary.json"
+    },
+    {
+      "id": "V3-C-006",
+      "claim": "The surviving two-stage policy and consolidation-heavy baseline both averaged 2.1 occupied workers; their mean p95 values differed by 42.985865 microseconds and their marginal 95 percent Student-t intervals overlapped strongly.",
+      "strength": "official repeated holdout exact point estimates; no practical or statistical superiority claim",
+      "paperLines": [54, 70, 265, 273, 275, 284, 285, 286, 294, 307],
+      "evidence": "results/2026-09-08-v3-survivor-holdout/analysis/holdout-summary.json"
+    },
+    {
+      "id": "V3-C-007",
+      "claim": "The holdout workload was unseen to V3 search and policy selection, but earlier V2 baseline-only results were known before the V3 holdout protocol was frozen.",
+      "strength": "protocol provenance boundary",
+      "paperLines": [170, 302],
+      "evidence": "experiments/protocol-v3-survivor-holdout.json and V3 holdout summary notes"
+    },
+    {
+      "id": "V3-C-008",
+      "claim": "The default kube-scheduler is retained only as a common placement reference because it does not emit the custom scheduler's decision timestamp.",
+      "strength": "official V2 external-reference observation and measurement-source boundary",
+      "paperLines": [166, 211, 212, 226, 234, 300, 302],
+      "evidence": "results/2026-08-28-v2-official-baselines/analysis-manifest.json"
+    }
+  ],
+  "claimBoundaries": {
+    "supported": [
+      "Two-stage resampling produced fewer false Pareto discoveries than one-shot control among three selected finalists per arm under the frozen shared-validation protocol.",
+      "One V3 two-stage survivor remained nondominated on the fixed holdout under exact repeated-mean point-estimate dominance.",
+      "The live evaluator completed all official V3 budgets without unschedulable Pods or missing timestamp coverage."
+    ],
+    "excluded": [
+      "Two-stage resampling is statistically or generally superior to one-shot search.",
+      "The holdout survivor is practically or statistically superior to the consolidation-heavy baseline.",
+      "The mixed-burst holdout is fully blinded.",
+      "The V3 policies generalize to other workloads or production clusters.",
+      "The custom scheduler is faster or better than the default kube-scheduler."
+    ]
+  },
+  "figureAudit": {
+    "path": "paper/figures/v3-mitigation-holdout.tex",
+    "sources": [
+      "results/2026-09-07-v3-shared-validation/analysis/validation-summary.json",
+      "results/2026-09-08-v3-survivor-holdout/analysis/holdout-summary.json"
+    ],
+    "checks": [
+      "Left-panel counts are 2/3 for one-shot and 1/3 for two-stage.",
+      "Right-panel point estimates and marginal intervals match the committed holdout summary.",
+      "Marker shapes distinguish baselines, dropped survivors, and the remaining survivor in grayscale.",
+      "The caption states that confidence intervals do not define Pareto dominance."
+    ]
+  },
+  "closureChecks": {
+    "latexBuild": "latexmk -pdf -interaction=nonstopmode -halt-on-error main.tex",
+    "pdfPages": 6,
+    "paperSize": "US Letter",
+    "undefinedCitationsOrReferences": 0,
+    "overfullBoxes": 0,
+    "pdfStructure": "qpdf --check passed",
+    "fonts": "all embedded Type 1",
+    "visualInspection": "all six pages rendered; the V3 two-panel figure was reviewed at 150 dpi with no clipping or label overlap",
+    "numericAudit": "paper values and figure coordinates cross-checked against committed V3 search, shared-validation, and holdout summaries"
+  },
+  "residualLimitations": [
+    "Each arm has only three seeds and three selected finalists, so the false-discovery comparison is descriptive.",
+    "Each 24-Pod replay's interpolated p95 depends on the 22nd and 23rd ordered observations.",
+    "Marginal confidence intervals are not a multivariate Pareto significance procedure.",
+    "The holdout is unseen to V3 selection but not fully blinded because prior V2 baseline-only outcomes were known.",
+    "kind workers are homogeneous containers on one physical host.",
+    "Maximum workload-occupied workers is a consolidation proxy, not powered-node cost.",
+    "The default kube-scheduler is a placement reference, not a latency baseline."
+  ],
+  "decision": {
+    "submissionEvidenceReady": true,
+    "paperSubmissionBlocked": false,
+    "nextAction": "Add V3 regeneration and paper-audit checks to the repository verification entrypoint, then update the KubeCon proposal from the same bounded claim set."
+  }
+}
