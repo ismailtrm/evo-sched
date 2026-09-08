@@ -4361,6 +4361,80 @@ Analysis ve full repository doğrulaması `go test ./...`, focused race testi,
 `go vet ./...` ve `make verify` ile geçti. Son canlı kontrolün ardından beş kind
 container'ı silinmeden durduruldu.
 
+### 3.83. V3 paper, evidence audit ve tek-komut doğrulama kapısı tamamlandı
+
+Official V3 search, shared validation ve survivor holdout sonuçları immutable raw
+artefact'lar korunarak paper'a taşındı. Amaç V2'deki "one-shot kazanım tekrarda
+kayboldu" sonucunu silmek değil, onun üzerine kurulan budget-matched mitigation
+deneyini aynı kanıt zincirinde anlatmaktı. Paper bu nedenle V3'ün desteklediğinden
+daha güçlü bir claim kurmadan şu üç sonucu birlikte raporlamaktadır:
+
+- one-shot ve two-stage arm seed başına eşit `72`, arm başına toplam `216` fresh
+  live-cluster sample kullandı
+- shared repeated validation'da false Pareto discovery proportion one-shot için
+  `2/3`, two-stage için `1/3` oldu; küçük payda nedeniyle bu yalnızca tanımlayıcı
+  mitigation desteğidir
+- holdout'ta üç validation survivor'ından yalnızca biri point-estimate front'ta
+  kaldı; aynı `2.1` occupied-worker seviyesindeki consolidation baseline'a karşı
+  p95 farkı yaklaşık `43` mikrosaniye ve confidence interval'lar örtüşmektedir
+
+Paper revizyonu üç atomik committe yapıldı:
+
+- `d7e09c2 docs: update paper with V3 mitigation results`
+- `97db2cf docs: add V3 mitigation and holdout figure`
+- `d4274ee docs: close V3 paper evidence audit`
+
+Yeni iki panelli vector figürün sol paneli aynı live-evaluation bütçesi altında
+iki arm'ın false-discovery sayısını, sağ paneli ise altı holdout policy'sinin mean
+p95 confidence interval'larını ve iki exact point-estimate Pareto noktasını
+göstermektedir. Figür grayscale ayrışma, legend yerleşimi, clipping ve altıncı
+sayfadaki iki-kolon görünümü açısından görsel olarak denetlenmiştir. Final paper
+altı sayfa, US Letter, embedded Type 1 font ve temiz reference/layout kontrolüyle
+derlenmiştir.
+
+V2 audit'i tarihsel kayıt olarak değiştirilmedi. Bunun yerine
+`paper/evidence-audit-v3.json`, V3 claim'lerini official raw/analysis commit'leri,
+protocol tag'leri, checksum'lar ve residual limitations ile ayrı bir kapalı audit
+olarak bağladı. Audit özellikle şunları dışarıda bırakmaktadır:
+
+- statistical veya practical superiority iddiası
+- küçük finalist paydasından genel mitigation etkinliği çıkarımı
+- holdout'u tamamen blind veya production-genellenebilir gösterme
+- 24 Pod'luk replay p95'ini düşük varyanslı kabul etme
+
+Repository doğrulaması da V3'e yükseltildi:
+
+- `make verify` artık official V3 search, shared validation, holdout, paper ve
+  evidence audit zincirini doğruluyor
+- `make verify-v2` önceki official V2 doğrulamasını erişilebilir tutuyor
+- `scripts/verify-official-v3.sh` Go test/vet, üç summary regeneration,
+  JSON/CSV/weight karşılaştırması, protocol/audit provenance, focused race testleri
+  ve PDF denetimini tek kapıda çalıştırıyor
+
+Bu geçişte üç doğrulama pürüzü yaşandı ve kayıt altına alındı:
+
+1. İlk paper derlemesinde `43` mikrosaniye annotation'ındaki hatalı TeX math
+   sınırı derlemeyi bozdu; label `$43~\mu\mathrm{s}$` olarak düzeltildi.
+2. İlk V3 verify denemesinde sandbox içindeki varsayılan Go cache yazılamadı;
+   verifier repo dışındaki geçici `GOCACHE` ile izole edildi.
+3. Search summary'deki protocol checksum ile çalışma ağacındaki güncel protocol
+   checksum'u farklı çıktı. Bu numerical drift değildi: search summary, official
+   search tag'indeki frozen protokolü; güncel dosya ise daha sonra eklenen shared
+   validation sözleşmesini temsil ediyordu. Verifier bu nedenle analysis gövdesini
+   runtime provenance alanlarından bağımsız karşılaştırıyor, güncel input'ları
+   ayrıca doğruluyor ve tarihsel search protocol checksum'unu annotated tag
+   snapshot'ından kontrol ediyor. Hiçbir sonuç sayısı elle değiştirilmedi.
+
+Verifier düzeltmeleri şu atomik commitlerde tutuldu:
+
+- `901132d test: add official V3 verification gate`
+- `96fe96a fix: isolate V3 verification Go cache`
+- `581115d fix: verify V3 protocol snapshots by tag`
+
+Son tam `make verify` yedi aşamanın tamamını geçti. Böylece paper'daki V3 claim
+seti, makine-okunabilir audit, versioned raw artefact'lar ve yeniden üretim kapısı
+aynı Git geçmişinde kapanmış oldu.
+
 ## 4. Şu Anki Durum
 
 Şu anda proje durumu şöyledir:
@@ -4426,11 +4500,13 @@ container'ı silinmeden durduruldu.
 - Holdout repeated-mean front'u spread-heavy, balanced ve consolidation-heavy için sırasıyla 4, 3 ve 2 occupied-worker kullanan üç unique noktadan oluşmuştur
 - Holdout interior knee point'i `evok8s-v2-balanced` olarak seçilmiştir
 - Holdout latency confidence interval'ları çakıştığı için latency sıralaması descriptive point estimate olarak tutulmaktadır
-- Gate 5 tamamlanmış, Gate 6 paper-evidence alt-fazı tamamlanmıştır
+- Gate 5 tamamlanmış, Gate 6'nın V2 ve V3 paper-evidence alt-fazları tamamlanmıştır
 - Final V2 paper source'u `549e272` commit'inde sabitlenmiş; altı sayfalık IEEE conference PDF'ye derlenip görsel/sayısal denetimden geçmiştir
 - V2 paper evidence audit `9b678f0` commit'inde `10/10` bulgu resolved ve submission evidence ready olarak kapatılmıştır
 - Public İngilizce README, Apache-2.0 lisansı ve pinned tested-version bilgisi eklenmiştir
-- `make verify` Go test/vet, official summary regeneration, evidence audit ve paper PDF kontrollerini tek komutta geçmiştir
+- `make verify` official V3 Go test/vet, search/shared-validation/holdout summary
+  regeneration, protocol/audit provenance, race ve paper PDF kontrollerini tek
+  komutta geçmiştir; historical V2 kapısı `make verify-v2` olarak korunmuştur
 - V2 branch, dört protocol tag ve checksum doğrulamalı official evidence release'i private GitHub reposunda yayımlanmıştır
 - Repository private olduğu için release PDF henüz CFP'de anonim erişilebilir stabil public kaynak değildir
 - One-shot provisional front ile ten-repeat validation çöküşünü yan yana gösteren standalone KubeCon vector figure hazırdır
@@ -4467,11 +4543,16 @@ container'ı silinmeden durduruldu.
 - Holdout survivor ile consolidation baseline arasındaki aynı `2.1` occupied
   worker seviyesindeki p95 farkı yalnızca yaklaşık `43` mikrosaniye ve CI'lar
   örtüşmektedir; statistical veya practical superiority iddiası yoktur
+- V3 paper altı sayfalık IEEE conference PDF olarak güncellenmiş; budget-matched
+  mitigation ve holdout near-tie sonucu iki panelli vector figürle gösterilmiştir
+- `paper/evidence-audit-v3.json` official V3 commit/tag/checksum zincirini ve
+  muhafazakar claim sınırlarını kapalı audit olarak doğrulamaktadır
 - kind cluster official shared-validation postflight'i ve raw acceptance sonrası
   canonical state korunarak durdurulmuştur
 - Functional live smoke ve kind resource lifecycle komutları Makefile entrypoint'leri olarak eklenmiştir
-- Gate 6 CFP taslağı official V2 claim setine bağlı ve commitlidir; public paper
-  PDF, speaking sample, kullanıcı teyitleri ve Sessionize gönderimi açıktır
+- Gate 6 CFP taslağı hâlâ official V2 claim setine bağlıdır; V3 paper ile aynı
+  claim setine yükseltilmesi, stabil public PDF, speaking sample, kullanıcı
+  teyitleri ve Sessionize gönderimi açıktır
 - Scheduler interval testli admin komutuyla canonical `2s` değerine restore edilmiştir
 - `evo-sched` kind container'ları Gate 5 search postflight sonrasında silinmeden durdurulmuştur
 - Scheduler experiment preflight skill'i V2 contract, canonical weights ve exact worker-count kontrolüyle güncellenmiştir
@@ -4497,9 +4578,9 @@ container'ı silinmeden durduruldu.
 - Üç V2 train workload üzerinde üç custom policy ve default kube-scheduler için üç tekrarlı official baseline protokolü tamamlanmıştır
 - Official baseline artifactleri, manifestleri ve mean/sample-SD/worst-case özetleri commitlenmiştir
 - Clean/tag/preflight hard gate'li ve interruption recovery destekli repo-içi official multi-seed runner tamamlanmıştır
-- Sıradaki aktif araştırma kararı, V3 search/shared-validation/holdout sonucunu
-  paper ve KubeCon anlatısına evidence-audit ile işlemek; near-tie survivor'ı
-  olduğundan güçlü göstermemektir
+- V3 search/shared-validation/holdout sonucu paper ve evidence audit'e işlenmiş;
+  sıradaki aktif anlatı işi CFP ve public repo yüzeyini aynı muhafazakar claim
+  setine taşımaktır
 - Ayrı CFP hattında stabil public paper PDF ve speaking sample hazırlayıp CFP
   taslağını kullanıcı onayıyla Sessionize'a aktarma işi açıktır
 
@@ -4517,6 +4598,10 @@ Başka bir ifadeyle:
 - Adım 8 için gerekli evolutionary loop iskeleti kurulmuş durumda
 - Adım 8 için ilk tam seed sonucu alınmış ve Pareto özeti çıkarılmış durumda
 - Adım 8'in V2 multi-seed search, repeated train validation ve holdout baseline genelleme fazları tamamlandı; optimizer-only kazanım doğrulanmadı, workload-duyarlı baseline tradeoff'u doğrulandı
+- Adım 8'in V3 budget-matched noise-aware mitigation, shared validation ve
+  survivor holdout fazları tamamlandı; two-stage arm küçük payda altında daha az
+  false discovery üretti, fakat tek holdout survivor'ının baseline farkı near-tie
+  düzeyinde kaldı
 
 ## 5. Sıradaki Muhtemel Adımlar
 
@@ -4681,6 +4766,12 @@ Sonuç:
 - [x] V2 branch, protocol tag'leri, paper ve official evidence asset'lerini private release olarak yayımla ve remote checksum doğrulaması yap
 - [x] One-shot apparent gains ile repeated-validation sonucunu aynı evidence figure'da karşılaştır
 - [x] 30 dakikalık KubeCon talk outline'ı ve 3--5 dakikalık speaking sample script'i hazırla
+- [x] V3 budget-matched mitigation ve holdout sonucunu paper, vector figure ve
+  ayrı evidence audit'e işle
+- [x] Tek-komut official verification kapısını V3'e yükselt ve V2 kapısını ayrı
+  entrypoint olarak koru
+- [ ] CFP taslağı, README/reproduction yüzeyi ve sunum figürlerini V3 claim setiyle
+  eşleştir
 - [ ] Stabil public paper PDF, speaking sample ve kullanıcı teyitlerini tamamla
 - [ ] Sessionize formunu son resmi gereksinim kontrolünden sonra gönder
 
@@ -4717,6 +4808,7 @@ Sonuç:
 - [x] Official survivor holdout'u tmux içinde koştur ve raw acceptance'ı kapat
 - [x] Repeated-mean point-estimate front, uncertainty ve survivor genelleme
   sonucunu analiz et
+- [x] V3 sonucunu paper, evidence audit ve repository verification gate'ine taşı
 
 Çıkış koşulu:
 
