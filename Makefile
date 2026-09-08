@@ -4,7 +4,7 @@ CLUSTER_NAME ?= evo-sched
 SCHEDULER_IMAGE ?= evok8s-scheduler:0.1.0
 KIND_NODE_IMAGE ?= kindest/node:v1.35.0
 
-.PHONY: verify verify-v2 test vet paper killer-figure release-package cluster-up cluster-stop scheduler-image scheduler-deploy live-smoke
+.PHONY: verify verify-v2 test vet paper killer-figure release-package release-package-v3 cluster-up cluster-stop scheduler-image scheduler-deploy live-smoke
 
 verify:
 	./scripts/verify-official-v3.sh
@@ -26,6 +26,9 @@ killer-figure:
 
 release-package:
 	./scripts/package-v2-release.sh $(RELEASE_OUTPUT)
+
+release-package-v3:
+	./scripts/package-v3-release.sh $(RELEASE_OUTPUT)
 
 cluster-up:
 	@if docker inspect $(CLUSTER_NAME)-control-plane >/dev/null 2>&1; then \
