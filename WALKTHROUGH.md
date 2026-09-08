@@ -4701,6 +4701,57 @@ gerçek baskı boyutunda yeniden görsel kontrolü ve audit'in yeni source commi
 bağlanmasıdır. Mevcut release korunmalı; düzeltilmiş PDF ayrı revision olarak
 paketlenmelidir. Yeni canlı deney bu bulguların giderilmesi için gerekli değildir.
 
+### 3.89. Paper/figure review bulgularını sıralı editorial revision ile kapattık
+
+Kullanıcının onayıyla 3.88 bulguları yeni deney veya raw evidence değişikliği
+yapılmadan giderildi. Amaç yalnızca daha güzel çizim değil, figürlerin gerçek
+protokolü ve ölçümlerin sınırlarını doğru göstermesiydi.
+
+- `f3a70d7`: Fig. 4 legend'i eksen dışına alındı; baseline açık kare ve küçük
+  survivor üçgeni yakın iki policy'yi koordinatlarını oynatmadan gösteriyor.
+  Worker CI'ları eklendi; taşan annotation ve alttaki slogan kaldırıldı.
+  Sol panel artık apparent discovery değil observed false discovery sayıyor.
+- `bdff30d`: Fig. 1 kaynak snapshot'ını resource-fit kontrolünün önüne aldı;
+  aşırı küçültme kaldırıldı. Fig. 2 search ve post-search evaluation'ı ayrı
+  akışlara böldü; holdout'tan optimizer'a feedback olmadığı görünür hale geldi.
+  Her configuration update'in yeni Pod gerektirdiği yönündeki caption düzeltildi.
+- `7109c44`: Fig. 3 küçük bar/legend yerine şekillerle ayrışan kategorik dot
+  plot oldu; worker değerleri değişmedi. Finalist cap'inin beş, gerçekleşen
+  sayının üç olduğu; deduplication, arm/policy order ve uncertainty aggregation
+  açıklandı. Tekrarlanan metin kısaltıldı. Table V unrounded front kararını ve
+  yuvarlatılmış eşit satırlardaki 43 mikro-saniye farkını açıklıyor. Fig. 4
+  Results içine taşındı; son sayfa sütunları dengelendi. Artifact erişiminin
+  private olduğu ve bu revision'ın eski release sonrasında geldiği yazıldı.
+- `cddfbe0`: evidence audit yeni paper source SHA'sına ve güncel claim
+  satırlarına bağlandı; anonymous/public erişim ayrı açık gate olarak korundu.
+
+Uygulama sırasında TikZ `step` stil adı yerleşik anahtarla çakıştığı için
+`flowstep` kullanıldı. İlk layout denemelerindeki fazla sayfa ve yatay taşma,
+metin tekrarlarını azaltma ve plot genişliği düzenlemesiyle giderildi.
+Verification ilk denemede uncommitted audit nedeniyle clean-tree gate'inde
+durdu; audit commit'inden sonra aynı komut baştan başarıyla çalıştı.
+
+Doğrulama:
+
+- Altı sayfa render edilerek incelendi; son baseline ve references sayfaları
+  tekrar kontrol edildi. Fig. 4 ayrıca 1600-pixel grayscale render'da incelendi.
+- Altı holdout noktasının iki eksendeki mean/CI değerleri official summary ile
+  karşılaştırıldı; worker yarı aralığı `0.2262` ve latency farkı değişmedi.
+- `make verify` geçti: Go tests, vet, official analiz regeneration/comparison,
+  protocol/audit identities, üç V3 analyzer race testi ve PDF kontrolleri.
+- `make killer-figure` geçti. PDF altı sayfa US Letter; overfull/undefined
+  diagnostic yok, qpdf başarılı, fontlar Type 1.
+- Yerel paper PDF SHA-256:
+  `dc7948f3ba675e63516108b34233aa1214dc45cac37bf05c46403d8f3c30dbdc`.
+- Standalone figure PDF SHA-256:
+  `8709ac9973d6c1352ae672f60d5fa4d2ec59d14f7ab996448ef840b73fece003`.
+
+3.88 editorial/görsel kabulü bu source revision için kapandı. Mevcut private
+`v3-evidence-2026-09-08` release/tag/asset'leri değiştirilmedi; push yapılmadı.
+Yerel PDF günceldir, eski remote release yeni PDF'yi içermez. İstenirse yeni
+revision ayrı paketlenmelidir; public erişim, speaking sample ve gerçek CFP
+submission halen ayrı işlerdir. Cluster veya canlı deney başlatılmadı.
+
 ## 4. Şu Anki Durum
 
 Şu anda proje durumu şöyledir:
@@ -4824,10 +4875,9 @@ paketlenmelidir. Yeni canlı deney bu bulguların giderilmesi için gerekli değ
   sabitlenmiş ve checksum doğrulamalı local release package kabul edilmiştir
 - V3 branch/tag ve beş asset'li release private GitHub remote'una aktarılmış;
   authenticated geri indirme ile remote checksum kabulü tamamlanmıştır
-- Release sonrası overall review (3.88) Fig. 1/4 okunabilirlik, Fig. 2 holdout
-  sınırı ve yöntem anlatımı için editorial kabulü yeniden açmıştır; mevcut PDF
-  teknik olarak doğrulanmış release snapshot'ıdır, görsel olarak koşulsuz final
-  değildir. Sıradaki paper işi bu bulguları düzeltip yeni revision üretmektir.
+- Release sonrası overall review (3.88) bulguları 3.89'da kapatılmıştır;
+  yerel altı sayfalık PDF görsel ve teknik olarak doğrulanmıştır. Yeni kaynak
+  commit'leri yereldir; private release eski snapshot olarak korunmuştur.
 - Stabil public V3 release/PDF, speaking sample, kullanıcı teyitleri ve
   Sessionize gönderimi açıktır
 - Scheduler interval testli admin komutuyla canonical `2s` değerine restore edilmiştir
@@ -5056,7 +5106,7 @@ Sonuç:
 - [x] Local annotated V3 release tag oluştur ve package acceptance'ı tamamla
 - [x] V3 branch/tag ve checksum doğrulamalı asset'leri private GitHub release'e
   aktar
-- [ ] Release sonrası 3.88 review bulgularını gider; paper/figure görsel kabulünü
+- [x] Release sonrası 3.88 review bulgularını gider; paper/figure görsel kabulünü
   yeni source commit'iyle yeniden kapat
 - [ ] Stabil public paper PDF, speaking sample ve kullanıcı teyitlerini tamamla
 - [ ] Sessionize formunu son resmi gereksinim kontrolünden sonra gönder
