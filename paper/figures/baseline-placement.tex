@@ -1,40 +1,23 @@
+% Vertical offsets distinguish workloads within each categorical policy row.
 \begin{tikzpicture}
 \begin{axis}[
-  width=\linewidth,
-  height=5.0cm,
-  ybar,
-  bar width=4.8pt,
-  ymin=0,
-  ymax=4.45,
-  ylabel={mean max occupied workers},
-  symbolic x coords={CPU-tight,Mem-tight,Mixed},
-  xtick=data,
-  xticklabel style={font=\scriptsize},
-  ytick={0,1,2,3,4},
-  ymajorgrids=true,
-  grid style={gray!20},
-  legend style={
-    font=\tiny,
-    at={(0.5,1.02)},
-    anchor=south,
-    legend columns=2,
-    draw=none,
-    cells={anchor=west}
-  },
-  enlarge x limits=0.22,
+  width=0.94\linewidth, height=4.6cm,
+  xmin=2.75, xmax=4.25, xtick={3,3.5,4},
+  ymin=0.5, ymax=4.5, ytick={1,2,3,4},
+  yticklabels={Kube default,Consolidation,Spread,Balanced},
+  tick label style={font=\footnotesize},
+  xlabel={mean max occupied workers},
+  label style={font=\footnotesize},
+  xmajorgrids=true, grid style={gray!20},
+  legend style={font=\footnotesize, at={(0.5,1.06)}, anchor=south,
+    legend columns=3, column sep=3pt, draw=none, cells={anchor=west}},
 ]
-\addplot+[fill=white, draw=black, thick] coordinates {
-  (CPU-tight,4.00) (Mem-tight,4.00) (Mixed,3.00)
-};
-\addplot+[fill=black!20, draw=black] coordinates {
-  (CPU-tight,4.00) (Mem-tight,4.00) (Mixed,4.00)
-};
-\addplot+[fill=black!55, draw=black] coordinates {
-  (CPU-tight,3.00) (Mem-tight,3.00) (Mixed,3.00)
-};
-\addplot+[fill=black!85, draw=black] coordinates {
-  (CPU-tight,4.00) (Mem-tight,4.00) (Mixed,4.00)
-};
-\legend{Balanced,Spread-heavy,Consolidation-heavy,Kube default}
+\addplot[only marks, mark=o, mark size=2.6pt, thick, black]
+  coordinates {(4,4.25) (4,3.25) (3,2.25) (4,1.25)};
+\addplot[only marks, mark=triangle*, mark size=2.5pt, black!65]
+  coordinates {(4,4) (4,3) (3,2) (4,1)};
+\addplot[only marks, mark=square*, mark size=2.1pt, black]
+  coordinates {(3,3.75) (4,2.75) (3,1.75) (4,0.75)};
+\legend{CPU-tight,Mem-tight,Mixed}
 \end{axis}
 \end{tikzpicture}
