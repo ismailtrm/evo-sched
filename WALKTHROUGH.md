@@ -4593,6 +4593,37 @@ committed release snapshot'ini kapatır: `/tmp` dizini kalıcı yayın değildir
 GitHub V3 release oluşturulmadı, remote branch/tag erişilebilirliği ve anonim
 public URL doğrulanmadı.
 
+### 3.87. V3 branch, tag ve release private GitHub remote'unda doğrulandı
+
+Local kabulden sonra kullanıcı onayıyla branch ve annotated release tag private
+`ismailtrm/evo-sched` repository'sine pushlandı. Uzak ref'ler GitHub'dan tekrar
+okunarak şu hedeflerle doğrulandı:
+
+- `research/noise-aware-resampling-v3` -> `b49bc2508f71094aadd7d1ed14086eac78132ca9`
+- `v3-evidence-2026-09-08^{}` ->
+  `41f26955b710d1e7f432a952e010c60fb7f8b5a7`
+
+`EvoSched V3 Noise-Aware Search Evidence` adlı non-draft, non-prerelease release
+aynı tag üzerinde oluşturuldu:
+
+```text
+https://github.com/ismailtrm/evo-sched/releases/tag/v3-evidence-2026-09-08
+```
+
+Paper PDF, official evidence arşivi, reproducibility source arşivi, release
+manifesti ve `SHA256SUMS` olmak üzere beş asset'in tamamı GitHub tarafından
+`uploaded` olarak raporlandı. Asset'ler authenticated `gh release download` ile
+yeni bir `/tmp` dizinine geri indirildi; indirilen dört hashed payload
+`SHA256SUMS` ile geçti ve uzaktaki checksum dosyası local paketle byte-for-byte
+aynıydı. GitHub asset digest'leri de 3.86'da kaydedilen SHA256 değerleriyle
+eşleşti.
+
+Bu aşamayla V3 artefact'ı local, committed ve private-remote release
+seviyelerinde doğrulanmıştır. Repository `PRIVATE` kaldığı için release URL'si
+anonim reviewer erişimine açık değildir; CFP'de stabil public artefact olarak
+kullanılamaz. Public visibility ve Sessionize submission ayrı kullanıcı gate'i
+olarak açık kalır.
+
 ## 4. Şu Anki Durum
 
 Şu anda proje durumu şöyledir:
@@ -4714,6 +4745,8 @@ public URL doğrulanmadı.
   render'larında başlık/annotation hizası görsel olarak doğrulanmıştır
 - V3 evidence snapshot'i local annotated `v3-evidence-2026-09-08` tag'iyle
   sabitlenmiş ve checksum doğrulamalı local release package kabul edilmiştir
+- V3 branch/tag ve beş asset'li release private GitHub remote'una aktarılmış;
+  authenticated geri indirme ile remote checksum kabulü tamamlanmıştır
 - Stabil public V3 release/PDF, speaking sample, kullanıcı teyitleri ve
   Sessionize gönderimi açıktır
 - Scheduler interval testli admin komutuyla canonical `2s` değerine restore edilmiştir
@@ -4744,7 +4777,8 @@ public URL doğrulanmadı.
 - V3 search/shared-validation/holdout sonucu paper, evidence audit, CFP, talk
   package ve README'ye aynı bounded claim setiyle işlenmiştir
 - Reproducible V3 release package local olarak kabul edilmiştir; tag/branch push,
-  GitHub V3 release ve public erişim ayrıca kullanıcı kararı gerektirir
+  private GitHub release ve remote checksum doğrulaması tamamlanmıştır; public
+  erişim ayrıca kullanıcı kararı gerektirir
 - Ayrı CFP hattında stabil public paper PDF ve speaking sample hazırlayıp CFP
   taslağını kullanıcı onayıyla Sessionize'a aktarma işi açıktır
 
@@ -4939,6 +4973,8 @@ Sonuç:
 - [x] V2 paketleyiciyi değiştirmeden clean/tag/checksum gated V3 release
   paketleyicisini ekle
 - [x] Local annotated V3 release tag oluştur ve package acceptance'ı tamamla
+- [x] V3 branch/tag ve checksum doğrulamalı asset'leri private GitHub release'e
+  aktar
 - [ ] Stabil public paper PDF, speaking sample ve kullanıcı teyitlerini tamamla
 - [ ] Sessionize formunu son resmi gereksinim kontrolünden sonra gönder
 
