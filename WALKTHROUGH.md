@@ -4508,6 +4508,52 @@ muhafazakar V3 claim setini kullanmaktadır. Açık kalan işler stable public V
 release, erişilebilir paper PDF, speaking sample kaydı, kullanıcı teyitleri ve
 Sessionize gönderimidir.
 
+### 3.85. V3 release paketleyici local/public durumlarını ayıracak şekilde hazırlandı
+
+Mevcut `scripts/package-v2-release.sh` historical V2 branch ve evidence setine
+bağlıydı. V3 sonuçlarını aynı paket adı veya içerikle yayınlamak provenance
+karışıklığı yaratacağından V2 script'i değiştirilmedi; ayrı
+`scripts/package-v3-release.sh` ve `make release-package-v3` entrypoint'i eklendi.
+
+V3 paketleyici şu hard gate'leri uygular:
+
+- clean `research/noise-aware-resampling-v3` worktree
+- varsayılan `v3-evidence-2026-09-08` release tag'inin annotated olması ve tam
+  `HEAD` commit'ine işaret etmesi
+- V2 official baseline ile üç V3 protocol tag'inin `HEAD` ancestor'ı olması
+- bütün evidence/source path'lerinin aynı `HEAD` snapshot'ında tracked olması
+- paketleme öncesi tam `make verify` geçişi
+- çıktı dizininin önceden var olmaması
+
+Paket üç payload ve iki metadata artefact'ı üretir:
+
+- altı sayfalık `evo-sched-v3-paper.pdf`
+- V2 baseline referansı ile official V3 search/shared-validation/holdout,
+  protocol, workload ve audit'i içeren evidence arşivi
+- scheduler, evaluator, optimizer, scripts, manifests, paper source, CFP/talk
+  package ve ledger'ı içeren reproducibility source arşivi
+- source commit, protocol tag'leri, artefact boyut/hash'ları, claim boundaries ve
+  limitations taşıyan machine-readable release manifesti
+- bütün payload ve manifest için `SHA256SUMS`
+
+Manifest `packagingStatus=locally-verified` ve
+`publicationStatus=not-verified-by-packager` alanlarını ayrı tutar. Script push,
+GitHub release, upload veya public URL doğrulaması yapmaz; local package hiçbir
+zaman kendiliğinden "released" ya da "public" sayılmaz.
+
+İlk shell audit'inde `set -o pipefail` altında `tar -tzf | rg -q` üyelik
+kontrolünün `rg` erken çıktığında upstream `tar` için SIGPIPE riski taşıdığı
+görüldü. Kontrol, arşiv listesinin tamamını tüketen `rg ... >/dev/null` biçimine
+çevrildi. `bash -n` ve dirty-worktree negatif gate testi geçti; `shellcheck`
+hostta kurulu olmadığı için çalıştırılamadı. End-to-end acceptance annotated
+release tag oluşturulmadan bilinçli olarak başlatılmadı.
+
+Kod ve giriş noktası `3d2c138 feat: add verified V3 release packaging`, README
+kullanım/sınır açıklaması ise `2102257 docs: document V3 release package`
+commit'indedir. Sıradaki adım bu ledger commit'inden sonra clean final SHA'ya
+local annotated release tag koymak, `/tmp` altında paketi üretmek ve checksum,
+manifest, PDF ve iki tar arşivini bağımsız kabul etmektir.
+
 ## 4. Şu Anki Durum
 
 Şu anda proje durumu şöyledir:
@@ -4659,6 +4705,8 @@ Sessionize gönderimidir.
 - Sıradaki aktif artefact işi reproducible V3 release package hazırlamak ve
   private görünürlük sınırında doğrulamaktır; public erişim ayrıca kullanıcı
   kararı gerektirir
+- V3 release paketleyici ve README sözleşmesi commitlenmiştir; local annotated
+  release tag ile end-to-end package acceptance henüz yapılmamıştır
 - Ayrı CFP hattında stabil public paper PDF ve speaking sample hazırlayıp CFP
   taslağını kullanıcı onayıyla Sessionize'a aktarma işi açıktır
 
@@ -4850,6 +4898,9 @@ Sonuç:
   entrypoint olarak koru
 - [x] CFP taslağı, README/reproduction yüzeyi ve sunum figürlerini V3 claim setiyle
   eşleştir
+- [x] V2 paketleyiciyi değiştirmeden clean/tag/checksum gated V3 release
+  paketleyicisini ekle
+- [ ] Local annotated V3 release tag oluştur ve package acceptance'ı tamamla
 - [ ] Stabil public paper PDF, speaking sample ve kullanıcı teyitlerini tamamla
 - [ ] Sessionize formunu son resmi gereksinim kontrolünden sonra gönder
 
