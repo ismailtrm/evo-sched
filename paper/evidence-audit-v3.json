@@ -4,7 +4,7 @@
   "status": "closed",
   "auditedPaper": {
     "path": "paper/main.tex",
-    "gitCommit": "7109c44dedc64b6fa58e49030222b38e8130661e",
+    "gitCommit": "e1a53efdcd83266424252daef9a95c6bd0a7dfbe",
     "role": "official V3 mitigation manuscript"
   },
   "preservationDecision": "Keep evidence-audit-v1.json, evidence-audit-v2.json, and all V1/V2 artifacts immutable. V3 adds a budget-matched mitigation experiment and does not rewrite earlier evidence.",
