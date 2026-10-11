@@ -128,7 +128,7 @@
       "Switch to the killer figure and keep the pointer movements deliberate.",
       "Return to camera for the final takeaway.",
       "Use an unlisted or public URL that reviewers can open without authentication.",
-      "Do not show the currently private GitHub repository URL as an accessible resource."
+      "Show the public GitHub repository and V3 revision release as anonymously accessible resources."
     ],
     "segments": [
       {

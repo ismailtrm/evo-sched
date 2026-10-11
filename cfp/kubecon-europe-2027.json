@@ -121,20 +121,20 @@
     {
       "label": "Project repository",
       "url": "https://github.com/ismailtrm/evo-sched",
-      "availability": "private-pending-public-release",
-      "submissionReady": false
+      "availability": "public-anonymous",
+      "submissionReady": true
     },
     {
       "label": "IEEE paper source",
       "url": "https://github.com/ismailtrm/evo-sched/blob/research/noise-aware-resampling-v3/paper/main.tex",
-      "availability": "private-pending-public-release",
-      "submissionReady": false
+      "availability": "public-anonymous",
+      "submissionReady": true
     },
     {
       "label": "Machine-readable paper evidence audit",
       "url": "https://github.com/ismailtrm/evo-sched/blob/research/noise-aware-resampling-v3/paper/evidence-audit-v3.json",
-      "availability": "private-pending-public-release",
-      "submissionReady": false
+      "availability": "public-anonymous",
+      "submissionReady": true
     }
   ],
   "submissionChecklist": {

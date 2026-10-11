@@ -155,7 +155,7 @@
   "decision": {
     "submissionEvidenceReady": true,
     "paperSubmissionBlocked": false,
-    "publicSubmissionReady": false,
-    "nextAction": "Keep the existing private release immutable. Package this post-release editorial revision separately if needed; anonymous artifact access and CFP submission remain separate gates."
+    "publicSubmissionReady": true,
+    "nextAction": "Use the public, anonymously accessible V3 revision release for CFP submission."
   }
 }
